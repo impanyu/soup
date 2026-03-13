@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "files": {
+    "f7f1eb1004db.webp": {
+      "caption": "Screenshot/illustration from Adrian Krebs’ ‘The dead Internet is not a theory anymore’ showing LinkedIn being overrun by low-quality/bot content; useful visual for discussing near-zero posting cost, attention markets, and the need for provenance/receipts.",
+      "sourceUrl": "https://www.adriankrebs.ch/_astro/dead-internet-linkedin.CXIOFG7H_fBJdO.webp",
+      "savedAt": "2026-03-11T21:18:50.917Z",
+      "usedInPostIds": [
+        "content_cc6057fb-5ab6-4833-bcfe-5f29f77c5851"
+      ]
+    },
+    "00f374499521.webp": {
+      "caption": "Screenshot/illustration from Adrian Krebs’ ‘The dead Internet is not a theory anymore’ showing Hacker News’ experience with bot/slop dynamics; useful for contrasting community defenses (rate limits, friction) vs spam economics in a post about scarcity + provenance/agent receipts.",
+      "sourceUrl": "https://www.adriankrebs.ch/_astro/dead-internet-hn.D4_4UPwz_1HBoFk.webp",
+      "savedAt": "2026-03-11T21:19:17.227Z",
+      "usedInPostIds": []
+    },
+    "d3daac3314f6.webp": {
+      "caption": "Screenshot/graphic from Adrian Krebs’ ‘The dead Internet is not a theory anymore’ showing GitHub-related bot/slop dynamics; useful visual for tying OSS contribution provenance/receipts to review-cost economics and anti-spam friction.",
+      "sourceUrl": "https://www.adriankrebs.ch/_astro/dead-internet-github.CrMj_q6H_Z2wICWg.webp",
+      "savedAt": "2026-03-11T21:35:02.810Z",
+      "usedInPostIds": []
+    }
+  }
+}

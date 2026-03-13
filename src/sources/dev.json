@@ -1,0 +1,156 @@
+[
+  {
+    "id": "rust-blog",
+    "name": "Rust Blog",
+    "category": "Dev & Code",
+    "topics": ["technology", "web development"],
+    "rss": { "feedUrl": "https://blog.rust-lang.org/feed.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "go-blog",
+    "name": "Go Blog",
+    "category": "Dev & Code",
+    "topics": ["technology", "web development", "cloud computing"],
+    "rss": { "feedUrl": "https://go.dev/blog/feed.atom" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "python-insider",
+    "name": "Python Insider",
+    "category": "Dev & Code",
+    "topics": ["technology", "data science", "machine learning"],
+    "rss": { "feedUrl": "https://blog.python.org/feeds/posts/default" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nodejs-blog",
+    "name": "Node.js Blog",
+    "category": "Dev & Code",
+    "topics": ["web development", "technology", "devops"],
+    "rss": { "feedUrl": "https://nodejs.org/en/feed/blog.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "chromium-blog",
+    "name": "Chromium Blog",
+    "category": "Dev & Code",
+    "topics": ["web development", "technology", "cybersecurity"],
+    "rss": { "feedUrl": "https://blog.chromium.org/feeds/posts/default" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mozilla-hacks",
+    "name": "Mozilla Hacks",
+    "category": "Dev & Code",
+    "topics": ["web development", "technology", "cybersecurity"],
+    "rss": { "feedUrl": "https://hacks.mozilla.org/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "github-blog",
+    "name": "GitHub Blog",
+    "category": "Dev & Code",
+    "topics": ["technology", "devops", "web development"],
+    "rss": { "feedUrl": "https://github.blog/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "gitlab-blog",
+    "name": "GitLab Blog",
+    "category": "Dev & Code",
+    "topics": ["devops", "technology", "cybersecurity"],
+    "rss": { "feedUrl": "https://about.gitlab.com/atom.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hashicorp-blog",
+    "name": "HashiCorp Blog",
+    "category": "Dev & Code",
+    "topics": ["devops", "cloud computing", "cybersecurity"],
+    "rss": { "feedUrl": "https://www.hashicorp.com/blog/feed.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "npm-blog",
+    "name": "npm Blog",
+    "category": "Dev & Code",
+    "topics": ["web development", "technology"],
+    "rss": { "feedUrl": "https://blog.npmjs.org/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "aws-blog",
+    "name": "AWS Blog",
+    "category": "Dev & Code",
+    "topics": ["cloud computing", "devops", "technology"],
+    "rss": { "feedUrl": "https://aws.amazon.com/blogs/aws/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "google-ai-blog",
+    "name": "Google AI Blog",
+    "category": "Dev & Code",
+    "topics": ["artificial intelligence", "machine learning", "deep learning", "data science"],
+    "rss": { "feedUrl": "https://blog.research.google/feeds/posts/default" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "openai-blog",
+    "name": "OpenAI Blog",
+    "category": "Dev & Code",
+    "topics": ["artificial intelligence", "machine learning", "deep learning"],
+    "rss": { "feedUrl": "https://openai.com/blog/rss/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "huggingface-blog",
+    "name": "Hugging Face Blog",
+    "category": "Dev & Code",
+    "topics": ["machine learning", "artificial intelligence", "deep learning", "data science"],
+    "rss": { "feedUrl": "https://huggingface.co/blog/feed.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

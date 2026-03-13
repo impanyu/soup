@@ -1,0 +1,1449 @@
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
+
+import { db } from './db.js';
+import * as mediaStorage from './mediaStorage.js';
+import { startScheduler } from './scheduler.js';
+import { ensureDemoData } from './bootstrap.js';
+import { previewAgentContext, DEFAULT_PHASE_MAX_STEPS, TONE_PROFILES, INTELLIGENCE_LEVELS } from './agentRuntime.js';
+import { EXTERNAL_SOURCES, TOPIC_SOURCE_MAP, TOPICS } from './externalSources.js';
+import { addRunNowJob, isAgentRunning, syncSingleAgent } from './queue.js';
+import * as agentStorage from './agentStorage.js';
+import { runSkillEditorChat } from './skillEditor.js';
+import { getToolsForPhase } from './toolRegistry.js';
+
+function syncCharacteristics(agent) {
+  const prefs = agent.preferences || {};
+  const tone = prefs.tone || 'balanced';
+  const tp = TONE_PROFILES[tone] || TONE_PROFILES.balanced;
+  agentStorage.writeCharacteristics(agent.id, {
+    name: agent.name,
+    bio: agent.bio || '',
+    topics: (prefs.topics || []).join(', ') || 'general',
+    tone,
+    toneProfile: tp
+  });
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const publicDir = path.join(__dirname, '..', 'public');
+
+ensureDemoData();
+await startScheduler();
+
+function sendJson(res, code, payload) {
+  res.writeHead(code, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS'
+  });
+  res.end(JSON.stringify(payload));
+}
+
+function sendFile(res, filePath) {
+  if (!fs.existsSync(filePath)) {
+    sendJson(res, 404, { error: 'Not found' });
+    return;
+  }
+
+  const ext = path.extname(filePath);
+  const mime = {
+    '.html': 'text/html; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
+    '.mov': 'video/quicktime'
+  }[ext] || 'application/octet-stream';
+
+  const headers = { 'Content-Type': mime };
+  // Disable caching for JS/CSS/HTML during development so changes take effect immediately
+  if (ext === '.js' || ext === '.css' || ext === '.html') {
+    headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+  }
+  res.writeHead(200, headers);
+  res.end(fs.readFileSync(filePath));
+}
+
+function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+      if (data.length > 2 * 1024 * 1024) {
+        reject(new Error('Payload too large'));
+        req.socket.destroy();
+      }
+    });
+    req.on('end', () => {
+      if (!data) return resolve({});
+      try {
+        resolve(JSON.parse(data));
+      } catch {
+        reject(new Error('Invalid JSON body'));
+      }
+    });
+  });
+}
+
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+      if (data.length > 2 * 1024 * 1024) {
+        reject(new Error('Payload too large'));
+        req.socket.destroy();
+      }
+    });
+    req.on('end', () => resolve(data));
+  });
+}
+
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
+
+function parseMultipart(req) {
+  return new Promise((resolve, reject) => {
+    const contentType = req.headers['content-type'] || '';
+    const boundaryMatch = contentType.match(/boundary=(.+)/);
+    if (!boundaryMatch) return reject(new Error('Missing multipart boundary'));
+    const boundary = boundaryMatch[1].replace(/;.*$/, '').trim();
+    const delimiter = Buffer.from(`--${boundary}`);
+
+    const chunks = [];
+    let totalSize = 0;
+    req.on('data', (chunk) => {
+      totalSize += chunk.length;
+      if (totalSize > MAX_UPLOAD_SIZE) {
+        reject(new Error('Upload too large (max 10MB)'));
+        req.socket.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      const body = Buffer.concat(chunks);
+      const fields = {};
+      const files = [];
+
+      // Split by boundary
+      let start = 0;
+      while (true) {
+        const idx = body.indexOf(delimiter, start);
+        if (idx === -1) break;
+        if (start > 0) {
+          // Process the part between previous boundary and this one
+          // Skip the CRLF after boundary marker
+          let partStart = start;
+          // The part data is between `start` (after prev delimiter+CRLF) and `idx` (before trailing CRLF+delimiter)
+          let partEnd = idx;
+          // Trim trailing \r\n before delimiter
+          if (partEnd >= 2 && body[partEnd - 2] === 0x0d && body[partEnd - 1] === 0x0a) partEnd -= 2;
+
+          const partBuf = body.subarray(partStart, partEnd);
+          // Split headers from body at \r\n\r\n
+          const headerEnd = partBuf.indexOf('\r\n\r\n');
+          if (headerEnd !== -1) {
+            const headerStr = partBuf.subarray(0, headerEnd).toString('utf-8');
+            const partBody = partBuf.subarray(headerEnd + 4);
+
+            const nameMatch = headerStr.match(/name="([^"]+)"/);
+            const filenameMatch = headerStr.match(/filename="([^"]+)"/);
+            const ctMatch = headerStr.match(/Content-Type:\s*(.+)/i);
+
+            if (filenameMatch && nameMatch) {
+              files.push({
+                fieldname: nameMatch[1],
+                filename: filenameMatch[1],
+                contentType: ctMatch ? ctMatch[1].trim() : 'application/octet-stream',
+                buffer: Buffer.from(partBody)
+              });
+            } else if (nameMatch) {
+              fields[nameMatch[1]] = partBody.toString('utf-8');
+            }
+          }
+        }
+        // Move past delimiter + possible \r\n
+        start = idx + delimiter.length;
+        if (body[start] === 0x2d && body[start + 1] === 0x2d) break; // --boundary-- end marker
+        if (body[start] === 0x0d && body[start + 1] === 0x0a) start += 2;
+      }
+
+      resolve({ fields, files });
+    });
+    req.on('error', reject);
+  });
+}
+
+function parseStripeSignature(sigHeader) {
+  const parts = String(sigHeader || '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const parsed = { t: null, v1: [] };
+  for (const part of parts) {
+    const [k, ...rest] = part.split('=');
+    const value = rest.join('=');
+    if (k === 't') parsed.t = Number(value);
+    if (k === 'v1') parsed.v1.push(value);
+  }
+  return parsed;
+}
+
+function constantTimeEqual(a, b) {
+  const aa = Buffer.from(String(a || ''), 'utf8');
+  const bb = Buffer.from(String(b || ''), 'utf8');
+  if (aa.length !== bb.length) return false;
+  return crypto.timingSafeEqual(aa, bb);
+}
+
+function verifyStripeWebhookSignature({ rawBody, signatureHeader, webhookSecret, toleranceSec = 300 }) {
+  if (!webhookSecret) throw new Error('Missing STRIPE_WEBHOOK_SECRET');
+  const parsed = parseStripeSignature(signatureHeader);
+  if (!parsed.t || !parsed.v1.length) throw new Error('Invalid Stripe-Signature header');
+
+  const ageSec = Math.abs(Math.floor(Date.now() / 1000) - parsed.t);
+  if (ageSec > toleranceSec) throw new Error('Stripe webhook timestamp outside tolerance window');
+
+  const signedPayload = `${parsed.t}.${rawBody}`;
+  const expected = crypto.createHmac('sha256', webhookSecret).update(signedPayload, 'utf8').digest('hex');
+  const ok = parsed.v1.some((candidate) => constantTimeEqual(candidate, expected));
+  if (!ok) throw new Error('Stripe webhook signature verification failed');
+}
+
+function getBearerToken(req) {
+  const h = req.headers.authorization || '';
+  if (!h.toLowerCase().startsWith('bearer ')) return null;
+  return h.slice(7).trim();
+}
+
+function requireOwner(userId, agentId) {
+  const agent = db.getAgent(agentId);
+  if (!agent) throw new Error('Agent not found.');
+  if (agent.ownerUserId !== userId) throw new Error('Forbidden for this user.');
+  return agent;
+}
+
+// Resolves the acting entity. Returns { kind:'user'|'agent', id, name, credits, ...obj }
+function resolveActor(body, apiUser) {
+  const actorAgentId = body.actorAgentId || body.asAgentId;
+  if (actorAgentId) {
+    const agent = db.getAgent(actorAgentId);
+    if (!agent) throw new Error('Actor agent not found.');
+    const ownerUserId = body.actorUserId || apiUser?.id;
+    if (!ownerUserId || agent.ownerUserId !== ownerUserId) {
+      throw new Error('You can only act as your own hosted agents.');
+    }
+    return { kind: 'agent', ...agent };
+  }
+
+  const userId = body.actorUserId || apiUser?.id;
+  if (!userId) throw new Error('actorUserId or authenticated API key is required.');
+  const user = db.getUser(userId);
+  if (!user) throw new Error('Actor user not found.');
+  return { kind: 'user', ...user };
+}
+
+// Legacy alias kept for run-now / agent-specific routes
+function resolveActorAgent(body, apiUser) {
+  const actor = resolveActor(body, apiUser);
+  if (actor.kind === 'user') {
+    // Fall back to first owned agent when caller expects an agent
+    const owned = db.getOwnedAgents(actor.id);
+    if (!owned.length) throw new Error('User has no hosted agent.');
+    return owned[0];
+  }
+  return actor;
+}
+
+function contentWithStats(content, viewerKind, viewerId) {
+  let authorName = 'Unknown';
+  let authorAvatarUrl = '';
+  if (content.authorKind === 'user') {
+    const u = db.getUser(content.authorId);
+    authorName = u?.name || 'Unknown';
+    authorAvatarUrl = u?.avatarUrl || '';
+  } else {
+    const a = db.getAgent(content.authorId || content.authorAgentId);
+    authorName = a?.name || 'Unknown';
+    authorAvatarUrl = a?.avatarUrl || '';
+  }
+  const contentReactions = db.state.reactions.filter((r) => r.contentId === content.id);
+  const likes     = contentReactions.filter((r) => r.type === 'like').length;
+  const dislikes  = contentReactions.filter((r) => r.type === 'dislike').length;
+  const favorites = contentReactions.filter((r) => r.type === 'favorite').length;
+  const replies   = db.state.contents.filter((c) => c.parentId === content.id && !c.repostOfId).length;
+  const reposts   = db.state.contents.filter((c) => c.repostOfId === content.id).length;
+
+  let viewerReactions = [];
+  if (viewerKind && viewerId) {
+    const viewerIds = new Set([`${viewerKind}:${viewerId}`]);
+    if (viewerKind === 'user') {
+      for (const a of db.getOwnedAgents(viewerId)) {
+        viewerIds.add(`agent:${a.id}`);
+      }
+    }
+    viewerReactions = contentReactions
+      .filter((r) => viewerIds.has(`${r.actorKind}:${r.actorId}`))
+      .map((r) => r.type);
+  }
+
+  // If this is a repost, include the original post info
+  let repostOf = null;
+  if (content.repostOfId) {
+    const orig = db.state.contents.find((c) => c.id === content.repostOfId);
+    if (orig) {
+      let origAuthorName = 'Unknown';
+      let origAuthorAvatarUrl = '';
+      if (orig.authorKind === 'user') {
+        const ou = db.getUser(orig.authorId);
+        origAuthorName = ou?.name || 'Unknown';
+        origAuthorAvatarUrl = ou?.avatarUrl || '';
+      } else {
+        const oa = db.getAgent(orig.authorId || orig.authorAgentId);
+        origAuthorName = oa?.name || 'Unknown';
+        origAuthorAvatarUrl = oa?.avatarUrl || '';
+      }
+      repostOf = { id: orig.id, title: orig.title, text: orig.text, authorName: origAuthorName, authorAvatarUrl: origAuthorAvatarUrl, authorKind: orig.authorKind, authorId: orig.authorId, createdAt: orig.createdAt };
+    }
+  }
+
+  // If this is a reply, include parent context
+  let replyTo = null;
+  if (content.parentId && !content.repostOfId) {
+    const parent = db.state.contents.find((c) => c.id === content.parentId);
+    if (parent) {
+      let parentAuthorName = 'Unknown';
+      let parentAuthorAvatarUrl = '';
+      if (parent.authorKind === 'user') {
+        const pu = db.getUser(parent.authorId);
+        parentAuthorName = pu?.name || 'Unknown';
+        parentAuthorAvatarUrl = pu?.avatarUrl || '';
+      } else {
+        const pa = db.getAgent(parent.authorId || parent.authorAgentId);
+        parentAuthorName = pa?.name || 'Unknown';
+        parentAuthorAvatarUrl = pa?.avatarUrl || '';
+      }
+      replyTo = { id: parent.id, authorName: parentAuthorName, authorAvatarUrl: parentAuthorAvatarUrl, authorKind: parent.authorKind, authorId: parent.authorId };
+    }
+  }
+
+  return {
+    ...content,
+    authorName,
+    authorAvatarUrl,
+    authorKind: content.authorKind || 'agent',
+    authorId: content.authorId || content.authorAgentId,
+    stats: { likes, dislikes, favorites, replies, reposts },
+    viewerReactions,
+    repostOf,
+    replyTo
+  };
+}
+
+function contentWithStatsForViewer(viewerKind, viewerId) {
+  return (content) => contentWithStats(content, viewerKind, viewerId);
+}
+
+
+async function maybeCreateStripePaymentIntent({ amount, currency = 'usd', externalUserId }) {
+  const stripeSecret = process.env.STRIPE_SECRET_KEY;
+
+  if (!stripeSecret) {
+    return {
+      provider: 'mock_stripe',
+      paymentIntentId: `pi_mock_${crypto.randomUUID()}`,
+      clientSecret: `pi_mock_secret_${crypto.randomUUID()}`,
+      note: 'Set STRIPE_SECRET_KEY to enable real Stripe PaymentIntents.'
+    };
+  }
+
+  const form = new URLSearchParams();
+  form.set('amount', String(Math.round(Number(amount) * 100)));
+  form.set('currency', currency);
+  form.set('metadata[externalUserId]', externalUserId);
+
+  const response = await fetch('https://api.stripe.com/v1/payment_intents', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${stripeSecret}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: form
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Stripe API error: ${errorBody}`);
+  }
+
+  const payload = await response.json();
+  return {
+    provider: 'stripe',
+    paymentIntentId: payload.id,
+    clientSecret: payload.client_secret
+  };
+}
+
+const server = http.createServer(async (req, res) => {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, Authorization',
+      'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS'
+    });
+    res.end();
+    return;
+  }
+
+  const url = new URL(req.url, 'http://localhost');
+  const pathname = url.pathname;
+  const bearerToken = getBearerToken(req);
+  const sessionUser = bearerToken ? db.getUserBySessionToken(bearerToken) : null;
+  const apiKeyUser = req.headers['x-api-key'] ? db.getUserByApiKey(req.headers['x-api-key']) : null;
+  const apiUser = sessionUser || apiKeyUser;
+
+  try {
+    if (req.method === 'POST' && pathname === '/api/stripe/webhook') {
+      const rawBody = await readRawBody(req);
+      verifyStripeWebhookSignature({
+        rawBody,
+        signatureHeader: req.headers['stripe-signature'],
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET
+      });
+
+      const event = JSON.parse(rawBody || '{}');
+      if (!event?.id || !event?.type) throw new Error('Invalid Stripe event payload');
+
+      if (event.type === 'payment_intent.succeeded') {
+        const pi = event.data?.object || {};
+        db.markTopupCredited({
+          paymentIntentId: pi.id,
+          stripeEventId: event.id,
+          amountMinor: Number(pi.amount_received || pi.amount || 0),
+          currency: pi.currency || 'usd'
+        });
+      } else if (event.type === 'payment_intent.payment_failed') {
+        // Intentionally no-op for now; retries/visibility can be added in a dedicated payment-status model.
+      }
+
+      sendJson(res, 200, { received: true });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/health') {
+      sendJson(res, 200, {
+        ok: true,
+        users: db.state.users.length,
+        agents: db.state.agents.length,
+        contents: db.state.contents.length
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/defaults') {
+      sendJson(res, 200, { phaseMaxSteps: DEFAULT_PHASE_MAX_STEPS, intelligenceLevels: INTELLIGENCE_LEVELS });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/external-sources') {
+      sendJson(res, 200, {
+        sources: EXTERNAL_SOURCES.map(s => ({
+          id: s.id, name: s.name, type: s.type,
+          category: s.category, topics: s.topics,
+          requiresKey: s.requiresKey, dataType: s.dataType || 'article',
+          hasRss: !!s.rss, hasSearch: !!s.search
+        })),
+        topics: TOPICS,
+        topicSourceMap: TOPIC_SOURCE_MAP
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/auth/login') {
+      const body = await parseBody(req);
+      const username = body.username || body.userId;
+      const password = body.password;
+      if (!username || !password) throw new Error('Username and password are required.');
+
+      // Support login by username or by user ID
+      const user = username.startsWith('user_') ? db.getUser(username) : db.getUserByName(username);
+      if (!user) throw new Error('User not found.');
+      if (!db.verifyUserPassword(user.id, password)) throw new Error('Invalid credentials.');
+
+      const session = db.createAuthSession(user.id);
+      sendJson(res, 200, { token: session.token, user });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/auth/register') {
+      const body = await parseBody(req);
+      const name = String(body.name || '').trim();
+      const password = String(body.password || '').trim();
+      const userType = body.userType === 'external_agentic' ? 'external_agentic' : 'human';
+      if (!name) throw new Error('name is required.');
+      if (!password || password.length < 8) throw new Error('password must be at least 8 characters.');
+
+      const user = db.createUser({
+        name,
+        userType,
+        password,
+        initialCredits: Number.isFinite(Number(body.initialCredits)) ? Number(body.initialCredits) : 100
+      });
+      const session = db.createAuthSession(user.id);
+      sendJson(res, 201, { token: session.token, user });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/auth/me') {
+      if (!sessionUser) throw new Error('Not authenticated.');
+      sendJson(res, 200, { user: sessionUser });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/upload') {
+      if (!apiUser) throw new Error('Authentication required.');
+      const { files } = await parseMultipart(req);
+      if (!files.length) throw new Error('No files uploaded.');
+      if (files.length > 4) throw new Error('Max 4 files per upload.');
+
+      const results = [];
+      for (const file of files) {
+        if (!file.contentType.startsWith('image/') && !file.contentType.startsWith('video/')) {
+          throw new Error(`Invalid file type: ${file.contentType}. Only image and video files are allowed.`);
+        }
+        const ext = file.filename.split('.').pop() || (file.contentType.startsWith('video/') ? 'mp4' : 'jpg');
+        const stored = mediaStorage.saveBuffer(file.buffer, ext);
+        results.push({
+          url: stored.localUrl,
+          type: file.contentType.startsWith('video/') ? 'video' : 'image',
+          filename: file.filename
+        });
+      }
+      sendJson(res, 200, { ok: true, files: results });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/avatar') {
+      if (!apiUser) throw new Error('Authentication required.');
+      const { fields, files } = await parseMultipart(req);
+      if (!files.length) throw new Error('No file uploaded.');
+      const file = files[0];
+      if (!file.contentType.startsWith('image/')) throw new Error('Only image files are allowed.');
+      const kind = fields.kind; // 'user' or 'agent'
+      const id = fields.id;
+      if (!kind || !id) throw new Error('Missing kind or id.');
+      if (kind === 'user') {
+        if (id !== apiUser.id) throw new Error('Can only update your own avatar.');
+        const ext = file.filename.split('.').pop() || 'jpg';
+        const stored = mediaStorage.saveBuffer(file.buffer, ext);
+        db.updateUser(id, { avatarUrl: stored.localUrl });
+        sendJson(res, 200, { avatarUrl: stored.localUrl });
+      } else if (kind === 'agent') {
+        const agent = db.getAgent(id);
+        if (!agent) throw new Error('Agent not found.');
+        if (agent.ownerUserId !== apiUser.id) throw new Error('Not the owner of this agent.');
+        const ext = file.filename.split('.').pop() || 'jpg';
+        const stored = mediaStorage.saveBuffer(file.buffer, ext);
+        db.updateAgent(id, { avatarUrl: stored.localUrl });
+        sendJson(res, 200, { avatarUrl: stored.localUrl });
+      } else {
+        throw new Error('Invalid kind. Must be "user" or "agent".');
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/auth/logout') {
+      if (bearerToken) db.revokeSession(bearerToken);
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/external-users') {
+      const body = await parseBody(req);
+      const user = db.createUser({
+        name: body.name || 'Unnamed User',
+        userType: body.userType || 'human',
+        initialCredits: body.initialCredits ?? 100
+      });
+      sendJson(res, 201, { user });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/external-users') {
+      sendJson(res, 200, { users: db.state.users });
+      return;
+    }
+
+    const userAgentsMatch = pathname.match(/^\/api\/external-users\/([^/]+)\/agents$/);
+    if (req.method === 'GET' && userAgentsMatch) {
+      const userId = userAgentsMatch[1];
+      const user = db.getUser(userId);
+      if (!user) throw new Error('User not found.');
+
+      sendJson(res, 200, {
+        user,
+        agents: db.getOwnedAgents(userId)
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/agents') {
+      const body = await parseBody(req);
+      const ownerUserId = body.ownerUserId || apiUser?.id;
+      if (!ownerUserId) throw new Error('ownerUserId or API key is required.');
+      if (!db.getUser(ownerUserId)) throw new Error('Owner user not found.');
+
+      const agent = db.createAgent({
+        ownerUserId,
+        name: body.name || 'Unnamed Hosted Agent',
+        bio: body.bio || '',
+        activenessLevel: body.activenessLevel || 'medium',
+        initialCredits: body.initialCredits ?? 100,
+        preferences: body.preferences,
+        runConfig: body.runConfig
+      });
+
+      syncCharacteristics(agent);
+      await syncSingleAgent(agent.id);
+      sendJson(res, 201, { agent });
+      return;
+    }
+
+    const singleAgentMatch = pathname.match(/^\/api\/agents\/([^/]+)$/);
+    if (req.method === 'GET' && singleAgentMatch) {
+      const agentId = singleAgentMatch[1];
+      const agent = db.getAgent(agentId);
+      if (!agent) {
+        sendJson(res, 404, { error: 'Agent not found' });
+        return;
+      }
+      sendJson(res, 200, agent);
+      return;
+    }
+
+    const patchAgentMatch = pathname.match(/^\/api\/agents\/([^/]+)$/);
+    if (req.method === 'PATCH' && patchAgentMatch) {
+      const agentId = patchAgentMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      requireOwner(actorUserId, agentId);
+
+      const prevEnabled = db.getAgent(agentId)?.enabled;
+      const agent = db.updateAgent(agentId, {
+        name: body.name,
+        bio: body.bio,
+        activenessLevel: body.activenessLevel,
+        intelligenceLevel: body.intelligenceLevel,
+        enabled: typeof body.enabled === 'boolean' ? body.enabled : undefined,
+        preferences: body.preferences,
+        runConfig: body.runConfig
+      });
+
+      // When resuming, recalculate nextActionAt to align with the original schedule pace
+      if (body.enabled === true && !prevEnabled) {
+        const last = new Date(agent.lastActionAt || agent.createdAt).getTime();
+        const interval = agent.intervalMinutes * 60_000;
+        const now = Date.now();
+        const periods = Math.ceil((now - last) / interval);
+        const nextActionAt = new Date(last + periods * interval).toISOString();
+        db.updateAgent(agentId, { nextActionAt });
+        agent.nextActionAt = nextActionAt;
+      }
+
+      syncCharacteristics(agent);
+      await syncSingleAgent(agentId);
+      sendJson(res, 200, { agent });
+      return;
+    }
+
+    const deleteAgentMatch = pathname.match(/^\/api\/agents\/([^/]+)$/);
+    if (req.method === 'DELETE' && deleteAgentMatch) {
+      const agentId = deleteAgentMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      const agent = db.deleteAgent(agentId, actorUserId);
+      await syncSingleAgent(agentId);
+      sendJson(res, 200, { ok: true, agent });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/agents') {
+      sendJson(res, 200, { agents: db.state.agents });
+      return;
+    }
+
+    const agentPrefsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/preferences$/);
+    if (req.method === 'POST' && agentPrefsMatch) {
+      const agentId = agentPrefsMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      requireOwner(actorUserId, agentId);
+
+      const agent = db.updateAgent(agentId, {
+        preferences: body.preferences || {},
+        runConfig: body.runConfig || {}
+      });
+      syncCharacteristics(agent);
+      sendJson(res, 200, { agent });
+      return;
+    }
+
+    const agentCtxMatch = pathname.match(/^\/api\/agents\/([^/]+)\/context-preview$/);
+    if (req.method === 'GET' && agentCtxMatch) {
+      const agentId = agentCtxMatch[1];
+      const actorUserId = url.searchParams.get('actorUserId') || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      requireOwner(actorUserId, agentId);
+      sendJson(res, 200, { context: previewAgentContext(agentId) });
+      return;
+    }
+
+    const agentRunsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/run-logs$/);
+    if (req.method === 'GET' && agentRunsMatch) {
+      const agentId = agentRunsMatch[1];
+      const actorUserId = url.searchParams.get('actorUserId') || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      requireOwner(actorUserId, agentId);
+      const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+      const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') || 10)));
+      const allLogs = db.listAgentRunLogs(agentId, 1000);
+      const total = allLogs.length;
+      const totalPages = Math.ceil(total / perPage);
+      const logs = allLogs.slice((page - 1) * perPage, page * perPage);
+      sendJson(res, 200, { logs, page, perPage, total, totalPages });
+      return;
+    }
+
+    const runNowMatch = pathname.match(/^\/api\/agents\/([^/]+)\/run-now$/);
+    if (req.method === 'POST' && runNowMatch) {
+      const agentId = runNowMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      const agent = requireOwner(actorUserId, agentId);
+
+      try {
+        await addRunNowJob(agent.id);
+        sendJson(res, 202, { ok: true, status: 'started' });
+      } catch (err) {
+        sendJson(res, 409, { ok: false, reason: 'agent_already_running' });
+      }
+      return;
+    }
+
+    const agentRunningMatch = pathname.match(/^\/api\/agents\/([^/]+)\/running$/);
+    if (req.method === 'GET' && agentRunningMatch) {
+      const agentId = agentRunningMatch[1];
+      sendJson(res, 200, { running: await isAgentRunning(agentId) });
+      return;
+    }
+
+    const agentFavsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/favorites$/);
+    if (req.method === 'GET' && agentFavsMatch) {
+      const agentId = agentFavsMatch[1];
+      sendJson(res, 200, { favorites: db.getAgentFavorites(agentId).map(contentWithStats) });
+      return;
+    }
+
+    const agentLikedMatch = pathname.match(/^\/api\/agents\/([^/]+)\/liked$/);
+    if (req.method === 'GET' && agentLikedMatch) {
+      const agentId = agentLikedMatch[1];
+      sendJson(res, 200, { contents: db.getActorReactions('agent', agentId, 'like').map(contentWithStats) });
+      return;
+    }
+
+    const agentDislikedMatch = pathname.match(/^\/api\/agents\/([^/]+)\/disliked$/);
+    if (req.method === 'GET' && agentDislikedMatch) {
+      const agentId = agentDislikedMatch[1];
+      sendJson(res, 200, { contents: db.getActorReactions('agent', agentId, 'dislike').map(contentWithStats) });
+      return;
+    }
+
+    const agentViewHistMatch = pathname.match(/^\/api\/agents\/([^/]+)\/view-history$/);
+    if (req.method === 'GET' && agentViewHistMatch) {
+      const agentId = agentViewHistMatch[1];
+      const targetKind = url.searchParams.get('targetKind') || 'content';
+      const items = db.getActorViewHistory('agent', agentId, targetKind);
+      if (targetKind === 'content') {
+        sendJson(res, 200, { items: items.map(contentWithStats) });
+      } else {
+        sendJson(res, 200, { items });
+      }
+      return;
+    }
+
+    const agentContentsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/contents$/);
+    if (req.method === 'GET' && agentContentsMatch) {
+      const agentId = agentContentsMatch[1];
+      const limit = Number(url.searchParams.get('limit') || 50);
+      const contents = db.getAgentPublished(agentId).slice().reverse().slice(0, limit).map(contentWithStats);
+      sendJson(res, 200, { contents });
+      return;
+    }
+
+    const agentFollowersMatch = pathname.match(/^\/api\/agents\/([^/]+)\/followers$/);
+    if (req.method === 'GET' && agentFollowersMatch) {
+      const agentId = agentFollowersMatch[1];
+      sendJson(res, 200, { followers: db.getAgentFollowers(agentId) });
+      return;
+    }
+
+    const agentFollowingMatch = pathname.match(/^\/api\/agents\/([^/]+)\/following$/);
+    if (req.method === 'GET' && agentFollowingMatch) {
+      const agentId = agentFollowingMatch[1];
+      sendJson(res, 200, { following: db.getAgentFollowing(agentId) });
+      return;
+    }
+
+    const getSingleAgentMatch = pathname.match(/^\/api\/agents\/([^/]+)$/);
+    if (req.method === 'GET' && getSingleAgentMatch) {
+      const agentId = getSingleAgentMatch[1];
+      const agent = db.getAgent(agentId);
+      if (!agent) throw new Error('Agent not found.');
+      const stats = db.getAgentStats(agentId);
+      const viewerKind = url.searchParams.get('viewerKind') || 'agent';
+      const viewerId = url.searchParams.get('viewerId') || url.searchParams.get('viewerAgentId');
+      const isFollowing = viewerId
+        ? db.isFollowing({ followerKind: viewerKind, followerId: viewerId, followeeKind: 'agent', followeeId: agentId })
+        : false;
+      sendJson(res, 200, { agent: { ...agent, stats, isFollowing } });
+      return;
+    }
+
+    // User profile
+    const getUserMatch = pathname.match(/^\/api\/users\/([^/]+)$/);
+    if (req.method === 'GET' && getUserMatch) {
+      const userId = getUserMatch[1];
+      const user = db.getUser(userId);
+      if (!user) throw new Error('User not found.');
+      const stats = db.getActorStats('user', userId);
+      const viewerKind = url.searchParams.get('viewerKind') || 'user';
+      const viewerId = url.searchParams.get('viewerId');
+      const isFollowing = viewerId
+        ? db.isFollowing({ followerKind: viewerKind, followerId: viewerId, followeeKind: 'user', followeeId: userId })
+        : false;
+      const { passwordHash, apiKey, ...safeUser } = user;
+      sendJson(res, 200, { user: { ...safeUser, stats, isFollowing } });
+      return;
+    }
+
+    const patchUserMatch = pathname.match(/^\/api\/users\/([^/]+)$/);
+    if (req.method === 'PATCH' && patchUserMatch) {
+      const targetUserId = patchUserMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId || actorUserId !== targetUserId) throw new Error('Can only update your own profile.');
+      const user = db.updateUser(targetUserId, { bio: body.bio, name: body.name, avatarUrl: body.avatarUrl });
+      if (!user) throw new Error('User not found.');
+      const { passwordHash, apiKey, ...safeUser } = user;
+      sendJson(res, 200, { user: safeUser });
+      return;
+    }
+
+    const getUserContentsMatch = pathname.match(/^\/api\/users\/([^/]+)\/contents$/);
+    if (req.method === 'GET' && getUserContentsMatch) {
+      const userId = getUserContentsMatch[1];
+      const contents = db.getUserPublished(userId).slice().reverse().map(contentWithStats);
+      sendJson(res, 200, { contents });
+      return;
+    }
+
+    const getUserAllContentMatch = pathname.match(/^\/api\/users\/([^/]+)\/all-content$/);
+    if (req.method === 'GET' && getUserAllContentMatch) {
+      const userId = getUserAllContentMatch[1];
+      const vKind = url.searchParams.get('viewerKind');
+      const vId = url.searchParams.get('viewerId');
+      const filter = url.searchParams.get('filter'); // 'replies' = comments & reposts only
+      let contents = db.getUserAllContent(userId);
+      if (filter === 'replies') {
+        contents = contents.filter((c) => c.parentId);
+      }
+      contents = contents.map(contentWithStatsForViewer(vKind, vId));
+      sendJson(res, 200, { contents });
+      return;
+    }
+
+    const getUserFollowersMatch = pathname.match(/^\/api\/users\/([^/]+)\/followers$/);
+    if (req.method === 'GET' && getUserFollowersMatch) {
+      sendJson(res, 200, { followers: db.getActorFollowers('user', getUserFollowersMatch[1]) });
+      return;
+    }
+
+    const getUserFollowingMatch = pathname.match(/^\/api\/users\/([^/]+)\/following$/);
+    if (req.method === 'GET' && getUserFollowingMatch) {
+      sendJson(res, 200, { following: db.getActorFollowing('user', getUserFollowingMatch[1]) });
+      return;
+    }
+
+    const getUserLikedMatch = pathname.match(/^\/api\/users\/([^/]+)\/liked$/);
+    if (req.method === 'GET' && getUserLikedMatch) {
+      const userId = getUserLikedMatch[1];
+      sendJson(res, 200, { contents: db.getActorReactions('user', userId, 'like').map(contentWithStats) });
+      return;
+    }
+
+    const getUserDislikedMatch = pathname.match(/^\/api\/users\/([^/]+)\/disliked$/);
+    if (req.method === 'GET' && getUserDislikedMatch) {
+      const userId = getUserDislikedMatch[1];
+      sendJson(res, 200, { contents: db.getActorReactions('user', userId, 'dislike').map(contentWithStats) });
+      return;
+    }
+
+    const getUserFavoritesMatch = pathname.match(/^\/api\/users\/([^/]+)\/favorites$/);
+    if (req.method === 'GET' && getUserFavoritesMatch) {
+      const userId = getUserFavoritesMatch[1];
+      sendJson(res, 200, { contents: db.getActorReactions('user', userId, 'favorite').map(contentWithStats) });
+      return;
+    }
+
+    const getUserViewHistMatch = pathname.match(/^\/api\/users\/([^/]+)\/view-history$/);
+    if (req.method === 'GET' && getUserViewHistMatch) {
+      const userId = getUserViewHistMatch[1];
+      const targetKind = url.searchParams.get('targetKind') || 'content';
+      const items = db.getActorViewHistory('user', userId, targetKind);
+      if (targetKind === 'content') {
+        sendJson(res, 200, { items: items.map(contentWithStats) });
+      } else {
+        sendJson(res, 200, { items });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/contents') {
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+
+      const content = db.createContent({
+        authorKind: actor.kind,
+        authorId: actor.id,
+        title: body.title || '',
+        text: body.text || '',
+        mediaType: body.mediaType || 'text',
+        mediaUrl: body.mediaUrl || '',
+        media: Array.isArray(body.media) ? body.media : [],
+        tags: Array.isArray(body.tags) ? body.tags : [],
+        parentId: body.parentId || null,
+        repostOfId: body.repostOfId || null
+      });
+
+      sendJson(res, 201, { content: contentWithStats(content) });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/contents') {
+      const personalized = url.searchParams.get('personalized');
+      const followerKind = url.searchParams.get('followerKind');
+      const followerId = url.searchParams.get('followerId');
+      const vKind = url.searchParams.get('viewerKind');
+      const vId = url.searchParams.get('viewerId');
+      const mapper = contentWithStatsForViewer(vKind, vId);
+      let feed;
+      if (personalized === 'true' && followerKind && followerId) {
+        feed = db.getPersonalizedFeed({ followerKind, followerId }).map(mapper);
+      } else {
+        feed = db.listFeed().map(mapper);
+      }
+      sendJson(res, 200, { contents: feed });
+      return;
+    }
+
+    const getContentMatch = pathname.match(/^\/api\/contents\/([^/]+)$/);
+    if (req.method === 'GET' && getContentMatch) {
+      const id = getContentMatch[1];
+      const content = db.state.contents.find((c) => c.id === id);
+      if (!content) throw new Error('Content not found.');
+      const viewerKind = url.searchParams.get('viewerKind');
+      const viewerId = url.searchParams.get('viewerId');
+      if (viewerKind && viewerId) {
+        db.recordView({ actorKind: viewerKind, actorId: viewerId, targetKind: 'content', targetId: id });
+      } else {
+        content.viewCount += 1;
+        db.save();
+      }
+      const mapper = contentWithStatsForViewer(viewerKind, viewerId);
+      const children = db.getChildren(id).map(mapper);
+      const ancestors = db.getAncestors(id).map(mapper);
+      sendJson(res, 200, {
+        content: contentWithStats(content, viewerKind, viewerId),
+        children,
+        ancestors
+      });
+      return;
+    }
+
+    const deleteContentMatch = pathname.match(/^\/api\/contents\/([^/]+)$/);
+    if (req.method === 'DELETE' && deleteContentMatch) {
+      const id = deleteContentMatch[1];
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+      db.deleteContent(id, actor.kind, actor.id);
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    const getRepliesMatch = pathname.match(/^\/api\/contents\/([^/]+)\/replies$/);
+    if (req.method === 'GET' && getRepliesMatch) {
+      const contentId = getRepliesMatch[1];
+      const vKind = url.searchParams.get('viewerKind');
+      const vId = url.searchParams.get('viewerId');
+      const children = db.getChildren(contentId).map(contentWithStatsForViewer(vKind, vId));
+      sendJson(res, 200, { children });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/mentions/search') {
+      const q = url.searchParams.get('q') || '';
+      sendJson(res, 200, { results: db.searchByName(q) });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/mentions/all') {
+      sendJson(res, 200, { mentions: db.getAllNames() });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/search') {
+      const q = url.searchParams.get('q') || '';
+      const type = url.searchParams.get('type') || 'all';
+      const vKind = url.searchParams.get('viewerKind');
+      const vId = url.searchParams.get('viewerId');
+      const result = db.search({ query: q, type });
+      sendJson(res, 200, {
+        agents: result.agents,
+        users: result.users,
+        contents: result.contents.map(contentWithStatsForViewer(vKind, vId))
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/follow') {
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+      // targetAgentId (legacy) or targetId + targetKind
+      const followeeKind = body.targetKind || 'agent';
+      const followeeId = body.targetId || body.targetAgentId;
+      if (!followeeId) throw new Error('targetId or targetAgentId is required.');
+      db.follow({ followerKind: actor.kind, followerId: actor.id, followeeKind, followeeId });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/unfollow') {
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+      const followeeKind = body.targetKind || 'agent';
+      const followeeId = body.targetId || body.targetAgentId;
+      if (!followeeId) throw new Error('targetId or targetAgentId is required.');
+      db.unfollow({ followerKind: actor.kind, followerId: actor.id, followeeKind, followeeId });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/reactions') {
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+      db.react({ actorKind: actor.kind, actorId: actor.id, contentId: body.contentId, type: body.type });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/unreact') {
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+      db.unreact({ actorKind: actor.kind, actorId: actor.id, contentId: body.contentId, type: body.type });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/views') {
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+      db.recordView({ actorKind: actor.kind, actorId: actor.id, targetKind: body.targetKind, targetId: body.targetId });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/comments') {
+      const body = await parseBody(req);
+      const actor = resolveActor(body, apiUser);
+      const reply = db.createContent({
+        authorKind: actor.kind,
+        authorId: actor.id,
+        parentId: body.contentId,
+        text: body.text || ''
+      });
+      sendJson(res, 201, { comment: reply, content: contentWithStats(reply) });
+      return;
+    }
+
+    const userSubFeeMatch = pathname.match(/^\/api\/users\/([^/]+)\/subscription-fee$/);
+    if (req.method === 'POST' && userSubFeeMatch) {
+      const targetUserId = userSubFeeMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId || actorUserId !== targetUserId) throw new Error('Can only set your own subscription fee.');
+      db.setSubscriptionFee('user', targetUserId, body.fee);
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    // ── Tools for phase ────────────────────────────
+    const toolsPhaseMatch = pathname.match(/^\/api\/tools\/phase\/([^/]+)$/);
+    if (req.method === 'GET' && toolsPhaseMatch) {
+      const phase = toolsPhaseMatch[1];
+      const VALID_PHASES = ['browse', 'external_search', 'self_research', 'create'];
+      if (!VALID_PHASES.includes(phase)) {
+        sendJson(res, 400, { error: `Invalid phase: ${phase}` });
+        return;
+      }
+      const tools = getToolsForPhase(phase).map(t => ({
+        name: t.name,
+        description: t.description,
+        params: t.params
+      }));
+      sendJson(res, 200, { tools });
+      return;
+    }
+
+    const agentSubFeeMatch = pathname.match(/^\/api\/agents\/([^/]+)\/subscription-fee$/);
+    if (req.method === 'POST' && agentSubFeeMatch) {
+      const targetAgentId = agentSubFeeMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      requireOwner(actorUserId, targetAgentId);
+      db.setSubscriptionFee('agent', targetAgentId, body.fee);
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    // ── Per-agent skill overrides ────────────────────
+    const VALID_PHASES = ['browse', 'external_search', 'self_research', 'create'];
+    const skillMatch = pathname.match(/^\/api\/agents\/([^/]+)\/skills\/([^/]+)$/);
+    if (req.method === 'GET' && skillMatch) {
+      const agentId = skillMatch[1];
+      const phase = skillMatch[2];
+      if (!VALID_PHASES.includes(phase)) {
+        sendJson(res, 400, { error: `Invalid phase: ${phase}` });
+        return;
+      }
+      const override = agentStorage.readSkill(agentId, phase);
+      if (override !== null) {
+        sendJson(res, 200, { phase, content: override, isOverride: true });
+      } else {
+        // Read global skill
+        const globalPath = path.join(__dirname, 'skills', `${phase}.md`);
+        const content = fs.existsSync(globalPath) ? fs.readFileSync(globalPath, 'utf8') : '';
+        sendJson(res, 200, { phase, content, isOverride: false });
+      }
+      return;
+    }
+    if (req.method === 'PUT' && skillMatch) {
+      const agentId = skillMatch[1];
+      const phase = skillMatch[2];
+      if (!VALID_PHASES.includes(phase)) {
+        sendJson(res, 400, { error: `Invalid phase: ${phase}` });
+        return;
+      }
+      const body = await parseBody(req);
+
+      // Reset to default: delete the override
+      if (body.reset) {
+        agentStorage.deleteSkill(agentId, phase);
+        sendJson(res, 200, { ok: true, isOverride: false });
+        return;
+      }
+
+      const content = body.content;
+      if (typeof content !== 'string') {
+        sendJson(res, 400, { error: 'content is required' });
+        return;
+      }
+      // If content matches global exactly, delete the override
+      const globalPath = path.join(__dirname, 'skills', `${phase}.md`);
+      const globalContent = fs.existsSync(globalPath) ? fs.readFileSync(globalPath, 'utf8') : '';
+      if (content === globalContent) {
+        agentStorage.deleteSkill(agentId, phase);
+        sendJson(res, 200, { ok: true, isOverride: false });
+      } else {
+        agentStorage.writeSkill(agentId, phase, content);
+        sendJson(res, 200, { ok: true, isOverride: true });
+      }
+      return;
+    }
+
+    // ── Skill Editor Chat ──
+    if (req.method === 'POST' && pathname === '/api/skill-editor/chat') {
+      const body = await parseBody(req);
+      const { agentId, phase, skillContent, userMessage } = body;
+      const validPhases = ['browse', 'external_search', 'self_research', 'create'];
+      if (!validPhases.includes(phase)) throw new Error('Invalid phase');
+      if (!userMessage || typeof userMessage !== 'string') throw new Error('userMessage is required');
+      if (typeof skillContent !== 'string') throw new Error('skillContent is required');
+      const result = await runSkillEditorChat(phase, skillContent, userMessage);
+      sendJson(res, 200, result);
+      return;
+    }
+
+    // ── MCP Servers per-agent ────────────────────
+    const mcpListMatch = pathname.match(/^\/api\/agents\/([^/]+)\/mcp-servers$/);
+    const mcpDeleteMatch = pathname.match(/^\/api\/agents\/([^/]+)\/mcp-servers\/(\d+)$/);
+
+    if (req.method === 'GET' && mcpListMatch) {
+      const agentId = mcpListMatch[1];
+      const servers = agentStorage.readMcpServers(agentId);
+      sendJson(res, 200, { servers });
+      return;
+    }
+
+    if (req.method === 'POST' && mcpListMatch) {
+      const agentId = mcpListMatch[1];
+      const body = await parseBody(req);
+      const { name, url } = body;
+      if (!name || typeof name !== 'string') {
+        sendJson(res, 400, { error: 'name is required' });
+        return;
+      }
+      if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+        sendJson(res, 400, { error: 'url must be a valid http:// or https:// URL' });
+        return;
+      }
+      const servers = agentStorage.readMcpServers(agentId);
+      servers.push({ name: name.trim(), url: url.trim() });
+      agentStorage.writeMcpServers(agentId, servers);
+      sendJson(res, 200, { servers });
+      return;
+    }
+
+    if (req.method === 'DELETE' && mcpDeleteMatch) {
+      const agentId = mcpDeleteMatch[1];
+      const index = parseInt(mcpDeleteMatch[2], 10);
+      const servers = agentStorage.readMcpServers(agentId);
+      if (index < 0 || index >= servers.length) {
+        sendJson(res, 400, { error: 'Invalid server index' });
+        return;
+      }
+      servers.splice(index, 1);
+      agentStorage.writeMcpServers(agentId, servers);
+      sendJson(res, 200, { servers });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/credits/topup-intent') {
+      const body = await parseBody(req);
+      const externalUserId = body.externalUserId || apiUser?.id;
+      if (!externalUserId) throw new Error('externalUserId or API key is required.');
+
+      const amount = Number(body.amount);
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid amount.');
+
+      const intent = await maybeCreateStripePaymentIntent({
+        amount,
+        currency: body.currency || 'usd',
+        externalUserId
+      });
+
+      db.createPendingStripeTopup({
+        externalUserId,
+        amount,
+        currency: body.currency || 'usd',
+        paymentIntentId: intent.paymentIntentId,
+        provider: intent.provider
+      });
+
+      sendJson(res, 200, { paymentIntent: intent });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/credits/topup-confirm') {
+      const body = await parseBody(req);
+      const externalUserId = body.externalUserId || apiUser?.id;
+      if (!externalUserId) throw new Error('externalUserId or API key is required.');
+
+      const amount = Number(body.amount);
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid amount.');
+
+      if (process.env.STRIPE_SECRET_KEY) {
+        throw new Error('For real Stripe mode, credits are applied only by /api/stripe/webhook after payment_intent.succeeded.');
+      }
+
+      const paymentIntentId = body.paymentIntentId || `pi_manual_${crypto.randomUUID()}`;
+      const result = db.markTopupCredited({
+        paymentIntentId,
+        stripeEventId: `manual_${paymentIntentId}`,
+        amountMinor: Math.round(amount * 100),
+        currency: body.currency || 'usd'
+      });
+
+      if (result.ignored) {
+        const user = db.addCreditsToUser(externalUserId, amount, {
+          paymentIntentId,
+          mode: 'manual_without_pending'
+        });
+        sendJson(res, 200, { user, mode: 'manual' });
+        return;
+      }
+      const user = db.getUser(externalUserId);
+      sendJson(res, 200, { user, mode: 'mock_webhook' });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/credits/transfer') {
+      const body = await parseBody(req);
+      const externalUserId = body.externalUserId || apiUser?.id;
+      if (!externalUserId) throw new Error('externalUserId or API key is required.');
+
+      const transfer = db.transferUserToAgent({
+        userId: externalUserId,
+        agentId: body.agentId,
+        amount: body.amount
+      });
+
+      sendJson(res, 200, { transfer });
+      return;
+    }
+
+    const dashboardMatch = pathname.match(/^\/api\/dashboard\/([^/]+)$/);
+    if (req.method === 'GET' && dashboardMatch) {
+      const userId = dashboardMatch[1];
+      const user = db.getUser(userId);
+      if (!user) throw new Error('User not found.');
+
+      const agents = db.getOwnedAgents(userId);
+      const contentCount = agents.reduce((sum, a) => {
+        return sum + db.state.contents.filter((c) => c.authorAgentId === a.id).length;
+      }, 0);
+
+      sendJson(res, 200, {
+        user,
+        agents,
+        metrics: {
+          contentCount
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
+      sendFile(res, path.join(publicDir, 'index.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/search') {
+      sendFile(res, path.join(publicDir, 'search.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/login') {
+      sendFile(res, path.join(publicDir, 'login.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/register') {
+      sendFile(res, path.join(publicDir, 'register.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/agent') {
+      sendFile(res, path.join(publicDir, 'agent.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/user') {
+      sendFile(res, path.join(publicDir, 'user.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/post') {
+      sendFile(res, path.join(publicDir, 'post.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/following') {
+      sendFile(res, path.join(publicDir, 'following.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/liked') {
+      sendFile(res, path.join(publicDir, 'liked.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/favorites') {
+      sendFile(res, path.join(publicDir, 'favorites.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/myposts') {
+      sendFile(res, path.join(publicDir, 'myposts.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/myactivity') {
+      sendFile(res, path.join(publicDir, 'myactivity.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/dashboard') {
+      sendFile(res, path.join(publicDir, 'dashboard.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/configure') {
+      sendFile(res, path.join(publicDir, 'configure.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/skill-edit') {
+      sendFile(res, path.join(publicDir, 'skill-edit.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname.startsWith('/media/')) {
+      const mediaFile = path.join(__dirname, '..', 'data', 'media', path.basename(pathname));
+      sendFile(res, mediaFile);
+      return;
+    }
+
+    // Serve per-agent files: /agents/<agentId>/files/<filename>
+    const agentFileMatch = pathname.match(/^\/agents\/([^/]+)\/files\/([^/]+)$/);
+    if (req.method === 'GET' && agentFileMatch) {
+      const agentId = agentFileMatch[1];
+      const filename = path.basename(agentFileMatch[2]); // sanitize
+      const filePath = path.join(__dirname, '..', 'data', 'agents', agentId, 'files', filename);
+      sendFile(res, filePath);
+      return;
+    }
+
+    const staticFile = path.join(publicDir, pathname);
+    if (req.method === 'GET' && staticFile.startsWith(publicDir) && fs.existsSync(staticFile)) {
+      sendFile(res, staticFile);
+      return;
+    }
+
+    sendJson(res, 404, { error: 'Not found' });
+  } catch (error) {
+    sendJson(res, 400, { error: error.message || 'Request failed' });
+  }
+});
+
+const port = Number(process.env.PORT || 3000);
+server.listen(port, "127.0.0.1", () => {
+  console.log(`Server running on http://localhost:${port}`);
+});

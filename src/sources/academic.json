@@ -1,0 +1,203 @@
+[
+  {
+    "id": "arxiv",
+    "name": "ArXiv",
+    "category": "Academic & Research",
+    "topics": ["artificial intelligence", "machine learning", "physics", "science", "mathematics"],
+    "rss": { "feedUrl": "https://rss.arxiv.org/rss/cs" },
+    "search": {
+      "endpoint": "https://export.arxiv.org/api/query",
+      "searchParam": "search_query",
+      "resultPath": "feed",
+      "limitParam": "max_results",
+      "extraParams": { "start": "0" }
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pubmed",
+    "name": "PubMed",
+    "category": "Academic & Research",
+    "topics": ["biology", "health", "nutrition", "science", "medical research"],
+    "search": {
+      "endpoint": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+      "searchParam": "term",
+      "resultPath": "esearchresult.idlist",
+      "limitParam": "retmax",
+      "extraParams": { "db": "pubmed", "retmode": "json" }
+    },
+    "normalize": {
+      "titleTemplate": "PubMed article {_item}",
+      "snippetTemplate": "Medical/biological research article",
+      "urlTemplate": "https://pubmed.ncbi.nlm.nih.gov/{_item}/"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "wikipedia",
+    "name": "Wikipedia",
+    "category": "Academic & Research",
+    "topics": ["education", "history", "science", "philosophy", "linguistics"],
+    "search": {
+      "endpoint": "https://en.wikipedia.org/w/api.php",
+      "searchParam": "srsearch",
+      "resultPath": "query.search",
+      "limitParam": "srlimit",
+      "extraParams": { "action": "query", "list": "search", "format": "json", "origin": "*" }
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "snippet",
+      "urlTemplate": "https://en.wikipedia.org/wiki/{title}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-library",
+    "name": "Open Library",
+    "category": "Academic & Research",
+    "topics": ["books", "history", "education", "philosophy", "literature"],
+    "search": {
+      "endpoint": "https://openlibrary.org/search.json",
+      "searchParam": "q",
+      "resultPath": "docs",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetTemplate": "Author: {author_name} · First published: {first_publish_year}",
+      "urlTemplate": "https://openlibrary.org{key}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "semantic-scholar",
+    "name": "Semantic Scholar",
+    "category": "Academic & Research",
+    "topics": ["artificial intelligence", "machine learning", "science", "biology", "neuroscience"],
+    "search": {
+      "endpoint": "https://api.semanticscholar.org/graph/v1/paper/search",
+      "searchParam": "query",
+      "resultPath": "data",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetTemplate": "Year: {year} · Citations: {citationCount}",
+      "urlTemplate": "https://www.semanticscholar.org/paper/{paperId}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "crossref",
+    "name": "Crossref",
+    "category": "Academic & Research",
+    "topics": ["science", "education", "biology", "chemistry"],
+    "search": {
+      "endpoint": "https://api.crossref.org/works",
+      "searchParam": "query",
+      "resultPath": "message.items",
+      "limitParam": "rows"
+    },
+    "normalize": {
+      "titlePath": "title.0",
+      "snippetTemplate": "Type: {type} · Citations: {is-referenced-by-count}",
+      "urlPath": "URL"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "core-ac",
+    "name": "CORE",
+    "category": "Academic & Research",
+    "topics": ["science", "education", "mathematics", "philosophy"],
+    "rss": { "feedUrl": "https://core.ac.uk/rss/repositories/all" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "doaj",
+    "name": "DOAJ",
+    "category": "Academic & Research",
+    "topics": ["science", "education", "biology", "chemistry"],
+    "search": {
+      "endpoint": "https://doaj.org/api/search/articles",
+      "searchParam": "",
+      "resultPath": "results",
+      "limitParam": "pageSize"
+    },
+    "normalize": {
+      "titlePath": "bibjson.title",
+      "snippetPath": "bibjson.abstract",
+      "urlTemplate": "https://doaj.org/article/{id}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mit-news",
+    "name": "MIT News",
+    "category": "Academic & Research",
+    "topics": ["technology", "science", "artificial intelligence", "robotics"],
+    "rss": { "feedUrl": "https://news.mit.edu/rss/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "stanford-news",
+    "name": "Stanford News",
+    "category": "Academic & Research",
+    "topics": ["technology", "science", "education", "artificial intelligence"],
+    "rss": { "feedUrl": "https://news.stanford.edu/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "phd-comics",
+    "name": "PhD Comics",
+    "category": "Academic & Research",
+    "topics": ["education", "science", "comics"],
+    "rss": { "feedUrl": "https://phdcomics.com/gradfeed.php" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "gutenberg",
+    "name": "Project Gutenberg",
+    "category": "Academic & Research",
+    "topics": ["books", "literature", "history", "philosophy"],
+    "rss": { "feedUrl": "https://www.gutenberg.org/cache/epub/feeds/today.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

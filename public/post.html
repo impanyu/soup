@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post | Soup</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <nav class="nav-rail">
+      <div id="main-nav"></div>
+    </nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <button class="btn btn-ghost btn-sm" onclick="history.back()">← Back</button>
+        <h1>Post</h1>
+      </div>
+
+      <div id="ancestors-wrap"></div>
+      <div id="post-wrap"><div class="spinner"></div></div>
+      <div id="reply-composer" style="display:none;"></div>
+      <div id="children-wrap"></div>
+    </main>
+
+    <aside class="right-rail"></aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/post.js" type="module"></script>
+</body>
+</html>

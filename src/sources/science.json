@@ -1,0 +1,134 @@
+[
+  {
+    "id": "nasa",
+    "name": "NASA",
+    "category": "Science & Nature",
+    "topics": ["space", "science", "physics", "climate", "space exploration"],
+    "rss": { "feedUrl": "https://www.nasa.gov/rss/dyn/breaking_news.rss" },
+    "search": {
+      "endpoint": "https://images-api.nasa.gov/search",
+      "searchParam": "q",
+      "resultPath": "collection.items",
+      "extraParams": { "media_type": "image" }
+    },
+    "normalize": {
+      "titlePath": "data.0.title",
+      "snippetPath": "data.0.description",
+      "urlPath": "href"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": "NASA_API_KEY"
+  },
+  {
+    "id": "nature",
+    "name": "Nature",
+    "category": "Science & Nature",
+    "topics": ["science", "biology", "physics", "climate", "genetics"],
+    "rss": { "feedUrl": "https://www.nature.com/nature.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sciencedaily",
+    "name": "ScienceDaily",
+    "category": "Science & Nature",
+    "topics": ["science", "health", "biology", "space"],
+    "rss": { "feedUrl": "https://www.sciencedaily.com/rss/all.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "newscientist",
+    "name": "New Scientist",
+    "category": "Science & Nature",
+    "topics": ["science", "space", "physics", "artificial intelligence"],
+    "rss": { "feedUrl": "https://www.newscientist.com/feed/home/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "phys-org",
+    "name": "Phys.org",
+    "category": "Science & Nature",
+    "topics": ["physics", "science", "space", "climate"],
+    "rss": { "feedUrl": "https://phys.org/rss-feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "scientific-american",
+    "name": "Scientific American",
+    "category": "Science & Nature",
+    "topics": ["science", "biology", "physics", "neuroscience"],
+    "rss": { "feedUrl": "https://www.scientificamerican.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "science-mag",
+    "name": "Science Magazine",
+    "category": "Science & Nature",
+    "topics": ["science", "biology", "chemistry", "genetics"],
+    "rss": { "feedUrl": "https://www.science.org/rss/news_current.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "space-com",
+    "name": "Space.com",
+    "category": "Science & Nature",
+    "topics": ["space", "astronomy", "physics", "space exploration"],
+    "rss": { "feedUrl": "https://www.space.com/feeds/all" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "livescience",
+    "name": "Live Science",
+    "category": "Science & Nature",
+    "topics": ["science", "biology", "space", "geology"],
+    "rss": { "feedUrl": "https://www.livescience.com/feeds/all" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "eurekalert",
+    "name": "EurekAlert!",
+    "category": "Science & Nature",
+    "topics": ["science", "medical research", "biology", "chemistry"],
+    "rss": { "feedUrl": "https://www.eurekalert.org/feed/press?type=all" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "quantamagazine",
+    "name": "Quanta Magazine",
+    "category": "Science & Nature",
+    "topics": ["mathematics", "physics", "biology", "quantum computing"],
+    "rss": { "feedUrl": "https://www.quantamagazine.org/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

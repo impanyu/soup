@@ -1,0 +1,158 @@
+[
+  {
+    "id": "reddit",
+    "name": "Reddit",
+    "category": "Social & Discussion",
+    "topics": ["technology", "gaming", "fitness", "politics"],
+    "rss": { "feedUrl": "https://www.reddit.com/.rss" },
+    "search": {
+      "endpoint": "https://www.reddit.com/search.json",
+      "searchParam": "q",
+      "resultPath": "data.children",
+      "limitParam": "limit",
+      "extraParams": { "sort": "relevance" }
+    },
+    "normalize": {
+      "titlePath": "data.title",
+      "snippetPath": "data.selftext",
+      "urlTemplate": "https://reddit.com{data.permalink}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "lobsters",
+    "name": "Lobste.rs",
+    "category": "Social & Discussion",
+    "topics": ["technology", "web development", "cybersecurity"],
+    "rss": { "feedUrl": "https://lobste.rs/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "producthunt",
+    "name": "Product Hunt",
+    "category": "Social & Discussion",
+    "topics": ["technology", "startups", "design", "mobile apps"],
+    "rss": { "feedUrl": "https://www.producthunt.com/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mastodon",
+    "name": "Mastodon",
+    "category": "Social & Discussion",
+    "topics": ["technology", "art", "politics", "philosophy"],
+    "search": {
+      "endpoint": "https://mastodon.social/api/v2/search",
+      "searchParam": "q",
+      "resultPath": "statuses",
+      "limitParam": "limit",
+      "extraParams": { "type": "statuses" }
+    },
+    "normalize": {
+      "titleTemplate": "@{account.username}",
+      "snippetPath": "content",
+      "urlPath": "url"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "lemmy",
+    "name": "Lemmy",
+    "category": "Social & Discussion",
+    "topics": ["technology", "gaming", "politics", "science"],
+    "rss": { "feedUrl": "https://lemmy.world/feeds/all.xml" },
+    "search": {
+      "endpoint": "https://lemmy.world/api/v3/search",
+      "searchParam": "q",
+      "resultPath": "posts",
+      "limitParam": "limit",
+      "extraParams": { "type_": "Posts" }
+    },
+    "normalize": {
+      "titlePath": "post.name",
+      "snippetPath": "post.body",
+      "urlPath": "post.ap_id"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "tildes",
+    "name": "Tildes",
+    "category": "Social & Discussion",
+    "topics": ["technology", "philosophy", "science", "books"],
+    "rss": { "feedUrl": "https://tildes.net/topics.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "slashdot",
+    "name": "Slashdot",
+    "category": "Social & Discussion",
+    "topics": ["technology", "science", "cybersecurity", "politics"],
+    "rss": { "feedUrl": "https://rss.slashdot.org/Slashdot/slashdotMain" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hackernews-new",
+    "name": "HN New",
+    "category": "Social & Discussion",
+    "topics": ["technology", "startups", "web development"],
+    "rss": { "feedUrl": "https://hnrss.org/newest" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hackernews-ask",
+    "name": "HN Ask",
+    "category": "Social & Discussion",
+    "topics": ["technology", "startups", "education"],
+    "rss": { "feedUrl": "https://hnrss.org/ask" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hackernews-show",
+    "name": "HN Show",
+    "category": "Social & Discussion",
+    "topics": ["technology", "startups", "design"],
+    "rss": { "feedUrl": "https://hnrss.org/show" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "indie-hackers",
+    "name": "Indie Hackers",
+    "category": "Social & Discussion",
+    "topics": ["startups", "entrepreneurship", "ecommerce", "marketing"],
+    "rss": { "feedUrl": "https://www.indiehackers.com/feed.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

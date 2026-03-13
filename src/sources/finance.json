@@ -1,0 +1,164 @@
+[
+  {
+    "id": "coincap",
+    "name": "CoinCap",
+    "category": "Finance & Crypto",
+    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
+    "search": {
+      "endpoint": "https://api.coincap.io/v2/assets",
+      "searchParam": "search",
+      "resultPath": "data",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titleTemplate": "{name} ({symbol})",
+      "snippetTemplate": "Rank: {rank} · Price: ${priceUsd}",
+      "urlTemplate": "https://coincap.io/assets/{id}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "yahoo-finance",
+    "name": "Yahoo Finance",
+    "category": "Finance & Crypto",
+    "topics": ["finance", "investing", "business", "economics"],
+    "rss": { "feedUrl": "https://finance.yahoo.com/news/rssindex" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "marketwatch",
+    "name": "MarketWatch",
+    "category": "Finance & Crypto",
+    "topics": ["finance", "investing", "economics", "business"],
+    "rss": { "feedUrl": "https://feeds.marketwatch.com/marketwatch/topstories/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "coindesk",
+    "name": "CoinDesk",
+    "category": "Finance & Crypto",
+    "topics": ["cryptocurrency", "blockchain", "finance"],
+    "rss": { "feedUrl": "https://www.coindesk.com/arc/outboundfeeds/rss/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "financial-times",
+    "name": "Financial Times",
+    "category": "Finance & Crypto",
+    "topics": ["finance", "business", "economics", "world news"],
+    "rss": { "feedUrl": "https://www.ft.com/?format=rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "coingecko",
+    "name": "CoinGecko",
+    "category": "Finance & Crypto",
+    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
+    "search": {
+      "endpoint": "https://api.coingecko.com/api/v3/search",
+      "searchParam": "query",
+      "resultPath": "coins",
+      "limitParam": null
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Symbol: {symbol} · Market Cap Rank: {market_cap_rank}",
+      "urlTemplate": "https://www.coingecko.com/en/coins/{id}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "seeking-alpha",
+    "name": "Seeking Alpha",
+    "category": "Finance & Crypto",
+    "topics": ["investing", "stock market", "finance", "personal finance"],
+    "rss": { "feedUrl": "https://seekingalpha.com/market_currents.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "investopedia",
+    "name": "Investopedia",
+    "category": "Finance & Crypto",
+    "topics": ["personal finance", "investing", "stock market", "economics"],
+    "rss": { "feedUrl": "https://www.investopedia.com/feedbuilder/feed/getfeed?feedName=rss_headline" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bloomberg-markets",
+    "name": "Bloomberg Markets",
+    "category": "Finance & Crypto",
+    "topics": ["finance", "investing", "economics", "business"],
+    "rss": { "feedUrl": "https://feeds.bloomberg.com/markets/news.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cointelegraph",
+    "name": "Cointelegraph",
+    "category": "Finance & Crypto",
+    "topics": ["cryptocurrency", "blockchain", "finance"],
+    "rss": { "feedUrl": "https://cointelegraph.com/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "motley-fool",
+    "name": "Motley Fool",
+    "category": "Finance & Crypto",
+    "topics": ["investing", "stock market", "personal finance", "business"],
+    "rss": { "feedUrl": "https://www.fool.com/feeds/index.aspx" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "alpha-vantage",
+    "name": "Alpha Vantage",
+    "category": "Finance & Crypto",
+    "topics": ["stock market", "finance", "investing", "data science"],
+    "search": {
+      "endpoint": "https://www.alphavantage.co/query",
+      "searchParam": "keywords",
+      "resultPath": "bestMatches",
+      "extraParams": { "function": "SYMBOL_SEARCH" }
+    },
+    "normalize": {
+      "titleTemplate": "{1. symbol} - {2. name}",
+      "snippetTemplate": "Type: {3. type} · Region: {4. region}",
+      "urlTemplate": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={1. symbol}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": true,
+    "envKey": "ALPHA_VANTAGE_API_KEY"
+  }
+]

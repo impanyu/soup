@@ -1,0 +1,160 @@
+[
+  {
+    "id": "food-network",
+    "name": "Food Network",
+    "category": "Lifestyle",
+    "topics": ["food", "nutrition", "travel", "cooking"],
+    "rss": { "feedUrl": "https://www.foodnetwork.com/fn-dish/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "lonely-planet",
+    "name": "Lonely Planet",
+    "category": "Lifestyle",
+    "topics": ["travel", "food", "photography"],
+    "rss": { "feedUrl": "https://www.lonelyplanet.com/feed.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "vogue",
+    "name": "Vogue",
+    "category": "Lifestyle",
+    "topics": ["fashion", "design", "photography", "art"],
+    "rss": { "feedUrl": "https://www.vogue.com/feed/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "designboom",
+    "name": "Designboom",
+    "category": "Lifestyle",
+    "topics": ["design", "art", "photography", "architecture"],
+    "rss": { "feedUrl": "https://www.designboom.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "brain-pickings",
+    "name": "The Marginalian",
+    "category": "Lifestyle",
+    "topics": ["books", "philosophy", "art", "education"],
+    "rss": { "feedUrl": "https://www.themarginalian.org/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-meteo",
+    "name": "Open-Meteo",
+    "category": "Lifestyle",
+    "topics": ["climate", "travel", "sports"],
+    "search": {
+      "endpoint": "https://api.open-meteo.com/v1/forecast",
+      "searchParam": "latitude",
+      "resultPath": "current_weather"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "climate-gov",
+    "name": "Climate.gov",
+    "category": "Lifestyle",
+    "topics": ["climate", "science", "environment"],
+    "rss": { "feedUrl": "https://www.climate.gov/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "treehugger",
+    "name": "Treehugger",
+    "category": "Lifestyle",
+    "topics": ["sustainability", "environment", "gardening", "renewable energy"],
+    "rss": { "feedUrl": "https://www.treehugger.com/feeds/all" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bon-appetit",
+    "name": "Bon Appétit",
+    "category": "Lifestyle",
+    "topics": ["food", "cooking", "travel"],
+    "rss": { "feedUrl": "https://www.bonappetit.com/feed/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "national-geographic",
+    "name": "National Geographic",
+    "category": "Lifestyle",
+    "topics": ["travel", "photography", "science", "ecology"],
+    "rss": { "feedUrl": "https://www.nationalgeographic.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "atlas-obscura",
+    "name": "Atlas Obscura",
+    "category": "Lifestyle",
+    "topics": ["travel", "history", "folklore", "food"],
+    "rss": { "feedUrl": "https://www.atlasobscura.com/feeds/latest" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "curbed",
+    "name": "Curbed",
+    "category": "Lifestyle",
+    "topics": ["architecture", "home improvement", "design", "real estate"],
+    "rss": { "feedUrl": "https://www.curbed.com/rss/index.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "dwell",
+    "name": "Dwell",
+    "category": "Lifestyle",
+    "topics": ["architecture", "design", "home improvement"],
+    "rss": { "feedUrl": "https://www.dwell.com/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "serious-eats",
+    "name": "Serious Eats",
+    "category": "Lifestyle",
+    "topics": ["food", "cooking", "nutrition"],
+    "rss": { "feedUrl": "https://www.seriouseats.com/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

@@ -1,0 +1,239 @@
+[
+  {
+    "id": "youtube",
+    "name": "YouTube Search",
+    "category": "Multimedia",
+    "topics": ["streaming", "music", "film", "education", "gaming"],
+    "search": {
+      "endpoint": "https://www.googleapis.com/youtube/v3/search",
+      "searchParam": "q",
+      "resultPath": "items",
+      "limitParam": "maxResults",
+      "extraParams": { "part": "snippet", "type": "video" }
+    },
+    "normalize": {
+      "titlePath": "snippet.title",
+      "snippetPath": "snippet.description",
+      "urlTemplate": "https://www.youtube.com/watch?v={id.videoId}"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "YOUTUBE_API_KEY"
+  },
+  {
+    "id": "unsplash",
+    "name": "Unsplash",
+    "category": "Multimedia",
+    "topics": ["photography", "art", "design", "travel"],
+    "search": {
+      "endpoint": "https://api.unsplash.com/search/photos",
+      "searchParam": "query",
+      "resultPath": "results",
+      "limitParam": "per_page"
+    },
+    "normalize": {
+      "titlePath": "description",
+      "snippetTemplate": "Photo by {user.name} on Unsplash",
+      "urlPath": "links.html"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "UNSPLASH_ACCESS_KEY"
+  },
+  {
+    "id": "pexels",
+    "name": "Pexels",
+    "category": "Multimedia",
+    "topics": ["photography", "art", "design"],
+    "search": {
+      "endpoint": "https://api.pexels.com/v1/search",
+      "searchParam": "query",
+      "resultPath": "photos",
+      "limitParam": "per_page"
+    },
+    "normalize": {
+      "titlePath": "alt",
+      "snippetTemplate": "Photo by {photographer}",
+      "urlPath": "url"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "PEXELS_API_KEY"
+  },
+  {
+    "id": "wikimedia-commons",
+    "name": "Wikimedia Commons",
+    "category": "Multimedia",
+    "topics": ["photography", "history", "science", "education"],
+    "search": {
+      "endpoint": "https://commons.wikimedia.org/w/api.php",
+      "searchParam": "gsrsearch",
+      "resultPath": "query.pages",
+      "limitParam": "gsrlimit",
+      "extraParams": { "action": "query", "generator": "search", "gsrnamespace": "6", "prop": "imageinfo", "iiprop": "url|extmetadata", "format": "json", "origin": "*" }
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "title",
+      "urlTemplate": "https://commons.wikimedia.org/wiki/{title}"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "podcast-index",
+    "name": "Podcast Index",
+    "category": "Multimedia",
+    "topics": ["podcasts", "music", "education", "technology"],
+    "search": {
+      "endpoint": "https://api.podcastindex.org/api/1.0/search/byterm",
+      "searchParam": "q",
+      "resultPath": "feeds",
+      "limitParam": "max"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "description",
+      "urlPath": "link"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "PODCAST_INDEX_API_KEY"
+  },
+  {
+    "id": "internet-archive",
+    "name": "Internet Archive",
+    "category": "Multimedia",
+    "topics": ["books", "history", "music", "film", "education"],
+    "search": {
+      "endpoint": "https://archive.org/advancedsearch.php",
+      "searchParam": "q",
+      "resultPath": "response.docs",
+      "limitParam": "rows",
+      "extraParams": { "output": "json", "fl[]": "identifier,title,description,mediatype" }
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "description",
+      "urlTemplate": "https://archive.org/details/{identifier}"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "giphy",
+    "name": "Giphy",
+    "category": "Multimedia",
+    "topics": ["animation", "art", "comics"],
+    "search": {
+      "endpoint": "https://api.giphy.com/v1/gifs/search",
+      "searchParam": "q",
+      "resultPath": "data",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetTemplate": "GIF by {username}",
+      "urlPath": "url"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "GIPHY_API_KEY"
+  },
+  {
+    "id": "librivox",
+    "name": "LibriVox",
+    "category": "Multimedia",
+    "topics": ["books", "literature", "history", "education"],
+    "rss": { "feedUrl": "https://librivox.org/rss/latest_releases" },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "ted-talks",
+    "name": "TED Talks",
+    "category": "Multimedia",
+    "topics": ["education", "science", "technology", "philosophy"],
+    "rss": { "feedUrl": "https://feeds.feedburner.com/TEDTalks_audio" },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "npr-podcasts",
+    "name": "NPR Podcasts",
+    "category": "Multimedia",
+    "topics": ["podcasts", "politics", "cultural studies", "education"],
+    "rss": { "feedUrl": "https://feeds.npr.org/510318/podcast.xml" },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bbc-podcasts",
+    "name": "BBC Podcasts",
+    "category": "Multimedia",
+    "topics": ["podcasts", "world news", "science", "history"],
+    "rss": { "feedUrl": "https://podcasts.files.bbci.co.uk/p02nq0gn.rss" },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "freesound",
+    "name": "Freesound",
+    "category": "Multimedia",
+    "topics": ["music", "creative writing", "podcasts"],
+    "search": {
+      "endpoint": "https://freesound.org/apiv2/search/text/",
+      "searchParam": "query",
+      "resultPath": "results",
+      "limitParam": "page_size"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Duration: {duration}s · Tags: {tags}",
+      "urlTemplate": "https://freesound.org/people/{username}/sounds/{id}/"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-game-art",
+    "name": "OpenGameArt",
+    "category": "Multimedia",
+    "topics": ["game development", "art", "design", "animation"],
+    "rss": { "feedUrl": "https://opengameart.org/art.xml" },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "vimeo",
+    "name": "Vimeo Staff Picks",
+    "category": "Multimedia",
+    "topics": ["film", "animation", "photography", "art"],
+    "rss": { "feedUrl": "https://vimeo.com/channels/staffpicks/videos/rss" },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

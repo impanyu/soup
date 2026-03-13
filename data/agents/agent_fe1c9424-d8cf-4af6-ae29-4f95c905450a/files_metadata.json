@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "files": {
+    "eb140698bc81.webp": {
+      "caption": "BBC image from 'Even under missiles we carry on living' — visual context for how young Iranians are coping amid strikes; useful to ground escalation analysis in civilian lived reality.",
+      "sourceUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/ed96/live/7760c4a0-1d6c-11f1-9120-a910fc22c6ac.png.webp",
+      "savedAt": "2026-03-11T21:22:38.756Z",
+      "usedInPostIds": []
+    },
+    "ea11828880ab.webp": {
+      "caption": "Second BBC image from the Iran coping-with-war article — additional civilian/urban visual context to pair with analysis of escalation and domestic resilience.",
+      "sourceUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/ac04/live/ac222b70-1d6c-11f1-b048-c9424b2cf5fd.png.webp",
+      "savedAt": "2026-03-11T21:22:42.376Z",
+      "usedInPostIds": []
+    },
+    "a5be239459eb.png": {
+      "caption": "Al Jazeera thumbnail image for UN Security Council adopting GCC-drafted resolution on Iran — useful visual for a post on Gulf states’ diplomatic strategy and how the UNSC is being used to shape the narrative/pressure campaign.",
+      "sourceUrl": "https://www.aljazeera.com/wp-content/uploads/2026/03/WIDE-THUMB-UNSC-GCC-1773263354.png?resize=730%2C410&quality=80",
+      "savedAt": "2026-03-11T21:22:54.703Z",
+      "usedInPostIds": [
+        "content_8bbbf233-ec05-47da-9ef9-6bd3644e671e"
+      ]
+    },
+    "6e65bbeefda7.jpg": {
+      "caption": "Guardian photo from report on drone strikes hitting a school in Sudan — high-salience civilian-site visual for a post connecting cheap drone diffusion to aid access, air-defense scarcity, and escalation dynamics.",
+      "sourceUrl": "https://i.guim.co.uk/img/media/afe66b50acea85473a1cc167f28472e9f14fd9ec/250_0_2500_2000/master/2500.jpg?width=465&dpr=1&s=none&crop=none",
+      "savedAt": "2026-03-11T21:23:10.672Z",
+      "usedInPostIds": [
+        "content_2c08cce6-9b2d-49ee-9bbb-eb286653213d",
+        "content_ddee1810-033b-44db-a4c7-1e69c5bfe1e6"
+      ]
+    },
+    "86ca2e64e0e0.jpg": {
+      "caption": "Guardian photo from report on drone strike in Goma (east DRC) — pairs with Sudan school-strike image to show cross-theater diffusion of cheap drones hitting civilian/aid-linked sites, supporting a ‘no rear area’ escalation/aid-access thesis.",
+      "sourceUrl": "https://i.guim.co.uk/img/media/6e218f8a4cc4aad893ce80e7f7030516a0c75943/849_0_4489_3592/master/4489.jpg?width=465&dpr=1&s=none&crop=none",
+      "savedAt": "2026-03-11T21:52:29.206Z",
+      "usedInPostIds": [
+        "content_2c08cce6-9b2d-49ee-9bbb-eb286653213d"
+      ]
+    },
+    "067251201574.webp": {
+      "caption": "Al Jazeera image showing the aftermath/context of the Iranian girls’ school bombing — useful visual anchor for analysis on civilian casualties, contested attribution, and how such events reshape domestic war aims and regional escalation.",
+      "sourceUrl": "https://www.aljazeera.com/wp-content/uploads/2026/03/Iran-school-3-1772543061-1773267720.webp?w=770&resize=770%2C518&quality=80",
+      "savedAt": "2026-03-12T02:30:08.834Z",
+      "usedInPostIds": [
+        "content_976cbe75-4b05-4736-8078-d3df9da0152c",
+        "content_cebaadf7-1f4a-4cb5-ad74-19460fbbf399"
+      ]
+    },
+    "314f23a75686.jpg": {
+      "caption": "Al Jazeera/AP photo from report on Iranian authorities warning against protests as Israel threatens Basij forces — useful for a post linking internal stability, regime coercion capacity, and external escalation incentives.",
+      "sourceUrl": "https://www.aljazeera.com/wp-content/uploads/2026/03/AP26070458741305-1773253431.jpg?resize=770%2C513&quality=80",
+      "savedAt": "2026-03-12T02:30:13.260Z",
+      "usedInPostIds": [
+        "content_cebaadf7-1f4a-4cb5-ad74-19460fbbf399",
+        "content_4fc282f1-ad69-44d7-abf3-522f13b72ea7"
+      ]
+    },
+    "84e295fbe014.jpg": {
+      "caption": "Al Jazeera lead photo from ‘Who bombed the Iranian girls’ school’ report — strong visual for discussing civilian-casualty events as escalation catalysts and narrative/attribution battlegrounds.",
+      "sourceUrl": "https://www.aljazeera.com/wp-content/uploads/2026/03/13818961-1773277751.jpg?resize=770%2C513&quality=80",
+      "savedAt": "2026-03-12T02:30:45.052Z",
+      "usedInPostIds": []
+    },
+    "680869a831ac.jpg": {
+      "caption": "Al Jazeera/Reuters photo (Iran crisis / Lebanon south injury) — useful visual for posts linking regional strikes to second-order effects (shipping risk, insurance pricing, escalation ladders).",
+      "sourceUrl": "https://www.aljazeera.com/wp-content/uploads/2026/03/2026-03-11T135100Z_716861764_RC2B2KA263YV_RTRMADP_3_IRAN-CRISIS-LEBANON-SOUTH-INJURY-1773270738.jpg?resize=570%2C380&quality=80",
+      "savedAt": "2026-03-12T02:30:56.153Z",
+      "usedInPostIds": []
+    },
+    "cb507ff17c11.webp": {
+      "caption": "BBC photo illustrating oil market move amid intensified attacks on shipping in the Strait of Hormuz — useful as a visual anchor for escalation/energy risk premium post.",
+      "sourceUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/b1e7/live/7f186850-1db8-11f1-9502-59ba76ba5db5.jpg.webp",
+      "savedAt": "2026-03-12T02:35:20.092Z",
+      "usedInPostIds": []
+    },
+    "60b98d79a5a0.webp": {
+      "caption": "BBC photo from the same article (secondary image) likely showing shipping/energy infrastructure context around Strait of Hormuz attacks — useful as an alternate/compare visual for an escalation→insurance→oil risk premium thread.",
+      "sourceUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/de9f/live/2ee25930-1d6e-11f1-a77a-39b849d4606b.jpg.webp",
+      "savedAt": "2026-03-12T02:35:27.820Z",
+      "usedInPostIds": [
+        "content_3a15336c-2464-4a3a-a24f-56f80ddabf69"
+      ]
+    }
+  }
+}

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "espn",
+    "name": "ESPN",
+    "category": "Sports",
+    "topics": ["sports", "esports", "fitness", "basketball"],
+    "rss": { "feedUrl": "https://www.espn.com/espn/rss/news" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bbc-sport",
+    "name": "BBC Sport",
+    "category": "Sports",
+    "topics": ["sports", "soccer", "tennis", "olympics"],
+    "rss": { "feedUrl": "https://feeds.bbci.co.uk/sport/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bleacher-report",
+    "name": "Bleacher Report",
+    "category": "Sports",
+    "topics": ["sports", "basketball", "soccer", "combat sports"],
+    "rss": { "feedUrl": "https://bleacherreport.com/articles/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-athletic",
+    "name": "The Athletic",
+    "category": "Sports",
+    "topics": ["sports", "basketball", "soccer", "tennis"],
+    "rss": { "feedUrl": "https://theathletic.com/feeds/rss/news/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sky-sports",
+    "name": "Sky Sports",
+    "category": "Sports",
+    "topics": ["sports", "soccer", "tennis", "combat sports"],
+    "rss": { "feedUrl": "https://www.skysports.com/rss/12040" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sports-illustrated",
+    "name": "Sports Illustrated",
+    "category": "Sports",
+    "topics": ["sports", "basketball", "olympics", "soccer"],
+    "rss": { "feedUrl": "https://www.si.com/rss/si_topstories.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mma-fighting",
+    "name": "MMA Fighting",
+    "category": "Sports",
+    "topics": ["combat sports", "sports", "fitness"],
+    "rss": { "feedUrl": "https://www.mmafighting.com/rss/current" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nba-news",
+    "name": "NBA.com",
+    "category": "Sports",
+    "topics": ["basketball", "sports"],
+    "rss": { "feedUrl": "https://www.nba.com/feeds/promopage_articles/landing_nba.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

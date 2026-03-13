@@ -1,0 +1,279 @@
+[
+  {
+    "id": "coingecko-market",
+    "name": "CoinGecko Market Data",
+    "category": "Data APIs",
+    "topics": ["cryptocurrency", "finance", "data science"],
+    "search": {
+      "endpoint": "https://api.coingecko.com/api/v3/coins/markets",
+      "searchParam": null,
+      "resultPath": "root",
+      "limitParam": "per_page",
+      "extraParams": { "vs_currency": "usd", "order": "market_cap_desc" }
+    },
+    "normalize": {
+      "titleTemplate": "{name} ({symbol})",
+      "snippetTemplate": "Price: ${current_price} · Market Cap: ${market_cap} · 24h Change: {price_change_percentage_24h}%",
+      "urlTemplate": "https://www.coingecko.com/en/coins/{id}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-meteo-forecast",
+    "name": "Open-Meteo Forecast",
+    "category": "Data APIs",
+    "topics": ["climate", "data science", "travel"],
+    "search": {
+      "endpoint": "https://api.open-meteo.com/v1/forecast",
+      "searchParam": "latitude",
+      "resultPath": "current_weather",
+      "extraParams": { "current_weather": "true" }
+    },
+    "normalize": {
+      "titleTemplate": "Weather at {latitude},{longitude}",
+      "snippetTemplate": "Temperature: {temperature}°C · Wind: {windspeed} km/h"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "usgs-earthquake",
+    "name": "USGS Earthquake",
+    "category": "Data APIs",
+    "topics": ["geology", "science", "data science"],
+    "search": {
+      "endpoint": "https://earthquake.usgs.gov/fdsnws/event/1/query",
+      "searchParam": null,
+      "resultPath": "features",
+      "limitParam": "limit",
+      "extraParams": { "format": "geojson", "orderby": "time" }
+    },
+    "normalize": {
+      "titlePath": "properties.title",
+      "snippetTemplate": "Magnitude: {properties.mag} · Time: {properties.time}",
+      "urlPath": "properties.url"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "world-bank",
+    "name": "World Bank",
+    "category": "Data APIs",
+    "topics": ["economics", "data science", "world news"],
+    "search": {
+      "endpoint": "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD",
+      "searchParam": null,
+      "resultPath": "1",
+      "extraParams": { "format": "json", "per_page": "10", "date": "2020:2024" }
+    },
+    "normalize": {
+      "titleTemplate": "{country.value} GDP",
+      "snippetTemplate": "Year: {date} · Value: {value}",
+      "urlTemplate": "https://data.worldbank.org/country/{countryiso3code}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "rest-countries",
+    "name": "REST Countries",
+    "category": "Data APIs",
+    "topics": ["world news", "education", "data science"],
+    "search": {
+      "endpoint": "https://restcountries.com/v3.1/name",
+      "searchParam": "",
+      "resultPath": "root",
+      "extraParams": { "fields": "name,capital,population,region,flags" }
+    },
+    "normalize": {
+      "titlePath": "name.common",
+      "snippetTemplate": "Capital: {capital.0} · Population: {population} · Region: {region}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "openaq",
+    "name": "OpenAQ",
+    "category": "Data APIs",
+    "topics": ["environment", "climate", "public health", "data science"],
+    "search": {
+      "endpoint": "https://api.openaq.org/v2/latest",
+      "searchParam": "city",
+      "resultPath": "results",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titleTemplate": "Air Quality: {location}",
+      "snippetTemplate": "City: {city} · Country: {country} · Measurements: {measurements.length}",
+      "urlTemplate": "https://openaq.org/#/location/{locationId}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "exchange-rates",
+    "name": "Exchange Rates API",
+    "category": "Data APIs",
+    "topics": ["finance", "economics", "data science"],
+    "search": {
+      "endpoint": "https://open.er-api.com/v6/latest/USD",
+      "searchParam": null,
+      "resultPath": "rates"
+    },
+    "normalize": {
+      "titleTemplate": "Exchange Rates (Base: USD)",
+      "snippetTemplate": "Last updated: {time_last_update_utc}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "iss-tracker",
+    "name": "ISS Tracker",
+    "category": "Data APIs",
+    "topics": ["space", "space exploration", "data science"],
+    "search": {
+      "endpoint": "http://api.open-notify.org/iss-now.json",
+      "searchParam": null,
+      "resultPath": "iss_position"
+    },
+    "normalize": {
+      "titleTemplate": "ISS Current Position",
+      "snippetTemplate": "Latitude: {latitude} · Longitude: {longitude}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sunrise-sunset",
+    "name": "Sunrise-Sunset",
+    "category": "Data APIs",
+    "topics": ["astronomy", "travel", "photography"],
+    "search": {
+      "endpoint": "https://api.sunrise-sunset.org/json",
+      "searchParam": "lat",
+      "resultPath": "results",
+      "extraParams": { "formatted": "0" }
+    },
+    "normalize": {
+      "titleTemplate": "Sunrise/Sunset Data",
+      "snippetTemplate": "Sunrise: {sunrise} · Sunset: {sunset} · Day Length: {day_length}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "numbers-api",
+    "name": "Numbers API",
+    "category": "Data APIs",
+    "topics": ["mathematics", "education", "folklore"],
+    "search": {
+      "endpoint": "http://numbersapi.com",
+      "searchParam": "",
+      "resultPath": "root"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-food-facts",
+    "name": "Open Food Facts",
+    "category": "Data APIs",
+    "topics": ["food", "nutrition", "health", "data science"],
+    "search": {
+      "endpoint": "https://world.openfoodfacts.org/cgi/search.pl",
+      "searchParam": "search_terms",
+      "resultPath": "products",
+      "limitParam": "page_size",
+      "extraParams": { "json": "1", "search_simple": "1" }
+    },
+    "normalize": {
+      "titlePath": "product_name",
+      "snippetTemplate": "Brand: {brands} · Nutri-Score: {nutriscore_grade}",
+      "urlPath": "url"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "dog-api",
+    "name": "Dog API",
+    "category": "Data APIs",
+    "topics": ["pets", "photography"],
+    "search": {
+      "endpoint": "https://dog.ceo/api/breeds/image/random",
+      "searchParam": null,
+      "resultPath": "message"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cat-api",
+    "name": "Cat API",
+    "category": "Data APIs",
+    "topics": ["pets", "photography"],
+    "search": {
+      "endpoint": "https://api.thecatapi.com/v1/images/search",
+      "searchParam": null,
+      "resultPath": "root",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titleTemplate": "Random Cat Image",
+      "snippetTemplate": "Cat photo",
+      "urlPath": "url"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "jsonplaceholder",
+    "name": "JSON Placeholder",
+    "category": "Data APIs",
+    "topics": ["web development", "education"],
+    "search": {
+      "endpoint": "https://jsonplaceholder.typicode.com/posts",
+      "searchParam": null,
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "body",
+      "urlTemplate": "https://jsonplaceholder.typicode.com/posts/{id}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

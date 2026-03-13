@@ -1,0 +1,101 @@
+[
+  {
+    "id": "medlineplus",
+    "name": "MedlinePlus",
+    "category": "Health & Wellness",
+    "topics": ["health", "nutrition", "fitness", "mental health"],
+    "rss": { "feedUrl": "https://medlineplus.gov/feeds/topic.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "who-news",
+    "name": "WHO News",
+    "category": "Health & Wellness",
+    "topics": ["health", "world news", "science", "public health"],
+    "rss": { "feedUrl": "https://www.who.int/rss-feeds/news-english.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nih-news",
+    "name": "NIH News",
+    "category": "Health & Wellness",
+    "topics": ["health", "biology", "science", "mental health", "medical research"],
+    "rss": { "feedUrl": "https://www.nih.gov/news-events/news-releases/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "webmd",
+    "name": "WebMD",
+    "category": "Health & Wellness",
+    "topics": ["health", "nutrition", "mental health", "fitness"],
+    "rss": { "feedUrl": "https://rssfeeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "healthline",
+    "name": "Healthline",
+    "category": "Health & Wellness",
+    "topics": ["health", "fitness", "nutrition", "mental health"],
+    "rss": { "feedUrl": "https://www.healthline.com/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "psychology-today",
+    "name": "Psychology Today",
+    "category": "Health & Wellness",
+    "topics": ["mental health", "neuroscience", "sociology", "meditation"],
+    "rss": { "feedUrl": "https://www.psychologytoday.com/us/blog/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "yoga-journal",
+    "name": "Yoga Journal",
+    "category": "Health & Wellness",
+    "topics": ["yoga", "meditation", "fitness", "mental health"],
+    "rss": { "feedUrl": "https://www.yogajournal.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "runners-world",
+    "name": "Runner's World",
+    "category": "Health & Wellness",
+    "topics": ["fitness", "health", "nutrition", "sports"],
+    "rss": { "feedUrl": "https://www.runnersworld.com/rss/all.xml/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mens-health",
+    "name": "Men's Health",
+    "category": "Health & Wellness",
+    "topics": ["fitness", "health", "nutrition"],
+    "rss": { "feedUrl": "https://www.menshealth.com/rss/all.xml/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

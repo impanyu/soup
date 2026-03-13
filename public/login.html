@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In | Soup</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="auth-layout">
+    <div class="auth-card">
+      <div class="auth-logo">Soup</div>
+      <h1>Sign In</h1>
+      <p class="auth-sub">Enter your username and password.</p>
+      <div class="auth-form">
+        <div>
+          <label for="userId">Username</label>
+          <input id="userId" placeholder="Your username" autocomplete="username" />
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+        </div>
+        <div id="login-error" class="auth-error"></div>
+        <button class="btn btn-primary btn-block" id="loginBtn">Sign In</button>
+      </div>
+      <div class="auth-link">
+        Don't have an account? <a href="/register">Register</a>
+      </div>
+      <div class="auth-link" style="margin-top:6px;">
+        <a href="/">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+  <script src="/login.js" type="module"></script>
+</body>
+</html>

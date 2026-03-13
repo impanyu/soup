@@ -1,0 +1,245 @@
+[
+  {
+    "id": "hackernews",
+    "name": "Hacker News",
+    "category": "News & Tech",
+    "topics": ["technology", "startups", "web development", "cybersecurity"],
+    "rss": { "feedUrl": "https://hnrss.org/frontpage" },
+    "search": {
+      "endpoint": "https://hn.algolia.com/api/v1/search",
+      "searchParam": "query",
+      "resultPath": "hits",
+      "limitParam": "hitsPerPage"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetTemplate": "Points: {points} · Comments: {num_comments}",
+      "urlTemplate": "{url}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "techcrunch",
+    "name": "TechCrunch",
+    "category": "News & Tech",
+    "topics": ["technology", "startups", "business", "mobile apps"],
+    "rss": { "feedUrl": "https://techcrunch.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "arstechnica",
+    "name": "Ars Technica",
+    "category": "News & Tech",
+    "topics": ["technology", "science", "gaming", "cybersecurity"],
+    "rss": { "feedUrl": "https://feeds.arstechnica.com/arstechnica/index" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "theverge",
+    "name": "The Verge",
+    "category": "News & Tech",
+    "topics": ["technology", "design", "gaming", "film"],
+    "rss": { "feedUrl": "https://www.theverge.com/rss/index.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "wired",
+    "name": "Wired",
+    "category": "News & Tech",
+    "topics": ["technology", "science", "artificial intelligence", "cybersecurity"],
+    "rss": { "feedUrl": "https://www.wired.com/feed/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bbc-news",
+    "name": "BBC News",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "economics", "business"],
+    "rss": { "feedUrl": "https://feeds.bbci.co.uk/news/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "reuters",
+    "name": "Reuters",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "business", "finance"],
+    "rss": { "feedUrl": "https://www.reutersagency.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nytimes",
+    "name": "NY Times",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "books", "art"],
+    "rss": { "feedUrl": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "guardian",
+    "name": "The Guardian",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "climate", "philosophy"],
+    "rss": { "feedUrl": "https://www.theguardian.com/world/rss" },
+    "search": {
+      "endpoint": "https://content.guardianapis.com/search",
+      "searchParam": "q",
+      "resultPath": "response.results",
+      "limitParam": "page-size",
+      "extraParams": { "api-key": "ENV:GUARDIAN_API_KEY" }
+    },
+    "normalize": {
+      "titlePath": "webTitle",
+      "snippetPath": "webTitle",
+      "urlTemplate": "{webUrl}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": "GUARDIAN_API_KEY"
+  },
+  {
+    "id": "al-jazeera",
+    "name": "Al Jazeera",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "human rights", "economics"],
+    "rss": { "feedUrl": "https://www.aljazeera.com/xml/rss/all.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "ap-news",
+    "name": "AP News",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "business", "science"],
+    "rss": { "feedUrl": "https://apnews.com/index.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "npr",
+    "name": "NPR News",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "education", "cultural studies"],
+    "rss": { "feedUrl": "https://feeds.npr.org/1001/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "economist",
+    "name": "The Economist",
+    "category": "News & Tech",
+    "topics": ["economics", "politics", "business", "world news"],
+    "rss": { "feedUrl": "https://www.economist.com/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cnn",
+    "name": "CNN",
+    "category": "News & Tech",
+    "topics": ["world news", "politics", "business", "health"],
+    "rss": { "feedUrl": "http://rss.cnn.com/rss/edition.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "washingtonpost",
+    "name": "Washington Post",
+    "category": "News & Tech",
+    "topics": ["politics", "world news", "economics", "law"],
+    "rss": { "feedUrl": "https://feeds.washingtonpost.com/rss/world" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "vice",
+    "name": "Vice",
+    "category": "News & Tech",
+    "topics": ["cultural studies", "world news", "music", "sociology"],
+    "rss": { "feedUrl": "https://www.vice.com/en/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "slate",
+    "name": "Slate",
+    "category": "News & Tech",
+    "topics": ["politics", "media criticism", "law", "cultural studies"],
+    "rss": { "feedUrl": "https://slate.com/feeds/all.rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "propublica",
+    "name": "ProPublica",
+    "category": "News & Tech",
+    "topics": ["politics", "law", "human rights", "environment"],
+    "rss": { "feedUrl": "https://www.propublica.org/feeds/propublica/main" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "vox",
+    "name": "Vox",
+    "category": "News & Tech",
+    "topics": ["politics", "economics", "sociology", "climate"],
+    "rss": { "feedUrl": "https://www.vox.com/rss/index.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "foreign-affairs",
+    "name": "Foreign Affairs",
+    "category": "News & Tech",
+    "topics": ["politics", "world news", "economics", "human rights"],
+    "rss": { "feedUrl": "https://www.foreignaffairs.com/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

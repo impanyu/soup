@@ -1,0 +1,201 @@
+[
+  {
+    "id": "dev-to",
+    "name": "Dev.to",
+    "category": "Tech & Dev",
+    "topics": ["web development", "technology", "machine learning", "mobile apps"],
+    "rss": { "feedUrl": "https://dev.to/feed" },
+    "search": {
+      "endpoint": "https://dev.to/api/articles",
+      "searchParam": "tag",
+      "resultPath": "root",
+      "limitParam": "per_page"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "description",
+      "urlPath": "url"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "github-trending",
+    "name": "GitHub Trending",
+    "category": "Tech & Dev",
+    "topics": ["technology", "web development", "machine learning", "devops"],
+    "search": {
+      "endpoint": "https://api.github.com/search/repositories",
+      "searchParam": "q",
+      "resultPath": "items",
+      "extraParams": { "sort": "stars" },
+      "limitParam": "per_page"
+    },
+    "normalize": {
+      "titlePath": "full_name",
+      "snippetPath": "description",
+      "urlPath": "html_url"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "stackoverflow",
+    "name": "Stack Overflow",
+    "category": "Tech & Dev",
+    "topics": ["web development", "technology", "mobile apps", "devops"],
+    "rss": { "feedUrl": "https://stackoverflow.com/feeds" },
+    "search": {
+      "endpoint": "https://api.stackexchange.com/2.3/search",
+      "searchParam": "intitle",
+      "resultPath": "items",
+      "limitParam": "pagesize",
+      "extraParams": { "site": "stackoverflow", "order": "desc", "sort": "relevance" }
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetTemplate": "Score: {score} · Answers: {answer_count}",
+      "urlPath": "link"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hackernoon",
+    "name": "HackerNoon",
+    "category": "Tech & Dev",
+    "topics": ["technology", "web development", "blockchain", "startups"],
+    "rss": { "feedUrl": "https://hackernoon.com/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "smashing-magazine",
+    "name": "Smashing Magazine",
+    "category": "Tech & Dev",
+    "topics": ["web development", "design", "graphic design", "mobile apps"],
+    "rss": { "feedUrl": "https://www.smashingmagazine.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "css-tricks",
+    "name": "CSS-Tricks",
+    "category": "Tech & Dev",
+    "topics": ["web development", "design", "graphic design"],
+    "rss": { "feedUrl": "https://css-tricks.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "a-list-apart",
+    "name": "A List Apart",
+    "category": "Tech & Dev",
+    "topics": ["web development", "design", "technology"],
+    "rss": { "feedUrl": "https://alistapart.com/main/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "infoq",
+    "name": "InfoQ",
+    "category": "Tech & Dev",
+    "topics": ["technology", "devops", "cloud computing", "data science"],
+    "rss": { "feedUrl": "https://feed.infoq.com/infoq/infoq" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "thenewstack",
+    "name": "The New Stack",
+    "category": "Tech & Dev",
+    "topics": ["devops", "cloud computing", "technology", "web development"],
+    "rss": { "feedUrl": "https://thenewstack.io/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "dzone",
+    "name": "DZone",
+    "category": "Tech & Dev",
+    "topics": ["technology", "devops", "cloud computing", "web development"],
+    "rss": { "feedUrl": "https://feeds.dzone.com/home" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "android-dev",
+    "name": "Android Developers Blog",
+    "category": "Tech & Dev",
+    "topics": ["mobile apps", "technology", "design"],
+    "rss": { "feedUrl": "https://android-developers.googleblog.com/feeds/posts/default" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "swift-blog",
+    "name": "Swift.org Blog",
+    "category": "Tech & Dev",
+    "topics": ["mobile apps", "technology"],
+    "rss": { "feedUrl": "https://www.swift.org/atom.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "kubernetes-blog",
+    "name": "Kubernetes Blog",
+    "category": "Tech & Dev",
+    "topics": ["devops", "cloud computing", "technology"],
+    "rss": { "feedUrl": "https://kubernetes.io/feed.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "docker-blog",
+    "name": "Docker Blog",
+    "category": "Tech & Dev",
+    "topics": ["devops", "cloud computing", "technology"],
+    "rss": { "feedUrl": "https://www.docker.com/blog/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "threejs-journey",
+    "name": "Three.js Journey",
+    "category": "Tech & Dev",
+    "topics": ["web development", "3d printing", "animation", "design"],
+    "rss": { "feedUrl": "https://threejs-journey.com/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

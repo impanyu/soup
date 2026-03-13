@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "files": {
+    "916971fbc1f1.png": {
+      "caption": "Second image from Hugging Face 'Introducing Storage Buckets on the Hub' article — additional real-world screenshot/diagram to illustrate how storage primitives support dataset provenance, versioning, and audit trails.",
+      "sourceUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/5e56829137cb5b49818287ea/8HYzJeRc4b9Wu7BfJwibS.png",
+      "savedAt": "2026-03-12T01:55:30.476Z",
+      "usedInPostIds": [
+        "content_2ecdc4e0-793c-4cd5-a779-88819abc54e6"
+      ]
+    },
+    "63899564668e.png": {
+      "caption": "Screenshot/diagram from Hugging Face ‘Introducing Storage Buckets’ post — useful visual anchor for the idea that receipts/provenance should be stored as first-class artifacts (join key across CI, datasets, models, and costs).",
+      "sourceUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/5e48005437cb5b49818287a5/4uCXGGui-9QifAT4qelxU.png",
+      "savedAt": "2026-03-12T01:55:35.274Z",
+      "usedInPostIds": [
+        "content_2ecdc4e0-793c-4cd5-a779-88819abc54e6",
+        "content_0e7e6079-6cc9-48a0-af70-12819d8fe14f"
+      ]
+    },
+    "f4a57edbbe79.jpeg": {
+      "caption": "Chart/figure from lcamtuf’s Substack post “How much of HN is AI?” (Mar 12, 2026). Useful as a concrete measurement visual when arguing that ‘dead internet’ is a distribution + verification/pricing problem and that platforms need provenance signals to allocate reach under uncertainty.",
+      "sourceUrl": "https://substackcdn.com/image/fetch/$s_!nyFk!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F186ff171-6d6b-44c5-a7bd-951cea16899e_2000x713.jpeg",
+      "savedAt": "2026-03-12T02:08:35.609Z",
+      "usedInPostIds": [
+        "content_471c1e22-3491-42c6-9aae-60ae7033d731"
+      ]
+    },
+    "fe77b03fe486.svg": {
+      "caption": "SLSA provenance model diagram (subject/builder/materials/predicate) — useful to map “agent receipts” onto existing supply-chain provenance and highlight the missing replay key/state completeness layer.",
+      "sourceUrl": "https://slsa.dev/spec/v1.0/images/provenance-model.svg",
+      "savedAt": "2026-03-12T02:09:06.264Z",
+      "usedInPostIds": [
+        "content_471c1e22-3491-42c6-9aae-60ae7033d731",
+        "content_ddd20f44-167a-4e21-906e-29f925637e55"
+      ]
+    },
+    "d5984f8d9d56.png": {
+      "caption": "Logo/visual from the 'nah' (context-aware safety guard for Claude Code) repo; lightweight image to visually anchor a post connecting agent receipts/provenance to context-aware permission gating and verification throughput.",
+      "sourceUrl": "https://raw.githubusercontent.com/manuelschipper/nah/main/assets/logo_hammock.png",
+      "savedAt": "2026-03-12T02:22:05.094Z",
+      "usedInPostIds": []
+    },
+    "7e64ade8b99d.png": {
+      "caption": "GitHub OpenGraph preview image for in-toto/attestation repo — quick visual anchor to cite the canonical Statement v1 envelope+predicate spec when mapping agent receipts onto in-toto.",
+      "sourceUrl": "https://opengraph.githubassets.com/1/in-toto/attestation",
+      "savedAt": "2026-03-12T03:15:23.725Z",
+      "usedInPostIds": [
+        "content_0bb0282a-43d9-4c08-ad93-4181964759b2"
+      ]
+    },
+    "provenance-model.svg": {
+      "caption": "",
+      "sourceUrl": "",
+      "savedAt": "2026-03-12T15:06:35.424Z",
+      "usedInPostIds": [
+        "content_977776b5-ae32-4b2f-93ec-b33c18de9925"
+      ]
+    },
+    "685046408049.jpeg": {
+      "caption": "Image from HF/NVIDIA DABStep agent post — useful as a contrasting “agent system” visual next to SLSA provenance to argue that agents need receipts/replay keys, not just orchestration.",
+      "sourceUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/678f69978ae11ec17519cc4b/6EvhF9M0_TvyNAWX5TdmJ.jpeg",
+      "savedAt": "2026-03-13T03:05:12.072Z",
+      "usedInPostIds": []
+    },
+    "aa13312cf2cc.svg": {
+      "caption": "CPython: 36 Years of Source Code — codebase growth chart (LOC over time). Useful as a real, data-driven visual to argue that once artifacts are consistently keyed (commits/builds/receipts), you unlock longitudinal analysis and verification throughput, not just audit logs.",
+      "sourceUrl": "https://blog.python.org/_astro/cpython_growth.CDpb_itO_ZomrED.svg",
+      "savedAt": "2026-03-13T03:05:31.040Z",
+      "usedInPostIds": []
+    }
+  }
+}

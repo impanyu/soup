@@ -1,0 +1,169 @@
+[
+  {
+    "id": "tmdb",
+    "name": "TMDB",
+    "category": "Entertainment",
+    "topics": ["film", "art", "streaming"],
+    "search": {
+      "endpoint": "https://api.themoviedb.org/3/search/movie",
+      "searchParam": "query",
+      "resultPath": "results"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "overview",
+      "urlTemplate": "https://www.themoviedb.org/movie/{id}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": true,
+    "envKey": "TMDB_API_KEY"
+  },
+  {
+    "id": "ign",
+    "name": "IGN",
+    "category": "Entertainment",
+    "topics": ["gaming", "esports", "film", "technology"],
+    "rss": { "feedUrl": "https://feeds.feedburner.com/ign/all" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "polygon",
+    "name": "Polygon",
+    "category": "Entertainment",
+    "topics": ["gaming", "esports", "design", "film"],
+    "rss": { "feedUrl": "https://www.polygon.com/rss/index.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pitchfork",
+    "name": "Pitchfork",
+    "category": "Entertainment",
+    "topics": ["music", "art", "design"],
+    "rss": { "feedUrl": "https://pitchfork.com/feed/feed-news/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "anilist",
+    "name": "AniList",
+    "category": "Entertainment",
+    "topics": ["anime", "art", "design", "film"],
+    "search": {
+      "endpoint": "https://graphql.anilist.co",
+      "searchParam": "query",
+      "resultPath": "data.Page.media"
+    },
+    "responseFormat": "graphql",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "kotaku",
+    "name": "Kotaku",
+    "category": "Entertainment",
+    "topics": ["gaming", "anime", "virtual reality", "game development"],
+    "rss": { "feedUrl": "https://kotaku.com/rss" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "gamespot",
+    "name": "GameSpot",
+    "category": "Entertainment",
+    "topics": ["gaming", "esports", "virtual reality", "streaming"],
+    "rss": { "feedUrl": "https://www.gamespot.com/feeds/mashup/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "eurogamer",
+    "name": "Eurogamer",
+    "category": "Entertainment",
+    "topics": ["gaming", "game development", "esports"],
+    "rss": { "feedUrl": "https://www.eurogamer.net/feed" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "variety",
+    "name": "Variety",
+    "category": "Entertainment",
+    "topics": ["film", "music", "streaming", "theater"],
+    "rss": { "feedUrl": "https://variety.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hollywood-reporter",
+    "name": "Hollywood Reporter",
+    "category": "Entertainment",
+    "topics": ["film", "music", "streaming", "theater"],
+    "rss": { "feedUrl": "https://www.hollywoodreporter.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "rolling-stone",
+    "name": "Rolling Stone",
+    "category": "Entertainment",
+    "topics": ["music", "film", "cultural studies", "politics"],
+    "rss": { "feedUrl": "https://www.rollingstone.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "stereogum",
+    "name": "Stereogum",
+    "category": "Entertainment",
+    "topics": ["music", "art", "cultural studies"],
+    "rss": { "feedUrl": "https://www.stereogum.com/feed/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pcgamer",
+    "name": "PC Gamer",
+    "category": "Entertainment",
+    "topics": ["gaming", "technology", "esports", "virtual reality"],
+    "rss": { "feedUrl": "https://www.pcgamer.com/rss/" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "anime-news-network",
+    "name": "Anime News Network",
+    "category": "Entertainment",
+    "topics": ["anime", "comics", "film", "cultural studies"],
+    "rss": { "feedUrl": "https://www.animenewsnetwork.com/all/rss.xml" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

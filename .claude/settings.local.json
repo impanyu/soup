@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/ypan12/git_repo/soup/public/index.html:*)",
+      "Bash(/Users/ypan12/git_repo/soup/public/agent.html:*)",
+      "Bash(/Users/ypan12/git_repo/soup/public/dashboard.html:*)",
+      "Bash(/Users/ypan12/git_repo/soup/public/search.html:*)",
+      "Bash(/Users/ypan12/git_repo/soup/public/login.html:*)",
+      "Bash(/Users/ypan12/git_repo/soup/public/register.html:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(do node:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(python3:*)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:cookbook.openai.com)",
+      "WebFetch(domain:developers.openai.com)",
+      "Bash(npm install:*)",
+      "Bash(redis-cli ping:*)",
+      "Bash(docker run:*)",
+      "Bash(docker exec:*)",
+      "Bash(lsof:*)",
+      "Bash(kill 59469:*)",
+      "Bash(brew list:*)",
+      "Bash(ps:*)",
+      "Bash(wc:*)"
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Skill | Soup</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    /* Always show the chat rail on this page */
+    @media (max-width: 1100px) {
+      .right-rail { display: flex !important; }
+      .main-content { flex: 1; min-width: 0; }
+    }
+    .right-rail {
+      height: calc(100vh - 32px);
+      position: sticky;
+      top: 16px;
+    }
+    .drag-handle {
+      width: 7px;
+      cursor: col-resize;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+      background: var(--border);
+    }
+    .drag-handle::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 3px;
+      height: 32px;
+      border-radius: 2px;
+      background: var(--text-muted);
+      opacity: 0.4;
+    }
+    .drag-handle:hover, .drag-handle.dragging {
+      background: var(--accent);
+    }
+    .drag-handle:hover::after, .drag-handle.dragging::after {
+      background: #fff;
+      opacity: 0.8;
+    }
+    .main-content { border-right: none !important; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <nav class="nav-rail">
+      <div id="main-nav"></div>
+    </nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <a href="/dashboard" id="back-link" class="text-accent" style="font-size:13px;">&larr; Back to Configure</a>
+        <h1 id="page-title">Edit Skill</h1>
+      </div>
+      <div id="skill-edit-content">
+        <div class="spinner"></div>
+      </div>
+    </main>
+
+    <div class="drag-handle" id="drag-handle"></div>
+
+    <aside class="right-rail" style="display:flex;flex-direction:column;">
+      <div style="display:flex;flex-direction:column;height:100%;min-height:0;">
+        <div class="widget-title" style="padding:12px 16px;flex-shrink:0;">Skill Editor Assistant</div>
+        <div id="chat-messages" style="flex:1;overflow-y:auto;padding:8px 12px;"></div>
+        <div style="padding:8px 12px;flex-shrink:0;">
+          <div id="chat-suggestions" style="margin:0 0 6px;display:flex;flex-wrap:wrap;gap:4px;">
+            <button class="chat-suggestion" data-msg="What does the agent do in this phase?" style="font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-muted);cursor:pointer;">What does the agent do in this phase?</button>
+            <button class="chat-suggestion" data-msg="What can the agent do in this phase?" style="font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-muted);cursor:pointer;">What can the agent do in this phase?</button>
+            <button class="chat-suggestion" data-msg="Summarize this skill file" style="font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-muted);cursor:pointer;">Summarize this skill file</button>
+            <button class="chat-suggestion" data-msg="How can I improve this skill?" style="font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-muted);cursor:pointer;">How can I improve this skill?</button>
+            <button class="chat-suggestion" data-msg="Reset this skill to a simpler version" style="font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-muted);cursor:pointer;">Reset to a simpler version</button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input id="chat-input" type="text" placeholder="Ask about this skill..." style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--text);height:28px;box-sizing:border-box;" />
+            <button class="btn btn-accent btn-xs" id="chat-send-btn" style="white-space:nowrap;height:28px;box-sizing:border-box;">Send</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/skill-edit.js" type="module"></script>
+</body>
+</html>
