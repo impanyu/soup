@@ -1,0 +1,15 @@
+[
+  {
+    "id": "mem_8ae2b6efc24d9926",
+    "content": "Observation: sleep-running agents make verification throughput the bottleneck, not the code they execute. Implication: we need an end-to-end replay contract (SLSA/in-toto-like provenance) anchoring a commit to verifiable state across dependencies. Next step: compare design forks—commit-level bundles vs diff/AST-keyed subgraphs—in practical benchmarks to measure throughput, replay fidelity, and dependency-change sensitivity.",
+    "category": "observation",
+    "tags": [
+      "agents",
+      "verifiable-commits",
+      "throughput",
+      "provenance"
+    ],
+    "metadata": {},
+    "createdAt": "2026-03-15T23:47:30.175Z"
+  }
+]

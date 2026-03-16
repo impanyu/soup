@@ -3,8 +3,16 @@
     "id": "food-network",
     "name": "Food Network",
     "category": "Lifestyle",
-    "topics": ["food", "nutrition", "travel", "cooking"],
-    "rss": { "feedUrl": "https://www.foodnetwork.com/fn-dish/rss.xml" },
+    "topics": [
+      "food",
+      "nutrition",
+      "travel",
+      "cooking"
+    ],
+    "siteUrl": "https://www.foodnetwork.com",
+    "rss": {
+      "feedUrl": "https://www.foodnetwork.com/fn-dish/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -14,8 +22,15 @@
     "id": "lonely-planet",
     "name": "Lonely Planet",
     "category": "Lifestyle",
-    "topics": ["travel", "food", "photography"],
-    "rss": { "feedUrl": "https://www.lonelyplanet.com/feed.xml" },
+    "topics": [
+      "travel",
+      "food",
+      "photography"
+    ],
+    "siteUrl": "https://www.lonelyplanet.com",
+    "rss": {
+      "feedUrl": "https://www.lonelyplanet.com/feed.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -25,8 +40,16 @@
     "id": "vogue",
     "name": "Vogue",
     "category": "Lifestyle",
-    "topics": ["fashion", "design", "photography", "art"],
-    "rss": { "feedUrl": "https://www.vogue.com/feed/rss" },
+    "topics": [
+      "fashion",
+      "design",
+      "photography",
+      "art"
+    ],
+    "siteUrl": "https://www.vogue.com",
+    "rss": {
+      "feedUrl": "https://www.vogue.com/feed/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -36,8 +59,16 @@
     "id": "designboom",
     "name": "Designboom",
     "category": "Lifestyle",
-    "topics": ["design", "art", "photography", "architecture"],
-    "rss": { "feedUrl": "https://www.designboom.com/feed/" },
+    "topics": [
+      "design",
+      "art",
+      "photography",
+      "architecture"
+    ],
+    "siteUrl": "https://www.designboom.com",
+    "rss": {
+      "feedUrl": "https://www.designboom.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -47,8 +78,16 @@
     "id": "brain-pickings",
     "name": "The Marginalian",
     "category": "Lifestyle",
-    "topics": ["books", "philosophy", "art", "education"],
-    "rss": { "feedUrl": "https://www.themarginalian.org/feed/" },
+    "topics": [
+      "books",
+      "philosophy",
+      "art",
+      "education"
+    ],
+    "siteUrl": "https://www.themarginalian.org",
+    "rss": {
+      "feedUrl": "https://www.themarginalian.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -58,7 +97,12 @@
     "id": "open-meteo",
     "name": "Open-Meteo",
     "category": "Lifestyle",
-    "topics": ["climate", "travel", "sports"],
+    "topics": [
+      "climate",
+      "travel",
+      "sports"
+    ],
+    "siteUrl": "https://open-meteo.com",
     "search": {
       "endpoint": "https://api.open-meteo.com/v1/forecast",
       "searchParam": "latitude",
@@ -73,8 +117,15 @@
     "id": "climate-gov",
     "name": "Climate.gov",
     "category": "Lifestyle",
-    "topics": ["climate", "science", "environment"],
-    "rss": { "feedUrl": "https://www.climate.gov/rss.xml" },
+    "topics": [
+      "climate",
+      "science",
+      "environment"
+    ],
+    "siteUrl": "https://www.climate.gov",
+    "rss": {
+      "feedUrl": "https://www.climate.gov/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -84,8 +135,16 @@
     "id": "treehugger",
     "name": "Treehugger",
     "category": "Lifestyle",
-    "topics": ["sustainability", "environment", "gardening", "renewable energy"],
-    "rss": { "feedUrl": "https://www.treehugger.com/feeds/all" },
+    "topics": [
+      "sustainability",
+      "environment",
+      "gardening",
+      "renewable energy"
+    ],
+    "siteUrl": "https://www.treehugger.com",
+    "rss": {
+      "feedUrl": "https://www.treehugger.com/feeds/all"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -95,8 +154,15 @@
     "id": "bon-appetit",
     "name": "Bon Appétit",
     "category": "Lifestyle",
-    "topics": ["food", "cooking", "travel"],
-    "rss": { "feedUrl": "https://www.bonappetit.com/feed/rss" },
+    "topics": [
+      "food",
+      "cooking",
+      "travel"
+    ],
+    "siteUrl": "https://www.bonappetit.com",
+    "rss": {
+      "feedUrl": "https://www.bonappetit.com/feed/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -106,8 +172,16 @@
     "id": "national-geographic",
     "name": "National Geographic",
     "category": "Lifestyle",
-    "topics": ["travel", "photography", "science", "ecology"],
-    "rss": { "feedUrl": "https://www.nationalgeographic.com/feed/" },
+    "topics": [
+      "travel",
+      "photography",
+      "science",
+      "ecology"
+    ],
+    "siteUrl": "https://www.nationalgeographic.com",
+    "rss": {
+      "feedUrl": "https://www.nationalgeographic.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -117,8 +191,16 @@
     "id": "atlas-obscura",
     "name": "Atlas Obscura",
     "category": "Lifestyle",
-    "topics": ["travel", "history", "folklore", "food"],
-    "rss": { "feedUrl": "https://www.atlasobscura.com/feeds/latest" },
+    "topics": [
+      "travel",
+      "history",
+      "folklore",
+      "food"
+    ],
+    "siteUrl": "https://www.atlasobscura.com",
+    "rss": {
+      "feedUrl": "https://www.atlasobscura.com/feeds/latest"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -128,8 +210,16 @@
     "id": "curbed",
     "name": "Curbed",
     "category": "Lifestyle",
-    "topics": ["architecture", "home improvement", "design", "real estate"],
-    "rss": { "feedUrl": "https://www.curbed.com/rss/index.xml" },
+    "topics": [
+      "architecture",
+      "home improvement",
+      "design",
+      "real estate"
+    ],
+    "siteUrl": "https://www.curbed.com",
+    "rss": {
+      "feedUrl": "https://www.curbed.com/rss/index.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -139,8 +229,15 @@
     "id": "dwell",
     "name": "Dwell",
     "category": "Lifestyle",
-    "topics": ["architecture", "design", "home improvement"],
-    "rss": { "feedUrl": "https://www.dwell.com/feed" },
+    "topics": [
+      "architecture",
+      "design",
+      "home improvement"
+    ],
+    "siteUrl": "https://www.dwell.com",
+    "rss": {
+      "feedUrl": "https://www.dwell.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -150,8 +247,595 @@
     "id": "serious-eats",
     "name": "Serious Eats",
     "category": "Lifestyle",
-    "topics": ["food", "cooking", "nutrition"],
-    "rss": { "feedUrl": "https://www.seriouseats.com/feed" },
+    "topics": [
+      "food",
+      "cooking",
+      "nutrition"
+    ],
+    "siteUrl": "https://www.seriouseats.com",
+    "rss": {
+      "feedUrl": "https://www.seriouseats.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "architectural-digest",
+    "name": "Architectural Digest",
+    "category": "Lifestyle",
+    "topics": [
+      "architecture",
+      "design",
+      "home improvement",
+      "art"
+    ],
+    "siteUrl": "https://www.architecturaldigest.com",
+    "rss": {
+      "feedUrl": "https://www.architecturaldigest.com/feed/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "dezeen",
+    "name": "Dezeen",
+    "category": "Lifestyle",
+    "topics": [
+      "architecture",
+      "design",
+      "art",
+      "sustainability"
+    ],
+    "siteUrl": "https://www.dezeen.com",
+    "rss": {
+      "feedUrl": "https://www.dezeen.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "apartment-therapy",
+    "name": "Apartment Therapy",
+    "category": "Lifestyle",
+    "topics": [
+      "home improvement",
+      "design",
+      "architecture",
+      "gardening"
+    ],
+    "siteUrl": "https://www.apartmenttherapy.com",
+    "rss": {
+      "feedUrl": "https://www.apartmenttherapy.com/main.rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-spruce",
+    "name": "The Spruce",
+    "category": "Lifestyle",
+    "topics": [
+      "home improvement",
+      "gardening",
+      "cooking",
+      "pets"
+    ],
+    "siteUrl": "https://www.thespruce.com",
+    "rss": {
+      "feedUrl": "https://www.thespruce.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "better-homes-gardens",
+    "name": "Better Homes and Gardens",
+    "category": "Lifestyle",
+    "topics": [
+      "home improvement",
+      "gardening",
+      "cooking",
+      "design"
+    ],
+    "siteUrl": "https://www.bhg.com",
+    "rss": {
+      "feedUrl": "https://www.bhg.com/rss/all.rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hgtv",
+    "name": "HGTV",
+    "category": "Lifestyle",
+    "topics": [
+      "home improvement",
+      "design",
+      "real estate",
+      "gardening"
+    ],
+    "siteUrl": "https://www.hgtv.com",
+    "rss": {
+      "feedUrl": "https://www.hgtv.com/content/hgtv-com/en/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "eater",
+    "name": "Eater",
+    "category": "Lifestyle",
+    "topics": [
+      "food",
+      "cooking",
+      "travel",
+      "business"
+    ],
+    "siteUrl": "https://www.eater.com",
+    "rss": {
+      "feedUrl": "https://www.eater.com/rss/index.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "food52",
+    "name": "Food52",
+    "category": "Lifestyle",
+    "topics": [
+      "food",
+      "cooking",
+      "home improvement"
+    ],
+    "siteUrl": "https://food52.com",
+    "rss": {
+      "feedUrl": "https://food52.com/blog/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "saveur",
+    "name": "Saveur",
+    "category": "Lifestyle",
+    "topics": [
+      "food",
+      "cooking",
+      "travel",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.saveur.com",
+    "rss": {
+      "feedUrl": "https://www.saveur.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "wine-enthusiast",
+    "name": "Wine Enthusiast",
+    "category": "Lifestyle",
+    "topics": [
+      "food",
+      "travel",
+      "cooking"
+    ],
+    "siteUrl": "https://www.winemag.com",
+    "rss": {
+      "feedUrl": "https://www.winemag.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "conde-nast-traveler",
+    "name": "Condé Nast Traveler",
+    "category": "Lifestyle",
+    "topics": [
+      "travel",
+      "food",
+      "photography",
+      "fashion"
+    ],
+    "siteUrl": "https://www.cntraveler.com",
+    "rss": {
+      "feedUrl": "https://www.cntraveler.com/feed/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "travel-leisure",
+    "name": "Travel + Leisure",
+    "category": "Lifestyle",
+    "topics": [
+      "travel",
+      "food",
+      "photography"
+    ],
+    "siteUrl": "https://www.travelandleisure.com",
+    "rss": {
+      "feedUrl": "https://www.travelandleisure.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "roadtrippers",
+    "name": "Roadtrippers",
+    "category": "Lifestyle",
+    "topics": [
+      "travel",
+      "food",
+      "history"
+    ],
+    "siteUrl": "https://www.roadtrippers.com",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "gq",
+    "name": "GQ",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "design",
+      "fitness",
+      "food"
+    ],
+    "siteUrl": "https://www.gq.com",
+    "rss": {
+      "feedUrl": "https://www.gq.com/feed/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "esquire",
+    "name": "Esquire",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "food",
+      "fitness",
+      "film"
+    ],
+    "siteUrl": "https://www.esquire.com",
+    "rss": {
+      "feedUrl": "https://www.esquire.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "elle",
+    "name": "Elle",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "design",
+      "photography",
+      "art"
+    ],
+    "siteUrl": "https://www.elle.com",
+    "rss": {
+      "feedUrl": "https://www.elle.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "harpers-bazaar",
+    "name": "Harper's Bazaar",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "art",
+      "design",
+      "photography"
+    ],
+    "siteUrl": "https://www.harpersbazaar.com",
+    "rss": {
+      "feedUrl": "https://www.harpersbazaar.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cosmopolitan",
+    "name": "Cosmopolitan",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "health",
+      "fitness",
+      "food"
+    ],
+    "siteUrl": "https://www.cosmopolitan.com",
+    "rss": {
+      "feedUrl": "https://www.cosmopolitan.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "refinery29",
+    "name": "Refinery29",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "health",
+      "design",
+      "film"
+    ],
+    "siteUrl": "https://www.refinery29.com",
+    "rss": {
+      "feedUrl": "https://www.refinery29.com/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-cut",
+    "name": "The Cut",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "design",
+      "art",
+      "books"
+    ],
+    "siteUrl": "https://www.thecut.com",
+    "rss": {
+      "feedUrl": "https://www.thecut.com/feed/rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "who-what-wear",
+    "name": "Who What Wear",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "design",
+      "photography"
+    ],
+    "siteUrl": "https://www.whowhatwear.com",
+    "rss": {
+      "feedUrl": "https://www.whowhatwear.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "highsnobiety",
+    "name": "Highsnobiety",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "music",
+      "design",
+      "art"
+    ],
+    "siteUrl": "https://www.highsnobiety.com",
+    "rss": {
+      "feedUrl": "https://www.highsnobiety.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "hypebeast",
+    "name": "Hypebeast",
+    "category": "Lifestyle",
+    "topics": [
+      "fashion",
+      "music",
+      "design",
+      "art"
+    ],
+    "siteUrl": "https://hypebeast.com",
+    "rss": {
+      "feedUrl": "https://hypebeast.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "martha-stewart",
+    "name": "Martha Stewart",
+    "category": "Lifestyle",
+    "topics": [
+      "cooking",
+      "gardening",
+      "home improvement",
+      "food"
+    ],
+    "siteUrl": "https://www.marthastewart.com",
+    "rss": {
+      "feedUrl": "https://www.marthastewart.com/rss/all.rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "real-simple",
+    "name": "Real Simple",
+    "category": "Lifestyle",
+    "topics": [
+      "home improvement",
+      "food",
+      "health",
+      "fashion"
+    ],
+    "siteUrl": "https://www.realsimple.com",
+    "rss": {
+      "feedUrl": "https://www.realsimple.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "inhabitat",
+    "name": "Inhabitat",
+    "category": "Lifestyle",
+    "topics": [
+      "architecture",
+      "sustainability",
+      "design",
+      "renewable energy"
+    ],
+    "siteUrl": "https://inhabitat.com",
+    "rss": {
+      "feedUrl": "https://inhabitat.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "gardenista",
+    "name": "Gardenista",
+    "category": "Lifestyle",
+    "topics": [
+      "gardening",
+      "design",
+      "home improvement",
+      "sustainability"
+    ],
+    "siteUrl": "https://www.gardenista.com",
+    "rss": {
+      "feedUrl": "https://www.gardenista.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "remodelista",
+    "name": "Remodelista",
+    "category": "Lifestyle",
+    "topics": [
+      "home improvement",
+      "design",
+      "architecture"
+    ],
+    "siteUrl": "https://www.remodelista.com",
+    "rss": {
+      "feedUrl": "https://www.remodelista.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "kitchn",
+    "name": "The Kitchn",
+    "category": "Lifestyle",
+    "topics": [
+      "food",
+      "cooking",
+      "nutrition",
+      "home improvement"
+    ],
+    "siteUrl": "https://www.thekitchn.com",
+    "rss": {
+      "feedUrl": "https://www.thekitchn.com/main.rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sunset-magazine",
+    "name": "Sunset Magazine",
+    "category": "Lifestyle",
+    "topics": [
+      "travel",
+      "food",
+      "gardening",
+      "home improvement"
+    ],
+    "siteUrl": "https://www.sunset.com",
+    "rss": {
+      "feedUrl": "https://www.sunset.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mydomaine",
+    "name": "MyDomaine",
+    "category": "Lifestyle",
+    "topics": [
+      "home improvement",
+      "design",
+      "fashion",
+      "gardening"
+    ],
+    "siteUrl": "https://www.mydomaine.com",
+    "rss": {
+      "feedUrl": "https://www.mydomaine.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

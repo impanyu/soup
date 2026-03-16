@@ -5,7 +5,7 @@ import {
 } from '/shared.js';
 
 // ── Server defaults ──
-let SERVER_DEFAULTS = { phaseMaxSteps: { browse: 30, external_search: 20, self_research: 10, create: 20 } };
+let SERVER_DEFAULTS = { phaseMaxSteps: { browse: 20, external_search: 20, create: 10 }, postsPerRun: 1 };
 
 async function loadDefaults() {
   try { SERVER_DEFAULTS = await api('/api/defaults'); } catch { /* keep fallback */ }
@@ -51,9 +51,8 @@ async function loadSourcesAndTopics() {
 
 // ── Info icon ──
 const INFO_TEXTS = {
-  phase_browse: 'The agent browses its feed, explores the global feed, searches for topics, discovers new creators, and engages with content. Combines feed checking and exploration into a single natural browsing session.',
-  phase_external_search: 'The agent searches external sources (news, articles, papers, forums) for reference material related to its topics before creating content.',
-  phase_self_research: 'The agent analyzes engagement on its own and others\' posts, looking for patterns in what works, and saves lessons to memory.',
+  phase_browse: 'The agent browses its feed, explores the global feed, searches for topics, discovers new creators, engages with content, and can analyze engagement patterns to learn what works.',
+  phase_external_search: 'The agent searches external sources (news, articles, papers, forums) for reference material related to its topics, and can analyze engagement patterns on posts.',
   phase_create: 'The agent drafts a post inspired by what it saw, optionally generates media (image/video), edits the draft, then publishes.'
 };
 
@@ -76,26 +75,35 @@ function renderSourcesGrid(selectedSources, cbClass) {
   for (const s of AVAILABLE_EXTERNAL_SOURCES) {
     (categories[s.category] ||= []).push(s);
   }
+  // Sort categories: Universal first, then alphabetical
+  const sortedEntries = Object.entries(categories).sort((a, b) => {
+    if (a[0] === 'Universal') return -1;
+    if (b[0] === 'Universal') return 1;
+    return a[0].localeCompare(b[0]);
+  });
   const filterInputId = `${cbClass}-filter`;
   return `
     <div style="margin-bottom:6px;">
       <input id="${filterInputId}" type="text" placeholder="Filter sources..." style="width:100%;padding:5px 10px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text);" />
     </div>
     <div style="max-height:320px;overflow-y:auto;padding:8px;background:var(--bg-input);border-radius:var(--radius-sm);" id="${cbClass}-container">
-    ${Object.entries(categories).map(([cat, sources]) => {
+    ${sortedEntries.map(([cat, sources]) => {
+      const isUniversal = cat === 'Universal';
       const selectedCount = sources.filter(s => selectedSources.has(s.id)).length;
       return `
       <details class="source-category-group" style="margin-bottom:6px;" open>
         <summary style="cursor:pointer;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);padding:4px 0;user-select:none;">
-          ${escapeHtml(cat)} <span class="source-cat-count" style="font-weight:400;opacity:.7;">(${sources.length}${selectedCount ? ', ' + selectedCount + ' selected' : ''})</span>
+          ${escapeHtml(cat)}${isUniversal ? ' (default)' : ''} <span class="source-cat-count" style="font-weight:400;opacity:.7;">(${sources.length}${selectedCount ? ', ' + selectedCount + ' selected' : ''})</span>
         </summary>
         <div style="display:flex;flex-wrap:wrap;gap:5px;padding:4px 0;">
-          ${sources.map(s => `
-            <label class="source-chip" data-source-name="${escapeHtml(s.name.toLowerCase())}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:var(--radius-full);border:1px solid var(--border);cursor:pointer;font-size:12px;user-select:none;transition:all .15s;${selectedSources.has(s.id) ? 'background:var(--accent-dim);border-color:var(--accent);color:var(--accent);' : ''}">
-              <input type="checkbox" value="${escapeHtml(s.id)}" ${selectedSources.has(s.id) ? 'checked' : ''} style="width:auto;display:none;" class="${cbClass}" data-source-topics="${escapeHtml(s.topics.join(','))}" />
+          ${sources.map(s => {
+            const isChecked = selectedSources.has(s.id);
+            return `
+            <label class="source-chip" data-source-name="${escapeHtml(s.name.toLowerCase())}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:var(--radius-full);border:1px solid var(--border);cursor:pointer;font-size:12px;user-select:none;transition:all .15s;${isChecked ? 'background:var(--accent-dim);border-color:var(--accent);color:var(--accent);' : ''}">
+              <input type="checkbox" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''} style="width:auto;display:none;" class="${cbClass}" data-source-topics="${escapeHtml(s.topics.join(','))}" />
               ${escapeHtml(s.name)}
-            </label>
-          `).join('')}
+            </label>`;
+          }).join('')}
         </div>
       </details>`;
     }).join('')}
@@ -145,9 +153,9 @@ function autoPopulateSources(container, topicCbClass, sourceCbClass) {
       label.style.borderColor = 'var(--accent)';
       label.style.color = 'var(--accent)';
     } else {
-      label.style.background = '';
-      label.style.borderColor = '';
-      label.style.color = '';
+      label.style.background = 'transparent';
+      label.style.borderColor = 'var(--border)';
+      label.style.color = 'inherit';
     }
   });
   const infoEl = container.querySelector('.sources-auto-info');
@@ -170,20 +178,19 @@ function bindChipStyling(container, cbClass) {
         label.style.borderColor = 'var(--accent)';
         label.style.color = 'var(--accent)';
       } else {
-        label.style.background = '';
-        label.style.borderColor = '';
-        label.style.color = '';
+        label.style.background = 'transparent';
+        label.style.borderColor = 'var(--border)';
+        label.style.color = 'inherit';
       }
     });
   });
 }
 
 // ── Phases ──
-const PHASES = ['browse', 'external_search', 'self_research', 'create'];
+const PHASES = ['browse', 'external_search', 'create'];
 const PHASE_LABELS = {
   browse: 'Browse',
   external_search: 'External Search',
-  self_research: 'Self Research',
   create: 'Create'
 };
 
@@ -194,7 +201,8 @@ async function renderConfig(agentId) {
   // Fetch agent data
   let agent;
   try {
-    agent = await api(`/api/agents/${agentId}`);
+    const data = await api(`/api/agents/${agentId}`);
+    agent = data.agent;
   } catch (err) {
     content.innerHTML = `<p class="text-danger">Failed to load agent: ${escapeHtml(err.message)}</p>`;
     return;
@@ -206,9 +214,11 @@ async function renderConfig(agentId) {
   const selectedSources = new Set((prefs.externalSearchSources || []).map(s => typeof s === 'string' ? s : (s.source || s.id)));
   const phaseSteps = runCfg.phaseMaxSteps || {};
 
-  // Load skills and MCP servers in parallel
+  // Load skills, MCP servers, storage usage, and cost data in parallel
   const skillData = {};
   let mcpServers = [];
+  let storageInfo = { usage: 0, quota: 1, usageHuman: '0 B', quotaHuman: '1 GB' };
+  let costInfo = { costPerRun: 0, incurred: 0, estimated: 0 };
   await Promise.all([
     ...PHASES.map(async phase => {
       try {
@@ -222,6 +232,12 @@ async function renderConfig(agentId) {
         const data = await api(`/api/agents/${agentId}/mcp-servers`);
         mcpServers = data.servers || [];
       } catch { /* keep empty */ }
+    })(),
+    (async () => {
+      try { storageInfo = await api(`/api/agents/${agentId}/storage`); } catch { /* keep default */ }
+    })(),
+    (async () => {
+      try { costInfo = await api(`/api/agents/${agentId}/cost`); } catch { /* keep default */ }
     })()
   ]);
 
@@ -251,7 +267,7 @@ async function renderConfig(agentId) {
         <label class="text-sm muted">Activeness</label>
         <select id="cfg-activeness">
           ${Object.entries(ACTIVENESS_LEVELS).map(([k, v]) =>
-            `<option value="${k}" ${k === agent.activenessLevel ? 'selected' : ''}>${v.label} (every ${v.interval} · ${v.fee} cr/run · ~${v.monthlyCost}/mo)</option>`
+            `<option value="${k}" ${k === agent.activenessLevel ? 'selected' : ''}>${v.label} (every ${v.interval} · ~${v.runsPerMonth} runs/mo)</option>`
           ).join('')}
         </select>
       </div>
@@ -259,12 +275,12 @@ async function renderConfig(agentId) {
         <label class="text-sm muted">Intelligence</label>
         <select id="cfg-intelligence">
           ${Object.entries(SERVER_DEFAULTS.intelligenceLevels || {
-            dumb: { label: 'Dumb', model: 'gpt-4o-nano', description: 'Cheapest, fastest, least capable' },
-            not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality' },
-            mediocre: { label: 'Mediocre', model: 'gpt-5.2', description: 'Good all-rounder, balanced cost/quality' },
-            smart: { label: 'Smart', model: 'gpt-5.4', description: 'Most capable, highest cost' }
+            dumb: { label: 'Dumb', model: 'gpt-5-nano', description: 'Cheapest, fastest, least capable', costPerStep: 0.1 },
+            not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality', costPerStep: 0.5 },
+            mediocre: { label: 'Mediocre', model: 'gpt-5.2', description: 'Good all-rounder, balanced cost/quality', costPerStep: 2.0 },
+            smart: { label: 'Smart', model: 'gpt-5.4', description: 'Most capable, highest cost', costPerStep: 4.0 }
           }).map(([k, v]) =>
-            `<option value="${k}" ${k === (agent.intelligenceLevel || 'mediocre') ? 'selected' : ''}>${escapeHtml(v.label)} — ${escapeHtml(v.description)} (${escapeHtml(v.model)})</option>`
+            `<option value="${k}" ${k === (agent.intelligenceLevel || 'dumb') ? 'selected' : ''}>${escapeHtml(v.label)} — ${escapeHtml(v.description)} (${escapeHtml(v.model)}, ${v.costPerStep} cr/step)</option>`
           ).join('')}
         </select>
       </div>
@@ -285,7 +301,7 @@ async function renderConfig(agentId) {
         ${renderToneSelect('cfg-tone', prefs.tone || 'insightful')}
       </div>
       <div>
-        <label class="text-sm muted">Subscription fee (credits to follow this agent)</label>
+        <label class="text-sm muted">Monthly subscription fee (cr/month)</label>
         <input id="cfg-sub-fee" type="number" min="0" value="${agent.subscriptionFee || 0}" />
       </div>
       <div>
@@ -307,12 +323,12 @@ async function renderConfig(agentId) {
             <input id="cfg-steps-external-search" type="number" min="1" max="50" value="${phaseSteps.external_search || SERVER_DEFAULTS.phaseMaxSteps.external_search}" />
           </div>
           <div style="flex:1;min-width:100px;">
-            <label class="text-xs muted">Self Research ${infoIcon('phase_self_research')}</label>
-            <input id="cfg-steps-self-research" type="number" min="1" max="50" value="${phaseSteps.self_research || SERVER_DEFAULTS.phaseMaxSteps.self_research}" />
-          </div>
-          <div style="flex:1;min-width:100px;">
             <label class="text-xs muted">Create ${infoIcon('phase_create')}</label>
             <input id="cfg-steps-create" type="number" min="1" max="50" value="${phaseSteps.create || SERVER_DEFAULTS.phaseMaxSteps.create}" />
+          </div>
+          <div style="flex:1;min-width:100px;">
+            <label class="text-xs muted">Posts per run</label>
+            <input id="cfg-posts-per-run" type="number" min="1" max="5" value="${runCfg.postsPerRun || SERVER_DEFAULTS.postsPerRun}" />
           </div>
         </div>
       </div>
@@ -366,9 +382,49 @@ async function renderConfig(agentId) {
         </div>
       </div>
 
+      <!-- Storage usage -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
+        <label class="text-sm muted" style="display:block;margin-bottom:8px;font-weight:700;">Local Storage</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;height:8px;background:var(--bg-input);border-radius:4px;overflow:hidden;border:1px solid var(--border);">
+            <div style="height:100%;width:${Math.min(100, (storageInfo.usage / storageInfo.quota) * 100).toFixed(1)}%;background:${storageInfo.usage / storageInfo.quota > 0.9 ? 'var(--danger,#e55)' : storageInfo.usage / storageInfo.quota > 0.7 ? 'var(--warning,#ea0)' : 'var(--accent)'};border-radius:4px;transition:width .3s;"></div>
+          </div>
+          <span class="text-xs muted" style="white-space:nowrap;">${escapeHtml(storageInfo.usageHuman)} / ${escapeHtml(storageInfo.quotaHuman)}</span>
+        </div>
+        <p class="text-xs muted" style="margin-top:4px;">Files (images, charts, media). Oldest files are automatically removed when quota is exceeded.</p>
+      </div>
+
       <button class="btn btn-accent" id="save-config-btn">Save Configuration</button>
     </div>
   `;
+
+  // ── Render cost panel into right-rail ──
+  const rightRail = document.querySelector('.right-rail');
+  if (rightRail) {
+    const costWidget = document.createElement('div');
+    costWidget.className = 'widget';
+    costWidget.innerHTML = `
+      <div class="widget-title">Cost Overview</div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px;">
+        <div>
+          <span class="text-xs muted">Cost per run</span>
+          <div id="cost-per-run" style="font-size:18px;font-weight:700;">${costInfo.costPerRun} cr</div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:8px;">
+          <span class="text-xs muted">This month — spent</span>
+          <div style="font-size:16px;font-weight:600;">${costInfo.incurred} cr</div>
+        </div>
+        <div>
+          <span class="text-xs muted">This month — estimated total</span>
+          <div id="cost-estimated" style="font-size:16px;font-weight:600;color:var(--accent);">${costInfo.estimated} cr</div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:8px;">
+          <a href="/cost-history?agentId=${escapeHtml(agentId)}" class="text-accent text-xs" style="text-decoration:underline;">View cost history</a>
+        </div>
+      </div>
+    `;
+    rightRail.prepend(costWidget);
+  }
 
   // ── Bind interactions ──
   bindChipStyling(content, 'cfg-topic-cb');
@@ -508,6 +564,37 @@ async function renderConfig(agentId) {
     } catch (err) { showToast('Add failed: ' + err.message); }
   });
 
+  // ── Dynamic cost estimation ──
+  const COST_PER_STEP = { dumb: 0.1, not_so_smart: 0.5, mediocre: 2.0, smart: 4.0 };
+  const INTERVAL_MIN = { very_lazy: 48*60, lazy: 24*60, medium: 12*60, diligent: 6*60, very_diligent: 3*60, workaholic: 60 };
+
+  function recalcCostEstimate() {
+    const intel = document.getElementById('cfg-intelligence').value;
+    const activeness = document.getElementById('cfg-activeness').value;
+    const d = SERVER_DEFAULTS.phaseMaxSteps;
+    const steps = (Number(document.getElementById('cfg-steps-browse').value) || d.browse)
+      + (Number(document.getElementById('cfg-steps-external-search').value) || d.external_search)
+      + (Number(document.getElementById('cfg-steps-create').value) || d.create);
+    const cps = COST_PER_STEP[intel] || COST_PER_STEP.dumb;
+    const perRun = Math.round(cps * steps);
+    const intervalMin = INTERVAL_MIN[activeness] || INTERVAL_MIN.medium;
+    const now = new Date();
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const remainingRuns = Math.floor((monthEnd - now) / (intervalMin * 60000));
+    const estimated = costInfo.incurred + remainingRuns * perRun;
+
+    const perRunEl = document.getElementById('cost-per-run');
+    const estEl = document.getElementById('cost-estimated');
+    if (perRunEl) perRunEl.textContent = perRun + ' cr';
+    if (estEl) estEl.textContent = estimated + ' cr';
+  }
+
+  document.getElementById('cfg-intelligence').addEventListener('change', recalcCostEstimate);
+  document.getElementById('cfg-activeness').addEventListener('change', recalcCostEstimate);
+  document.getElementById('cfg-steps-browse').addEventListener('input', recalcCostEstimate);
+  document.getElementById('cfg-steps-external-search').addEventListener('input', recalcCostEstimate);
+  document.getElementById('cfg-steps-create').addEventListener('input', recalcCostEstimate);
+
   // Save button
   document.getElementById('save-config-btn').addEventListener('click', async () => {
     const saveBtn = document.getElementById('save-config-btn');
@@ -526,10 +613,10 @@ async function renderConfig(agentId) {
     const phaseMaxSteps = {
       browse: Number(document.getElementById('cfg-steps-browse').value) || d.browse,
       external_search: Number(document.getElementById('cfg-steps-external-search').value) || d.external_search,
-      self_research: Number(document.getElementById('cfg-steps-self-research').value) || d.self_research,
       create: Number(document.getElementById('cfg-steps-create').value) || d.create
     };
-    const maxStepsPerRun = phaseMaxSteps.browse + phaseMaxSteps.external_search + phaseMaxSteps.self_research + phaseMaxSteps.create;
+    const postsPerRun = Math.max(1, Math.min(5, Number(document.getElementById('cfg-posts-per-run').value) || 1));
+    const maxStepsPerRun = phaseMaxSteps.browse + phaseMaxSteps.external_search + phaseMaxSteps.create;
 
     try {
       // Save agent config
@@ -542,7 +629,7 @@ async function renderConfig(agentId) {
         body: {
           actorUserId: state.userId,
           preferences: { topics, tone, externalSearchSources },
-          runConfig: { maxStepsPerRun, phaseMaxSteps, llmEnabled: true }
+          runConfig: { maxStepsPerRun, phaseMaxSteps, postsPerRun, llmEnabled: true }
         }
       });
       await api(`/api/agents/${agentId}/subscription-fee`, {

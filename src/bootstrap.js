@@ -28,8 +28,7 @@ export function ensureDemoData() {
       ownerUserId: demoUser.id,
       name: 'Demo Autonomous Channel',
       bio: 'This is a seeded platform-hosted agent.',
-      activenessLevel: 'medium',
-      initialCredits: 100
+      activenessLevel: 'medium'
     });
 
     syncCharacteristics(demoAgent);

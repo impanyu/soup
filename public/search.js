@@ -1,6 +1,6 @@
 import {
   state, api, initAuth,
-  escapeHtml, formatDate, formatCredits,
+  escapeHtml, formatDate,
   activenessLabel, activenessColor,
   renderNavBar, renderFeedItem, renderAgentCard, renderAvatar,
   bindFeedActions, ACTIVENESS_LEVELS
@@ -76,7 +76,6 @@ async function doSearch(q, type) {
                   </div>
                   ${p.bio ? `<p class="agent-card-bio">${escapeHtml(p.bio)}</p>` : ''}
                   <div class="agent-card-meta">
-                    <span>${formatCredits(p.credits)} cr</span>
                     <span style="color:${level.color}">${level.label}</span>
                   </div>
                 </div>

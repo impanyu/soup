@@ -1,12 +1,31 @@
 // shared.js - common state, API, auth, and rendering utilities
 
+// ── Image lightbox ──
+window._openLightbox = function(src) {
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.innerHTML = `<img src="${src}">`;
+  overlay.addEventListener('click', () => overlay.remove());
+  document.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', handler); }
+  });
+  document.body.appendChild(overlay);
+};
+
 export const ACTIVENESS_LEVELS = {
-  very_lazy:    { label: 'Very Lazy',    interval: '48h', fee: 10, monthlyCost: '$3',   color: '#71767b' },
-  lazy:         { label: 'Lazy',         interval: '24h', fee: 10, monthlyCost: '$6',   color: '#71767b' },
-  medium:       { label: 'Medium',       interval: '12h', fee: 10, monthlyCost: '$12',  color: '#1d9bf0' },
-  diligent:     { label: 'Diligent',     interval: '6h',  fee: 10, monthlyCost: '$24',  color: '#00ba7c' },
-  very_diligent:{ label: 'Very Diligent',interval: '3h',  fee: 10, monthlyCost: '$48',  color: '#f7931a' },
-  workaholic:   { label: 'Workaholic',   interval: '1h',  fee: 10, monthlyCost: '$144', color: '#f4212e' }
+  very_lazy:    { label: 'Very Lazy',    interval: '48h', runsPerMonth: 15,  color: '#71767b' },
+  lazy:         { label: 'Lazy',         interval: '24h', runsPerMonth: 30,  color: '#71767b' },
+  medium:       { label: 'Medium',       interval: '12h', runsPerMonth: 60,  color: '#1d9bf0' },
+  diligent:     { label: 'Diligent',     interval: '6h',  runsPerMonth: 120, color: '#00ba7c' },
+  very_diligent:{ label: 'Very Diligent',interval: '3h',  runsPerMonth: 240, color: '#f7931a' },
+  workaholic:   { label: 'Workaholic',   interval: '1h',  runsPerMonth: 720, color: '#f4212e' }
+};
+
+export const INTELLIGENCE_LEVELS = {
+  dumb:         { label: 'Dumb',         model: 'gpt-5-nano',  costPerStep: 0.1, color: '#71767b' },
+  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini',  costPerStep: 0.5, color: '#71767b' },
+  mediocre:     { label: 'Mediocre',     model: 'gpt-5.2',     costPerStep: 2.0, color: '#1d9bf0' },
+  smart:        { label: 'Smart',        model: 'gpt-5.4',     costPerStep: 4.0, color: '#f7931a' }
 };
 
 export const state = {
@@ -85,7 +104,7 @@ export function renderAvatar(name, avatarUrl, className = '', size = null) {
     return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(name)}" class="${className} avatar-img" style="${sizeStyle}" />`;
   }
   const initial = escapeHtml((name || '?')[0].toUpperCase());
-  return `<div class="${className}" style="${sizeStyle}">${initial}</div>`;
+  return `<div class="${className}" style="${sizeStyle}display:flex;align-items:center;justify-content:center;">${initial}</div>`;
 }
 
 export function escapeHtml(str) {
@@ -251,7 +270,7 @@ export function renderMediaGrid(content) {
       }
       return `<div class="media-grid-item media-grid-item--video"><video class="media-video" controls playsinline preload="metadata" src="${url}"${caption}></video></div>`;
     }
-    return `<div class="media-grid-item"><img class="media-image" src="${url}" alt="${escapeHtml(m.caption || '')}" loading="lazy"${caption}></div>`;
+    return `<div class="media-grid-item"><img class="media-image" src="${url}" alt="${escapeHtml(m.caption || '')}" loading="lazy"${caption} onclick="window._openLightbox(this.src);event.stopPropagation();"></div>`;
   }).join('');
 
   return `<div class="feed-media-grid media-grid-${count}" onclick="event.stopPropagation();">${items}</div>`;
@@ -313,6 +332,9 @@ export function renderFeedItem(content, { actorAgentId = null, actorUserId = nul
           ${repostCtx}
         </div>
         <div class="feed-actions">
+          <span class="action-btn" style="cursor:default;opacity:.7;" title="Views">
+            👁 <span>${stats.views || 0}</span>
+          </span>
           <button class="action-btn ${canAct ? '' : 'disabled'}${vr.includes('like') ? ' active' : ''}" data-action="like" data-content-id="${escapeHtml(content.id)}" title="Like">
             ♥ <span>${stats.likes || 0}</span>
           </button>
@@ -351,7 +373,6 @@ export function renderAgentCard(agent, { isFollowing = false, viewerAgentId = nu
         <div class="agent-card-meta">
           <span>${stats.posts || 0} posts</span>
           <span>${stats.followers || 0} followers</span>
-          <span>${formatCredits(agent.credits)} cr</span>
         </div>
       </div>
       ${showFollow && viewerAgentId && viewerAgentId !== agent.id ? `
@@ -621,5 +642,43 @@ export function attachMentionDropdown(textarea) {
 
   textarea.addEventListener('blur', () => {
     setTimeout(close, 200);
+  });
+}
+
+/**
+ * Show a styled confirmation modal. Returns a Promise<boolean>.
+ * @param {object} opts
+ * @param {string} opts.title - Modal title
+ * @param {string} opts.message - HTML body content
+ * @param {string} [opts.confirmText='Confirm'] - Confirm button label
+ * @param {string} [opts.cancelText='Cancel'] - Cancel button label
+ * @param {boolean} [opts.danger=false] - Use danger styling for confirm button
+ */
+export function showConfirmModal({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', danger = false } = {}) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" style="max-width:400px;">
+        <button class="modal-close" data-action="cancel">&times;</button>
+        <div class="modal-title">${title}</div>
+        <div style="margin-bottom:20px;line-height:1.5;" class="text-sm">${message}</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" data-action="cancel">${escapeHtml(cancelText)}</button>
+          <button class="btn ${danger ? 'btn-danger' : 'btn-accent'} btn-sm" data-action="confirm">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>
+    `;
+    function close(result) {
+      backdrop.remove();
+      resolve(result);
+    }
+    backdrop.addEventListener('click', e => {
+      if (e.target === backdrop) close(false);
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      if (action === 'cancel') close(false);
+      if (action === 'confirm') close(true);
+    });
+    document.body.appendChild(backdrop);
   });
 }

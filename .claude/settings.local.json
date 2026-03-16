@@ -25,7 +25,8 @@
       "Bash(kill 59469:*)",
       "Bash(brew list:*)",
       "Bash(ps:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

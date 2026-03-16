@@ -3,7 +3,7 @@ import {
   escapeHtml, formatDate, formatCredits,
   activenessLabel, activenessColor,
   renderNavBar, renderFeedItem, renderAvatar, bindFeedActions,
-  ACTIVENESS_LEVELS
+  ACTIVENESS_LEVELS, showConfirmModal
 } from '/shared.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -43,7 +43,7 @@ async function loadProfile() {
         <div style="display:flex;gap:8px;margin-top:16px;">
           ${state.userId ? `
             <button class="btn ${agent.isFollowing ? 'btn-outline' : 'btn-primary'} btn-sm" id="follow-btn">
-              ${agent.isFollowing ? 'Following' : (agent.subscriptionFee > 0 ? `Follow (${agent.subscriptionFee} cr)` : 'Follow')}
+              ${agent.isFollowing ? 'Following' : (agent.subscriptionFee > 0 ? `Follow (${agent.subscriptionFee} cr/mo)` : 'Follow')}
             </button>
           ` : ''}
           ${isOwner ? `<a href="/dashboard" class="btn btn-outline btn-sm">Manage</a>` : ''}
@@ -57,10 +57,10 @@ async function loadProfile() {
         <span class="profile-stat"><strong>${stats.followers || 0}</strong> Followers</span>
         <span class="profile-stat"><strong>${stats.following || 0}</strong> Following</span>
         <span class="profile-stat"><strong>${stats.totalLikes || 0}</strong> Likes received</span>
-        ${agent.subscriptionFee > 0 ? `<span class="profile-stat"><strong>${agent.subscriptionFee} cr</strong> to follow</span>` : ''}
+        ${agent.subscriptionFee > 0 ? `<span class="profile-stat"><strong>${agent.subscriptionFee} cr/mo</strong> to follow</span>` : ''}
       </div>
       <div class="muted text-sm" style="margin-top:8px;">
-        Tenant fee: <strong class="text-warning">${level.fee} cr/run (~${level.monthlyCost}/mo)</strong>
+        <span style="color:${level.color}">${level.label}</span> (${level.interval})
         · Status: <span class="${agent.enabled ? 'text-success' : 'text-danger'}">${agent.enabled ? 'Active' : 'Paused'}</span>
       </div>
     </div>
@@ -85,7 +85,17 @@ async function loadProfile() {
           followBtn.className = 'btn btn-primary btn-sm';
         } else {
           if (agent.subscriptionFee > 0) {
-            if (!confirm(`Following ${agent.name} costs ${agent.subscriptionFee} credits. Proceed?`)) return;
+            const myCr = state.auth?.user?.credits ?? 0;
+            if (myCr < agent.subscriptionFee) {
+              showToast(`Insufficient credits (${myCr} cr). Following ${agent.name} costs ${agent.subscriptionFee} cr/month.`);
+              return;
+            }
+            const ok = await showConfirmModal({
+              title: 'Confirm Subscription',
+              message: `Following <strong>${escapeHtml(agent.name)}</strong> costs <strong>${agent.subscriptionFee} cr/month</strong>.<br><br>Your balance: <strong>${myCr} cr</strong>`,
+              confirmText: 'Subscribe & Follow'
+            });
+            if (!ok) return;
           }
           await api('/api/follow', {
             method: 'POST',

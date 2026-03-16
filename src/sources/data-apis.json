@@ -275,5 +275,705 @@
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "spacex-launches",
+    "name": "SpaceX Launch Data",
+    "category": "Data APIs",
+    "topics": ["space", "engineering", "technology"],
+    "search": {
+      "endpoint": "https://api.spacexdata.com/v4/launches",
+      "searchParam": null,
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Date: {date_utc} · Success: {success}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nasa-neo",
+    "name": "NASA Near-Earth Objects",
+    "category": "Data APIs",
+    "topics": ["space", "asteroids", "science"],
+    "search": {
+      "endpoint": "https://api.nasa.gov/neo/rest/v1/feed",
+      "searchParam": null,
+      "resultPath": "near_earth_objects",
+      "extraParams": { "api_key": "DEMO_KEY" }
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Estimated diameter: {estimated_diameter.kilometers.estimated_diameter_max} km"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "solar-system",
+    "name": "Solar System Bodies",
+    "category": "Data APIs",
+    "topics": ["space", "astronomy", "science", "education"],
+    "search": {
+      "endpoint": "https://api.le-systeme-solaire.net/rest/bodies/",
+      "searchParam": null,
+      "resultPath": "bodies"
+    },
+    "normalize": {
+      "titlePath": "englishName",
+      "snippetTemplate": "Type: {bodyType} · Gravity: {gravity} m/s² · Mass: {mass.massValue}×10^{mass.massExponent} kg"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "astronauts-in-space",
+    "name": "Astronauts In Space",
+    "category": "Data APIs",
+    "topics": ["space", "people", "ISS"],
+    "search": {
+      "endpoint": "http://api.open-notify.org/astros.json",
+      "searchParam": null,
+      "resultPath": "people"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Craft: {craft}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "datausa-population",
+    "name": "DataUSA Population",
+    "category": "Data APIs",
+    "topics": ["demographics", "USA", "population", "data science"],
+    "search": {
+      "endpoint": "https://datausa.io/api/data",
+      "searchParam": null,
+      "resultPath": "data",
+      "extraParams": { "drilldowns": "Nation", "measures": "Population" }
+    },
+    "normalize": {
+      "titleTemplate": "US Population {Year}",
+      "snippetTemplate": "Population: {Population}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "genderize",
+    "name": "Genderize.io",
+    "category": "Data APIs",
+    "topics": ["demographics", "names", "statistics"],
+    "search": {
+      "endpoint": "https://api.genderize.io",
+      "searchParam": "name",
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titleTemplate": "Gender prediction for {name}",
+      "snippetTemplate": "Gender: {gender} · Probability: {probability} · Count: {count}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nationalize",
+    "name": "Nationalize.io",
+    "category": "Data APIs",
+    "topics": ["demographics", "names", "nationality"],
+    "search": {
+      "endpoint": "https://api.nationalize.io",
+      "searchParam": "name",
+      "resultPath": "country"
+    },
+    "normalize": {
+      "titleTemplate": "Nationality prediction for {name}",
+      "snippetTemplate": "Country: {country_id} · Probability: {probability}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "agify",
+    "name": "Agify.io",
+    "category": "Data APIs",
+    "topics": ["demographics", "names", "age"],
+    "search": {
+      "endpoint": "https://api.agify.io",
+      "searchParam": "name",
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titleTemplate": "Age prediction for {name}",
+      "snippetTemplate": "Age: {age} · Count: {count}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "disease-sh-countries",
+    "name": "COVID-19 by Country",
+    "category": "Data APIs",
+    "topics": ["health", "COVID", "epidemiology", "data science"],
+    "search": {
+      "endpoint": "https://disease.sh/v3/covid-19/countries",
+      "searchParam": null,
+      "resultPath": "root",
+      "extraParams": { "sort": "cases" }
+    },
+    "normalize": {
+      "titlePath": "country",
+      "snippetTemplate": "Cases: {cases} · Deaths: {deaths} · Recovered: {recovered}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "disease-sh-historical",
+    "name": "COVID-19 Historical",
+    "category": "Data APIs",
+    "topics": ["health", "COVID", "time-series"],
+    "search": {
+      "endpoint": "https://disease.sh/v3/covid-19/historical/all",
+      "searchParam": null,
+      "resultPath": "root",
+      "extraParams": { "lastdays": "30" }
+    },
+    "normalize": {
+      "titleTemplate": "COVID-19 Global Historical",
+      "snippetTemplate": "Daily cases, deaths, and recoveries over time"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "carbon-intensity-uk",
+    "name": "UK Carbon Intensity",
+    "category": "Data APIs",
+    "topics": ["energy", "carbon", "environment", "UK"],
+    "search": {
+      "endpoint": "https://api.carbonintensity.org.uk/intensity/date",
+      "searchParam": null,
+      "resultPath": "data"
+    },
+    "normalize": {
+      "titleTemplate": "UK Carbon Intensity",
+      "snippetTemplate": "Forecast: {intensity.forecast} · Actual: {intensity.actual} gCO2/kWh"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "carbon-generation-uk",
+    "name": "UK Electricity Generation Mix",
+    "category": "Data APIs",
+    "topics": ["energy", "renewables", "electricity", "UK"],
+    "search": {
+      "endpoint": "https://api.carbonintensity.org.uk/generation",
+      "searchParam": null,
+      "resultPath": "data"
+    },
+    "normalize": {
+      "titleTemplate": "UK Generation Mix",
+      "snippetTemplate": "Fuel: {fuel} · Percentage: {perc}%"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-meteo-air-quality",
+    "name": "Open-Meteo Air Quality",
+    "category": "Data APIs",
+    "topics": ["environment", "air-quality", "forecast"],
+    "search": {
+      "endpoint": "https://air-quality-api.open-meteo.com/v1/air-quality",
+      "searchParam": "latitude",
+      "resultPath": "hourly",
+      "extraParams": { "hourly": "pm10,pm2_5,ozone,nitrogen_dioxide" }
+    },
+    "normalize": {
+      "titleTemplate": "Air Quality Forecast",
+      "snippetTemplate": "Hourly PM2.5, PM10, Ozone, NO2 concentrations"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-meteo-marine",
+    "name": "Open-Meteo Marine",
+    "category": "Data APIs",
+    "topics": ["environment", "ocean", "marine", "waves"],
+    "search": {
+      "endpoint": "https://marine-api.open-meteo.com/v1/marine",
+      "searchParam": "latitude",
+      "resultPath": "hourly",
+      "extraParams": { "hourly": "wave_height,wave_period,wave_direction" }
+    },
+    "normalize": {
+      "titleTemplate": "Marine Forecast",
+      "snippetTemplate": "Wave Height, Period, and Direction forecast"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "usgs-water",
+    "name": "USGS Water Services",
+    "category": "Data APIs",
+    "topics": ["environment", "water", "hydrology", "USA"],
+    "search": {
+      "endpoint": "https://waterservices.usgs.gov/nwis/iv/",
+      "searchParam": "sites",
+      "resultPath": "value.timeSeries",
+      "extraParams": { "format": "json", "parameterCd": "00060,00065" }
+    },
+    "normalize": {
+      "titleTemplate": "USGS Water Data",
+      "snippetTemplate": "Streamflow and gage height readings"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "coincap-assets",
+    "name": "CoinCap Assets",
+    "category": "Data APIs",
+    "topics": ["cryptocurrency", "finance", "markets"],
+    "search": {
+      "endpoint": "https://api.coincap.io/v2/assets",
+      "searchParam": null,
+      "resultPath": "data",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Price: ${priceUsd} · Market Cap: ${marketCapUsd} · Change 24h: {changePercent24Hr}%"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "coincap-history",
+    "name": "CoinCap Price History",
+    "category": "Data APIs",
+    "topics": ["cryptocurrency", "finance", "time-series"],
+    "search": {
+      "endpoint": "https://api.coincap.io/v2/assets/bitcoin/history",
+      "searchParam": null,
+      "resultPath": "data",
+      "extraParams": { "interval": "d1" }
+    },
+    "normalize": {
+      "titleTemplate": "Crypto Price History",
+      "snippetTemplate": "Date: {date} · Price: ${priceUsd}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "frankfurter-latest",
+    "name": "Frankfurter Exchange Rates",
+    "category": "Data APIs",
+    "topics": ["finance", "forex", "currency", "ECB"],
+    "search": {
+      "endpoint": "https://api.frankfurter.app/latest",
+      "searchParam": null,
+      "resultPath": "rates"
+    },
+    "normalize": {
+      "titleTemplate": "ECB Exchange Rates",
+      "snippetTemplate": "Base: {base} · Date: {date}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "frankfurter-historical",
+    "name": "Frankfurter Historical Rates",
+    "category": "Data APIs",
+    "topics": ["finance", "forex", "time-series"],
+    "search": {
+      "endpoint": "https://api.frankfurter.app/2024-01-01..2024-12-31",
+      "searchParam": null,
+      "resultPath": "rates"
+    },
+    "normalize": {
+      "titleTemplate": "Historical Exchange Rates",
+      "snippetTemplate": "Daily exchange rate time series"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "citybikes",
+    "name": "CityBikes",
+    "category": "Data APIs",
+    "topics": ["transport", "bikes", "urban", "sharing"],
+    "search": {
+      "endpoint": "https://api.citybik.es/v2/networks",
+      "searchParam": null,
+      "resultPath": "networks"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "City: {location.city} · Country: {location.country} · Stations: {stations_count}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "ergast-f1",
+    "name": "Formula 1 Data",
+    "category": "Data APIs",
+    "topics": ["sports", "F1", "motorsport"],
+    "search": {
+      "endpoint": "https://api.jolpi.ca/ergast/f1/current/driverStandings.json",
+      "searchParam": null,
+      "resultPath": "MRData.StandingsTable.StandingsLists"
+    },
+    "normalize": {
+      "titleTemplate": "F1 Driver Standings",
+      "snippetTemplate": "Driver standings for current season"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "github-events",
+    "name": "GitHub Public Events",
+    "category": "Data APIs",
+    "topics": ["technology", "open-source", "developer"],
+    "search": {
+      "endpoint": "https://api.github.com/events",
+      "searchParam": null,
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titlePath": "type",
+      "snippetTemplate": "Actor: {actor.login} · Repo: {repo.name}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "stackexchange-tags",
+    "name": "StackOverflow Popular Tags",
+    "category": "Data APIs",
+    "topics": ["technology", "programming", "Q&A"],
+    "search": {
+      "endpoint": "https://api.stackexchange.com/2.3/tags",
+      "searchParam": null,
+      "resultPath": "items",
+      "extraParams": { "order": "desc", "sort": "popular", "site": "stackoverflow" }
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Questions: {count}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "wikipedia-pageviews",
+    "name": "Wikipedia Pageviews",
+    "category": "Data APIs",
+    "topics": ["technology", "wikipedia", "popularity", "time-series"],
+    "search": {
+      "endpoint": "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents",
+      "searchParam": null,
+      "resultPath": "items"
+    },
+    "normalize": {
+      "titleTemplate": "Wikipedia Pageviews",
+      "snippetTemplate": "Article: {article} · Views: {views}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "itunes-search",
+    "name": "iTunes Search",
+    "category": "Data APIs",
+    "topics": ["media", "music", "apps", "entertainment"],
+    "search": {
+      "endpoint": "https://itunes.apple.com/search",
+      "searchParam": "term",
+      "resultPath": "results",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "trackName",
+      "snippetTemplate": "Artist: {artistName} · Price: ${trackPrice} · Genre: {primaryGenreName}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "fruityvice",
+    "name": "Fruityvice",
+    "category": "Data APIs",
+    "topics": ["food", "nutrition", "health"],
+    "search": {
+      "endpoint": "https://www.fruityvice.com/api/fruit/all",
+      "searchParam": null,
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Calories: {nutritions.calories} · Sugar: {nutritions.sugar}g · Protein: {nutritions.protein}g"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "themealdb",
+    "name": "TheMealDB",
+    "category": "Data APIs",
+    "topics": ["food", "recipes", "cooking"],
+    "search": {
+      "endpoint": "https://www.themealdb.com/api/json/v1/1/categories.php",
+      "searchParam": null,
+      "resultPath": "categories"
+    },
+    "normalize": {
+      "titlePath": "strCategory",
+      "snippetTemplate": "Category: {strCategory}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "thecocktaildb",
+    "name": "TheCocktailDB",
+    "category": "Data APIs",
+    "topics": ["food", "drinks", "cocktails"],
+    "search": {
+      "endpoint": "https://www.thecocktaildb.com/api/json/v1/1/list.php",
+      "searchParam": null,
+      "resultPath": "drinks",
+      "extraParams": { "c": "list" }
+    },
+    "normalize": {
+      "titlePath": "strCategory",
+      "snippetTemplate": "Category: {strCategory}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "universities",
+    "name": "Universities",
+    "category": "Data APIs",
+    "topics": ["education", "universities", "global"],
+    "search": {
+      "endpoint": "http://universities.hipolabs.com/search",
+      "searchParam": "country",
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Country: {country} · Domain: {domains.0}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-brewery",
+    "name": "Open Brewery DB",
+    "category": "Data APIs",
+    "topics": ["food", "drinks", "breweries"],
+    "search": {
+      "endpoint": "https://api.openbrewerydb.org/v1/breweries",
+      "searchParam": null,
+      "resultPath": "root",
+      "extraParams": { "per_page": "50" }
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Type: {brewery_type} · City: {city} · State: {state}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nobel-prize",
+    "name": "Nobel Prize API",
+    "category": "Data APIs",
+    "topics": ["science", "education", "history"],
+    "search": {
+      "endpoint": "https://api.nobelprize.org/2.1/laureates",
+      "searchParam": null,
+      "resultPath": "laureates"
+    },
+    "normalize": {
+      "titlePath": "fullName.en",
+      "snippetTemplate": "Born: {birth.date} · Category: {nobelPrizes.0.category.en}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pokeapi",
+    "name": "PokeAPI",
+    "category": "Data APIs",
+    "topics": ["gaming", "pokemon", "entertainment"],
+    "search": {
+      "endpoint": "https://pokeapi.co/api/v2/pokemon",
+      "searchParam": null,
+      "resultPath": "results",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Pokemon: {name}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-trivia",
+    "name": "Open Trivia DB",
+    "category": "Data APIs",
+    "topics": ["education", "trivia", "entertainment"],
+    "search": {
+      "endpoint": "https://opentdb.com/api_count_global.php",
+      "searchParam": null,
+      "resultPath": "categories"
+    },
+    "normalize": {
+      "titleTemplate": "Trivia Categories",
+      "snippetTemplate": "Question counts by category"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-library",
+    "name": "Open Library",
+    "category": "Data APIs",
+    "topics": ["books", "literature", "education"],
+    "search": {
+      "endpoint": "https://openlibrary.org/search.json",
+      "searchParam": "q",
+      "resultPath": "docs",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetTemplate": "Author: {author_name.0} · Year: {first_publish_year} · Editions: {edition_count}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "jikan-anime",
+    "name": "Jikan Anime (MyAnimeList)",
+    "category": "Data APIs",
+    "topics": ["anime", "entertainment", "media"],
+    "search": {
+      "endpoint": "https://api.jikan.moe/v4/top/anime",
+      "searchParam": null,
+      "resultPath": "data",
+      "limitParam": "limit"
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetTemplate": "Score: {score} · Episodes: {episodes} · Members: {members}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "tvmaze-shows",
+    "name": "TVMaze Shows",
+    "category": "Data APIs",
+    "topics": ["entertainment", "TV", "media"],
+    "search": {
+      "endpoint": "https://api.tvmaze.com/shows",
+      "searchParam": null,
+      "resultPath": "root"
+    },
+    "normalize": {
+      "titlePath": "name",
+      "snippetTemplate": "Rating: {rating.average} · Genres: {genres} · Status: {status}"
+    },
+    "responseFormat": "json",
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
   }
 ]

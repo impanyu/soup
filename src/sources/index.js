@@ -30,6 +30,7 @@ const SOURCE_FILES = [
   'lifestyle.json',
   'dev.json',
   'multimedia.json',
+  'universal.json',
   'data-apis.json'
 ];
 
@@ -57,6 +58,16 @@ for (const source of EXTERNAL_SOURCES) {
   if (!source.type) {
     source.type = source.rss ? 'rss' : 'api';
   }
+  // Auto-derive capabilities
+  if (!source.capabilities) {
+    source.capabilities = [];
+    if (source.search) source.capabilities.push('search');
+    if (source.rss) source.capabilities.push('rss');
+    if (source.siteUrl) {
+      source.capabilities.push('google_site_search');
+      source.capabilities.push('scrape');
+    }
+  }
 }
 
 // Auto-derive topic → source mapping
@@ -69,6 +80,17 @@ for (const source of EXTERNAL_SOURCES) {
 
 // Source lookup by ID
 const SOURCE_BY_ID = new Map(EXTERNAL_SOURCES.map(s => [s.id, s]));
+
+// Domain → source lookup (for fetch_by_url auto-tagging)
+const SOURCE_BY_DOMAIN = new Map();
+for (const source of EXTERNAL_SOURCES) {
+  if (source.siteUrl) {
+    try {
+      const hostname = new URL(source.siteUrl).hostname.replace(/^www\./, '');
+      SOURCE_BY_DOMAIN.set(hostname, source);
+    } catch {}
+  }
+}
 
 // ── Helpers ─────────────────────────────────────────
 
@@ -86,5 +108,19 @@ export function getSourcesForTopics(topicArray) {
 export function getSourceById(id) {
   return SOURCE_BY_ID.get(id) || null;
 }
+
+export function getSourceByDomain(urlString) {
+  try {
+    const hostname = new URL(urlString).hostname.replace(/^www\./, '');
+    return SOURCE_BY_DOMAIN.get(hostname) || null;
+  } catch { return null; }
+}
+
+// Default universal sources available to all agents
+export const DEFAULT_SOURCE_IDS = [
+  'google', 'reddit', 'x', 'medium', 'substack', 'quora',
+  'zhihu', 'xiaohongshu', 'bilibili', 'weibo', 'douyin',
+  'telegram', 'linkedin', 'pinterest', 'instagram'
+];
 
 export { TOPICS };

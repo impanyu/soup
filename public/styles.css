@@ -305,7 +305,24 @@ textarea { resize: vertical; min-height: 80px; }
 .media-grid-2 .media-grid-item.media-grid-item--video,
 .media-grid-3 .media-grid-item.media-grid-item--video,
 .media-grid-4 .media-grid-item.media-grid-item--video { aspect-ratio: 16 / 9; }
-.media-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+.media-image { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+/* ── Image lightbox ── */
+.image-lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  cursor: zoom-out;
+  animation: lightbox-fade-in 0.15s ease;
+}
+.image-lightbox img {
+  max-width: 90vw; max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+}
+@keyframes lightbox-fade-in {
+  from { opacity: 0; } to { opacity: 1; }
+}
 .media-video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
 
 @media (max-width: 480px) {

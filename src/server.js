@@ -9,10 +9,11 @@ import * as mediaStorage from './mediaStorage.js';
 import { startScheduler } from './scheduler.js';
 import { ensureDemoData } from './bootstrap.js';
 import { previewAgentContext, DEFAULT_PHASE_MAX_STEPS, TONE_PROFILES, INTELLIGENCE_LEVELS } from './agentRuntime.js';
-import { EXTERNAL_SOURCES, TOPIC_SOURCE_MAP, TOPICS } from './externalSources.js';
+import { EXTERNAL_SOURCES, TOPIC_SOURCE_MAP, DEFAULT_SOURCE_IDS, TOPICS } from './externalSources.js';
 import { addRunNowJob, isAgentRunning, syncSingleAgent } from './queue.js';
 import * as agentStorage from './agentStorage.js';
 import { runSkillEditorChat } from './skillEditor.js';
+import * as vectorMemory from './vectorMemory.js';
 import { getToolsForPhase } from './toolRegistry.js';
 
 function syncCharacteristics(agent) {
@@ -229,6 +230,14 @@ function getBearerToken(req) {
   return h.slice(7).trim();
 }
 
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + units[i];
+}
+
 function requireOwner(userId, agentId) {
   const agent = db.getAgent(agentId);
   if (!agent) throw new Error('Agent not found.');
@@ -346,7 +355,7 @@ function contentWithStats(content, viewerKind, viewerId) {
     authorAvatarUrl,
     authorKind: content.authorKind || 'agent',
     authorId: content.authorId || content.authorAgentId,
-    stats: { likes, dislikes, favorites, replies, reposts },
+    stats: { views: content.viewCount || 0, likes, dislikes, favorites, replies, reposts },
     viewerReactions,
     repostOf,
     replyTo
@@ -443,6 +452,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/api/stripe/config') {
+      const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+      sendJson(res, 200, { publishableKey, mode: publishableKey ? 'live' : 'mock' });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/health') {
       sendJson(res, 200, {
         ok: true,
@@ -464,10 +479,12 @@ const server = http.createServer(async (req, res) => {
           id: s.id, name: s.name, type: s.type,
           category: s.category, topics: s.topics,
           requiresKey: s.requiresKey, dataType: s.dataType || 'article',
+          capabilities: s.capabilities || [],
           hasRss: !!s.rss, hasSearch: !!s.search
         })),
         topics: TOPICS,
-        topicSourceMap: TOPIC_SOURCE_MAP
+        topicSourceMap: TOPIC_SOURCE_MAP,
+        defaultSourceIds: DEFAULT_SOURCE_IDS
       });
       return;
     }
@@ -611,7 +628,7 @@ const server = http.createServer(async (req, res) => {
         name: body.name || 'Unnamed Hosted Agent',
         bio: body.bio || '',
         activenessLevel: body.activenessLevel || 'medium',
-        initialCredits: body.initialCredits ?? 100,
+        intelligenceLevel: body.intelligenceLevel || 'dumb',
         preferences: body.preferences,
         runConfig: body.runConfig
       });
@@ -619,18 +636,6 @@ const server = http.createServer(async (req, res) => {
       syncCharacteristics(agent);
       await syncSingleAgent(agent.id);
       sendJson(res, 201, { agent });
-      return;
-    }
-
-    const singleAgentMatch = pathname.match(/^\/api\/agents\/([^/]+)$/);
-    if (req.method === 'GET' && singleAgentMatch) {
-      const agentId = singleAgentMatch[1];
-      const agent = db.getAgent(agentId);
-      if (!agent) {
-        sendJson(res, 404, { error: 'Agent not found' });
-        return;
-      }
-      sendJson(res, 200, agent);
       return;
     }
 
@@ -684,6 +689,63 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/api/agents') {
       sendJson(res, 200, { agents: db.state.agents });
+      return;
+    }
+
+    const agentStorageMatch = pathname.match(/^\/api\/agents\/([^/]+)\/storage$/);
+    if (req.method === 'GET' && agentStorageMatch) {
+      const agentId = agentStorageMatch[1];
+      const usage = agentStorage.getStorageUsage(agentId);
+      const quota = agentStorage.AGENT_STORAGE_QUOTA;
+      sendJson(res, 200, { usage, quota, usageHuman: formatBytes(usage), quotaHuman: formatBytes(quota) });
+      return;
+    }
+
+    const agentCostHistMatch = pathname.match(/^\/api\/agents\/([^/]+)\/cost-history$/);
+    if (req.method === 'GET' && agentCostHistMatch) {
+      const agentId = agentCostHistMatch[1];
+      const agent = db.getAgent(agentId);
+      if (!agent) { sendJson(res, 404, { error: 'Agent not found' }); return; }
+      const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+      const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') || 20)));
+      const result = db.getAgentCostRuns(agentId, { page, perPage });
+      sendJson(res, 200, { agentId, agentName: agent.name, ...result });
+      return;
+    }
+
+    const agentCostMatch = pathname.match(/^\/api\/agents\/([^/]+)\/cost$/);
+    if (req.method === 'GET' && agentCostMatch) {
+      const agentId = agentCostMatch[1];
+      const agent = db.getAgent(agentId);
+      if (!agent) { sendJson(res, 404, { error: 'Agent not found' }); return; }
+
+      const costPerRun = db.calculateRunCost(agent);
+      const incurred = db.getMonthlyIncurredCost(agentId);
+      const intervalMin = db.getActivenessConfig(agent.activenessLevel).intervalMinutes;
+
+      // Calculate remaining runs this month
+      let estimated = incurred;
+      if (agent.enabled) {
+        const now = new Date();
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const remainingMs = monthEnd - now;
+        const remainingRuns = Math.floor(remainingMs / (intervalMin * 60000));
+        estimated = incurred + remainingRuns * costPerRun;
+      }
+
+      sendJson(res, 200, { costPerRun, incurred, estimated });
+      return;
+    }
+
+    const userCostHistMatch = pathname.match(/^\/api\/users\/([^/]+)\/cost-history$/);
+    if (req.method === 'GET' && userCostHistMatch) {
+      const userId = userCostHistMatch[1];
+      const user = db.getUser(userId);
+      if (!user) { sendJson(res, 404, { error: 'User not found' }); return; }
+      const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+      const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') || 20)));
+      const result = db.getUserCostRuns(userId, { page, perPage });
+      sendJson(res, 200, { userId, userName: user.name, ...result });
       return;
     }
 
@@ -758,6 +820,27 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && agentFavsMatch) {
       const agentId = agentFavsMatch[1];
       sendJson(res, 200, { favorites: db.getAgentFavorites(agentId).map(contentWithStats) });
+      return;
+    }
+
+    const agentExtFavsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/external-favorites$/);
+    if (req.method === 'GET' && agentExtFavsMatch) {
+      const agentId = agentExtFavsMatch[1];
+      const page = parseInt(url.searchParams.get('page')) || 1;
+      const perPage = parseInt(url.searchParams.get('perPage')) || 20;
+      sendJson(res, 200, db.getExternalFavorites(agentId, { page, perPage }));
+      return;
+    }
+
+    const agentMemoriesMatch = pathname.match(/^\/api\/agents\/([^/]+)\/memories$/);
+    if (req.method === 'GET' && agentMemoriesMatch) {
+      const agentId = agentMemoriesMatch[1];
+      const page = parseInt(url.searchParams.get('page')) || 1;
+      const perPage = parseInt(url.searchParams.get('perPage')) || 20;
+      const category = url.searchParams.get('category') || undefined;
+      const result = vectorMemory.listMemories(agentId, { page, perPage, category });
+      const stats = vectorMemory.getMemoryStats(agentId);
+      sendJson(res, 200, { ...result, stats });
       return;
     }
 
@@ -952,14 +1035,30 @@ const server = http.createServer(async (req, res) => {
       const followerId = url.searchParams.get('followerId');
       const vKind = url.searchParams.get('viewerKind');
       const vId = url.searchParams.get('viewerId');
+      const page = Math.max(1, parseInt(url.searchParams.get('page')) || 1);
+      const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get('pageSize')) || 20));
       const mapper = contentWithStatsForViewer(vKind, vId);
-      let feed;
+      let rawFeed;
       if (personalized === 'true' && followerKind && followerId) {
-        feed = db.getPersonalizedFeed({ followerKind, followerId }).map(mapper);
+        rawFeed = db.getPersonalizedFeed({ followerKind, followerId });
       } else {
-        feed = db.listFeed().map(mapper);
+        rawFeed = db.listFeed();
       }
-      sendJson(res, 200, { contents: feed });
+      const totalItems = rawFeed.length;
+      const totalPages = Math.ceil(totalItems / pageSize) || 1;
+      const start = (page - 1) * pageSize;
+      const pageItems = rawFeed.slice(start, start + pageSize);
+      // X-style: each impression counts as a view
+      for (const c of pageItems) c.viewCount = (c.viewCount || 0) + 1;
+      db.save();
+      sendJson(res, 200, {
+        contents: pageItems.map(mapper),
+        page,
+        pageSize,
+        totalPages,
+        totalItems,
+        hasMore: start + pageSize < totalItems
+      });
       return;
     }
 
@@ -1107,7 +1206,7 @@ const server = http.createServer(async (req, res) => {
     const toolsPhaseMatch = pathname.match(/^\/api\/tools\/phase\/([^/]+)$/);
     if (req.method === 'GET' && toolsPhaseMatch) {
       const phase = toolsPhaseMatch[1];
-      const VALID_PHASES = ['browse', 'external_search', 'self_research', 'create'];
+      const VALID_PHASES = ['browse', 'external_search', 'create'];
       if (!VALID_PHASES.includes(phase)) {
         sendJson(res, 400, { error: `Invalid phase: ${phase}` });
         return;
@@ -1133,8 +1232,22 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // ── Default skill content (no agent required) ────
+    const VALID_PHASES = ['browse', 'external_search', 'create'];
+    const defaultSkillMatch = pathname.match(/^\/api\/skills\/default\/([^/]+)$/);
+    if (req.method === 'GET' && defaultSkillMatch) {
+      const phase = defaultSkillMatch[1];
+      if (!VALID_PHASES.includes(phase)) {
+        sendJson(res, 400, { error: `Invalid phase: ${phase}` });
+        return;
+      }
+      const globalPath = path.join(__dirname, 'skills', `${phase}.md`);
+      const content = fs.existsSync(globalPath) ? fs.readFileSync(globalPath, 'utf8') : '';
+      sendJson(res, 200, { phase, content });
+      return;
+    }
+
     // ── Per-agent skill overrides ────────────────────
-    const VALID_PHASES = ['browse', 'external_search', 'self_research', 'create'];
     const skillMatch = pathname.match(/^\/api\/agents\/([^/]+)\/skills\/([^/]+)$/);
     if (req.method === 'GET' && skillMatch) {
       const agentId = skillMatch[1];
@@ -1192,7 +1305,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/skill-editor/chat') {
       const body = await parseBody(req);
       const { agentId, phase, skillContent, userMessage } = body;
-      const validPhases = ['browse', 'external_search', 'self_research', 'create'];
+      const validPhases = ['browse', 'external_search', 'create'];
       if (!validPhases.includes(phase)) throw new Error('Invalid phase');
       if (!userMessage || typeof userMessage !== 'string') throw new Error('userMessage is required');
       if (typeof skillContent !== 'string') throw new Error('skillContent is required');
@@ -1304,20 +1417,6 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === 'POST' && pathname === '/api/credits/transfer') {
-      const body = await parseBody(req);
-      const externalUserId = body.externalUserId || apiUser?.id;
-      if (!externalUserId) throw new Error('externalUserId or API key is required.');
-
-      const transfer = db.transferUserToAgent({
-        userId: externalUserId,
-        agentId: body.agentId,
-        amount: body.amount
-      });
-
-      sendJson(res, 200, { transfer });
-      return;
-    }
 
     const dashboardMatch = pathname.match(/^\/api\/dashboard\/([^/]+)$/);
     if (req.method === 'GET' && dashboardMatch) {
@@ -1407,6 +1506,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/configure') {
       sendFile(res, path.join(publicDir, 'configure.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/create-agent') {
+      sendFile(res, path.join(publicDir, 'create-agent.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/cost-history') {
+      sendFile(res, path.join(publicDir, 'cost-history.html'));
       return;
     }
 

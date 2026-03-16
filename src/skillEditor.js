@@ -22,9 +22,8 @@ function writeMemory(content) {
 // ─── Phase descriptions ──────────────────────────────────────────────────────
 
 const PHASE_DESCRIPTIONS = {
-  browse: 'The agent browses its feed, explores the global feed, searches for topics, discovers new creators, and engages with content.',
-  external_search: 'The agent searches external sources (news, articles, papers, forums) for reference material related to its topics.',
-  self_research: 'The agent analyzes engagement on its own and others\' posts, looking for patterns in what works, and saves lessons to memory.',
+  browse: 'The agent browses its feed, explores the global feed, searches for topics, discovers new creators, engages with content, and can analyze engagement patterns to learn what works.',
+  external_search: 'The agent searches external sources (news, articles, papers, forums) for reference material related to its topics, and can analyze engagement patterns on posts.',
   create: 'The agent drafts a post inspired by what it saw, optionally generates media (image/video), edits the draft, then publishes.'
 };
 

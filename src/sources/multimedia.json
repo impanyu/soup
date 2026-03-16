@@ -3,13 +3,23 @@
     "id": "youtube",
     "name": "YouTube Search",
     "category": "Multimedia",
-    "topics": ["streaming", "music", "film", "education", "gaming"],
+    "topics": [
+      "streaming",
+      "music",
+      "film",
+      "education",
+      "gaming"
+    ],
+    "siteUrl": "https://www.youtube.com",
     "search": {
       "endpoint": "https://www.googleapis.com/youtube/v3/search",
       "searchParam": "q",
       "resultPath": "items",
       "limitParam": "maxResults",
-      "extraParams": { "part": "snippet", "type": "video" }
+      "extraParams": {
+        "part": "snippet",
+        "type": "video"
+      }
     },
     "normalize": {
       "titlePath": "snippet.title",
@@ -25,7 +35,13 @@
     "id": "unsplash",
     "name": "Unsplash",
     "category": "Multimedia",
-    "topics": ["photography", "art", "design", "travel"],
+    "topics": [
+      "photography",
+      "art",
+      "design",
+      "travel"
+    ],
+    "siteUrl": "https://unsplash.com",
     "search": {
       "endpoint": "https://api.unsplash.com/search/photos",
       "searchParam": "query",
@@ -46,7 +62,12 @@
     "id": "pexels",
     "name": "Pexels",
     "category": "Multimedia",
-    "topics": ["photography", "art", "design"],
+    "topics": [
+      "photography",
+      "art",
+      "design"
+    ],
+    "siteUrl": "https://www.pexels.com",
     "search": {
       "endpoint": "https://api.pexels.com/v1/search",
       "searchParam": "query",
@@ -67,13 +88,27 @@
     "id": "wikimedia-commons",
     "name": "Wikimedia Commons",
     "category": "Multimedia",
-    "topics": ["photography", "history", "science", "education"],
+    "topics": [
+      "photography",
+      "history",
+      "science",
+      "education"
+    ],
+    "siteUrl": "https://commons.wikimedia.org",
     "search": {
       "endpoint": "https://commons.wikimedia.org/w/api.php",
       "searchParam": "gsrsearch",
       "resultPath": "query.pages",
       "limitParam": "gsrlimit",
-      "extraParams": { "action": "query", "generator": "search", "gsrnamespace": "6", "prop": "imageinfo", "iiprop": "url|extmetadata", "format": "json", "origin": "*" }
+      "extraParams": {
+        "action": "query",
+        "generator": "search",
+        "gsrnamespace": "6",
+        "prop": "imageinfo",
+        "iiprop": "url|extmetadata",
+        "format": "json",
+        "origin": "*"
+      }
     },
     "normalize": {
       "titlePath": "title",
@@ -89,7 +124,13 @@
     "id": "podcast-index",
     "name": "Podcast Index",
     "category": "Multimedia",
-    "topics": ["podcasts", "music", "education", "technology"],
+    "topics": [
+      "podcasts",
+      "music",
+      "education",
+      "technology"
+    ],
+    "siteUrl": "https://podcastindex.org",
     "search": {
       "endpoint": "https://api.podcastindex.org/api/1.0/search/byterm",
       "searchParam": "q",
@@ -110,13 +151,23 @@
     "id": "internet-archive",
     "name": "Internet Archive",
     "category": "Multimedia",
-    "topics": ["books", "history", "music", "film", "education"],
+    "topics": [
+      "books",
+      "history",
+      "music",
+      "film",
+      "education"
+    ],
+    "siteUrl": "https://archive.org",
     "search": {
       "endpoint": "https://archive.org/advancedsearch.php",
       "searchParam": "q",
       "resultPath": "response.docs",
       "limitParam": "rows",
-      "extraParams": { "output": "json", "fl[]": "identifier,title,description,mediatype" }
+      "extraParams": {
+        "output": "json",
+        "fl[]": "identifier,title,description,mediatype"
+      }
     },
     "normalize": {
       "titlePath": "title",
@@ -132,7 +183,12 @@
     "id": "giphy",
     "name": "Giphy",
     "category": "Multimedia",
-    "topics": ["animation", "art", "comics"],
+    "topics": [
+      "animation",
+      "art",
+      "comics"
+    ],
+    "siteUrl": "https://giphy.com",
     "search": {
       "endpoint": "https://api.giphy.com/v1/gifs/search",
       "searchParam": "q",
@@ -153,8 +209,16 @@
     "id": "librivox",
     "name": "LibriVox",
     "category": "Multimedia",
-    "topics": ["books", "literature", "history", "education"],
-    "rss": { "feedUrl": "https://librivox.org/rss/latest_releases" },
+    "topics": [
+      "books",
+      "literature",
+      "history",
+      "education"
+    ],
+    "siteUrl": "https://librivox.org",
+    "rss": {
+      "feedUrl": "https://librivox.org/rss/latest_releases"
+    },
     "responseFormat": "xml",
     "dataType": "media",
     "requiresKey": false,
@@ -164,8 +228,16 @@
     "id": "ted-talks",
     "name": "TED Talks",
     "category": "Multimedia",
-    "topics": ["education", "science", "technology", "philosophy"],
-    "rss": { "feedUrl": "https://feeds.feedburner.com/TEDTalks_audio" },
+    "topics": [
+      "education",
+      "science",
+      "technology",
+      "philosophy"
+    ],
+    "siteUrl": "https://www.ted.com",
+    "rss": {
+      "feedUrl": "https://feeds.feedburner.com/TEDTalks_audio"
+    },
     "responseFormat": "xml",
     "dataType": "media",
     "requiresKey": false,
@@ -175,8 +247,16 @@
     "id": "npr-podcasts",
     "name": "NPR Podcasts",
     "category": "Multimedia",
-    "topics": ["podcasts", "politics", "cultural studies", "education"],
-    "rss": { "feedUrl": "https://feeds.npr.org/510318/podcast.xml" },
+    "topics": [
+      "podcasts",
+      "politics",
+      "cultural studies",
+      "education"
+    ],
+    "siteUrl": "https://www.npr.org/podcasts",
+    "rss": {
+      "feedUrl": "https://feeds.npr.org/510318/podcast.xml"
+    },
     "responseFormat": "xml",
     "dataType": "media",
     "requiresKey": false,
@@ -186,8 +266,16 @@
     "id": "bbc-podcasts",
     "name": "BBC Podcasts",
     "category": "Multimedia",
-    "topics": ["podcasts", "world news", "science", "history"],
-    "rss": { "feedUrl": "https://podcasts.files.bbci.co.uk/p02nq0gn.rss" },
+    "topics": [
+      "podcasts",
+      "world news",
+      "science",
+      "history"
+    ],
+    "siteUrl": "https://www.bbc.co.uk/sounds",
+    "rss": {
+      "feedUrl": "https://podcasts.files.bbci.co.uk/p02nq0gn.rss"
+    },
     "responseFormat": "xml",
     "dataType": "media",
     "requiresKey": false,
@@ -197,7 +285,12 @@
     "id": "freesound",
     "name": "Freesound",
     "category": "Multimedia",
-    "topics": ["music", "creative writing", "podcasts"],
+    "topics": [
+      "music",
+      "creative writing",
+      "podcasts"
+    ],
+    "siteUrl": "https://freesound.org",
     "search": {
       "endpoint": "https://freesound.org/apiv2/search/text/",
       "searchParam": "query",
@@ -218,8 +311,16 @@
     "id": "open-game-art",
     "name": "OpenGameArt",
     "category": "Multimedia",
-    "topics": ["game development", "art", "design", "animation"],
-    "rss": { "feedUrl": "https://opengameart.org/art.xml" },
+    "topics": [
+      "game development",
+      "art",
+      "design",
+      "animation"
+    ],
+    "siteUrl": "https://opengameart.org",
+    "rss": {
+      "feedUrl": "https://opengameart.org/art.xml"
+    },
     "responseFormat": "xml",
     "dataType": "media",
     "requiresKey": false,
@@ -229,10 +330,414 @@
     "id": "vimeo",
     "name": "Vimeo Staff Picks",
     "category": "Multimedia",
-    "topics": ["film", "animation", "photography", "art"],
-    "rss": { "feedUrl": "https://vimeo.com/channels/staffpicks/videos/rss" },
+    "topics": [
+      "film",
+      "animation",
+      "photography",
+      "art"
+    ],
+    "siteUrl": "https://vimeo.com",
+    "rss": {
+      "feedUrl": "https://vimeo.com/channels/staffpicks/videos/rss"
+    },
     "responseFormat": "xml",
     "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "behance",
+    "name": "Behance",
+    "category": "Multimedia",
+    "topics": [
+      "design",
+      "graphic design",
+      "photography",
+      "art"
+    ],
+    "siteUrl": "https://www.behance.net",
+    "rss": {
+      "feedUrl": "https://www.behance.net/feeds/projects"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "dribbble-blog",
+    "name": "Dribbble Blog",
+    "category": "Multimedia",
+    "topics": [
+      "design",
+      "graphic design",
+      "art",
+      "web development"
+    ],
+    "siteUrl": "https://dribbble.com/stories",
+    "rss": {
+      "feedUrl": "https://dribbble.com/stories/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "500px-blog",
+    "name": "500px Blog",
+    "category": "Multimedia",
+    "topics": [
+      "photography",
+      "art",
+      "travel",
+      "design"
+    ],
+    "siteUrl": "https://iso.500px.com",
+    "rss": {
+      "feedUrl": "https://iso.500px.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "flickr-blog",
+    "name": "Flickr Blog",
+    "category": "Multimedia",
+    "topics": [
+      "photography",
+      "art",
+      "travel",
+      "creative writing"
+    ],
+    "siteUrl": "https://blog.flickr.net",
+    "rss": {
+      "feedUrl": "https://blog.flickr.net/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "soundcloud-blog",
+    "name": "SoundCloud Blog",
+    "category": "Multimedia",
+    "topics": [
+      "music",
+      "streaming",
+      "podcasts",
+      "art"
+    ],
+    "siteUrl": "https://blog.soundcloud.com",
+    "rss": {
+      "feedUrl": "https://blog.soundcloud.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bandcamp-daily",
+    "name": "Bandcamp Daily",
+    "category": "Multimedia",
+    "topics": [
+      "music",
+      "art",
+      "cultural studies",
+      "creative writing"
+    ],
+    "siteUrl": "https://daily.bandcamp.com",
+    "rss": {
+      "feedUrl": "https://daily.bandcamp.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mixcloud-blog",
+    "name": "Mixcloud Blog",
+    "category": "Multimedia",
+    "topics": [
+      "music",
+      "podcasts",
+      "streaming",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.mixcloud.com/blog",
+    "rss": {
+      "feedUrl": "https://www.mixcloud.com/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "artstation-magazine",
+    "name": "ArtStation Magazine",
+    "category": "Multimedia",
+    "topics": [
+      "art",
+      "design",
+      "animation",
+      "game development"
+    ],
+    "siteUrl": "https://magazine.artstation.com",
+    "rss": {
+      "feedUrl": "https://magazine.artstation.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cgsociety",
+    "name": "CGSociety",
+    "category": "Multimedia",
+    "topics": [
+      "animation",
+      "art",
+      "design",
+      "film"
+    ],
+    "siteUrl": "https://cgsociety.org",
+    "rss": {
+      "feedUrl": "https://cgsociety.org/news/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "blendernation",
+    "name": "BlenderNation",
+    "category": "Multimedia",
+    "topics": [
+      "animation",
+      "3d printing",
+      "art",
+      "design"
+    ],
+    "siteUrl": "https://www.blendernation.com",
+    "rss": {
+      "feedUrl": "https://www.blendernation.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sketchfab-blog",
+    "name": "Sketchfab Blog",
+    "category": "Multimedia",
+    "topics": [
+      "3d printing",
+      "art",
+      "design",
+      "virtual reality"
+    ],
+    "siteUrl": "https://sketchfab.com/blogs",
+    "rss": {
+      "feedUrl": "https://sketchfab.com/blogs/community/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pixabay-blog",
+    "name": "Pixabay Blog",
+    "category": "Multimedia",
+    "topics": [
+      "photography",
+      "art",
+      "design",
+      "creative writing"
+    ],
+    "siteUrl": "https://pixabay.com/blog",
+    "rss": {
+      "feedUrl": "https://pixabay.com/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "archive-org-blog",
+    "name": "Archive.org Blog",
+    "category": "Multimedia",
+    "topics": [
+      "books",
+      "history",
+      "music",
+      "education"
+    ],
+    "siteUrl": "https://blog.archive.org",
+    "rss": {
+      "feedUrl": "https://blog.archive.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-culture",
+    "name": "Open Culture",
+    "category": "Multimedia",
+    "topics": [
+      "education",
+      "film",
+      "music",
+      "books",
+      "history"
+    ],
+    "siteUrl": "https://www.openculture.com",
+    "rss": {
+      "feedUrl": "https://www.openculture.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "wfmu",
+    "name": "WFMU",
+    "category": "Multimedia",
+    "topics": [
+      "music",
+      "podcasts",
+      "cultural studies",
+      "art"
+    ],
+    "siteUrl": "https://wfmu.org",
+    "rss": {
+      "feedUrl": "https://blogfiles.wfmu.org/BT/spinitron_WFMU.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "boiler-room",
+    "name": "Boiler Room",
+    "category": "Multimedia",
+    "topics": [
+      "music",
+      "streaming",
+      "cultural studies",
+      "art"
+    ],
+    "siteUrl": "https://boilerroom.tv",
+    "rss": {
+      "feedUrl": "https://boilerroom.tv/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "resident-advisor-multimedia",
+    "name": "Resident Advisor",
+    "category": "Multimedia",
+    "topics": [
+      "music",
+      "podcasts",
+      "streaming",
+      "cultural studies"
+    ],
+    "siteUrl": "https://ra.co",
+    "rss": {
+      "feedUrl": "https://ra.co/xml/features.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "film-school-rejects",
+    "name": "Film School Rejects",
+    "category": "Multimedia",
+    "topics": [
+      "film",
+      "art",
+      "creative writing",
+      "education"
+    ],
+    "siteUrl": "https://filmschoolrejects.com",
+    "rss": {
+      "feedUrl": "https://filmschoolrejects.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "no-film-school",
+    "name": "No Film School",
+    "category": "Multimedia",
+    "topics": [
+      "film",
+      "photography",
+      "education",
+      "technology"
+    ],
+    "siteUrl": "https://nofilmschool.com",
+    "rss": {
+      "feedUrl": "https://nofilmschool.com/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "filmmaker-magazine",
+    "name": "Filmmaker Magazine",
+    "category": "Multimedia",
+    "topics": [
+      "film",
+      "art",
+      "photography",
+      "creative writing"
+    ],
+    "siteUrl": "https://filmmakermagazine.com",
+    "rss": {
+      "feedUrl": "https://filmmakermagazine.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "musopen",
+    "name": "Musopen",
+    "category": "Multimedia",
+    "topics": [
+      "music",
+      "education",
+      "art"
+    ],
+    "siteUrl": "https://musopen.org",
+    "responseFormat": "xml",
+    "dataType": "article",
     "requiresKey": false,
     "envKey": null
   }

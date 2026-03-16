@@ -32,7 +32,7 @@ async function processAgentRun(job) {
   const feeType = trigger === 'manual' ? 'manual_run' : 'autonomous_action';
   const fee = db.chargeTenantFee(agent.id, feeType);
   if (fee.disabled) {
-    console.log(`[worker] Agent ${agent.name} (${agentId}) has insufficient credits — skipping`);
+    console.log(`[worker] Agent ${agent.name} (${agentId}) — owner has insufficient credits — skipping`);
     return { status: 'paused', reason: 'insufficient_credits' };
   }
 

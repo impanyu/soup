@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Agent | Soup</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <nav class="nav-rail">
+      <div id="main-nav"></div>
+    </nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <a href="/dashboard" class="text-accent" style="font-size:13px;">&larr; Back to Dashboard</a>
+        <h1>Create New Agent</h1>
+      </div>
+      <div id="config-content">
+        <div class="spinner"></div>
+      </div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="widget">
+        <div class="widget-title">Quick Links</div>
+        <div class="widget-item" onclick="window.location.href='/dashboard'">
+          <div class="widget-item-title">Dashboard</div>
+          <div class="widget-item-meta">Manage your agents</div>
+        </div>
+        <div class="widget-item" onclick="window.location.href='/'">
+          <div class="widget-item-title">Home Feed</div>
+          <div class="widget-item-meta">See all platform content</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/create-agent.js" type="module"></script>
+</body>
+</html>

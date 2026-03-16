@@ -3,8 +3,16 @@
     "id": "hackernews",
     "name": "Hacker News",
     "category": "News & Tech",
-    "topics": ["technology", "startups", "web development", "cybersecurity"],
-    "rss": { "feedUrl": "https://hnrss.org/frontpage" },
+    "topics": [
+      "technology",
+      "startups",
+      "web development",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://news.ycombinator.com",
+    "rss": {
+      "feedUrl": "https://hnrss.org/frontpage"
+    },
     "search": {
       "endpoint": "https://hn.algolia.com/api/v1/search",
       "searchParam": "query",
@@ -25,8 +33,16 @@
     "id": "techcrunch",
     "name": "TechCrunch",
     "category": "News & Tech",
-    "topics": ["technology", "startups", "business", "mobile apps"],
-    "rss": { "feedUrl": "https://techcrunch.com/feed/" },
+    "topics": [
+      "technology",
+      "startups",
+      "business",
+      "mobile apps"
+    ],
+    "siteUrl": "https://techcrunch.com",
+    "rss": {
+      "feedUrl": "https://techcrunch.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -36,8 +52,16 @@
     "id": "arstechnica",
     "name": "Ars Technica",
     "category": "News & Tech",
-    "topics": ["technology", "science", "gaming", "cybersecurity"],
-    "rss": { "feedUrl": "https://feeds.arstechnica.com/arstechnica/index" },
+    "topics": [
+      "technology",
+      "science",
+      "gaming",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://arstechnica.com",
+    "rss": {
+      "feedUrl": "https://feeds.arstechnica.com/arstechnica/index"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -47,8 +71,16 @@
     "id": "theverge",
     "name": "The Verge",
     "category": "News & Tech",
-    "topics": ["technology", "design", "gaming", "film"],
-    "rss": { "feedUrl": "https://www.theverge.com/rss/index.xml" },
+    "topics": [
+      "technology",
+      "design",
+      "gaming",
+      "film"
+    ],
+    "siteUrl": "https://www.theverge.com",
+    "rss": {
+      "feedUrl": "https://www.theverge.com/rss/index.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -58,8 +90,16 @@
     "id": "wired",
     "name": "Wired",
     "category": "News & Tech",
-    "topics": ["technology", "science", "artificial intelligence", "cybersecurity"],
-    "rss": { "feedUrl": "https://www.wired.com/feed/rss" },
+    "topics": [
+      "technology",
+      "science",
+      "artificial intelligence",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://www.wired.com",
+    "rss": {
+      "feedUrl": "https://www.wired.com/feed/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -69,8 +109,16 @@
     "id": "bbc-news",
     "name": "BBC News",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "economics", "business"],
-    "rss": { "feedUrl": "https://feeds.bbci.co.uk/news/rss.xml" },
+    "topics": [
+      "world news",
+      "politics",
+      "economics",
+      "business"
+    ],
+    "siteUrl": "https://www.bbc.com/news",
+    "rss": {
+      "feedUrl": "https://feeds.bbci.co.uk/news/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -80,8 +128,16 @@
     "id": "reuters",
     "name": "Reuters",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "business", "finance"],
-    "rss": { "feedUrl": "https://www.reutersagency.com/feed/" },
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "finance"
+    ],
+    "siteUrl": "https://www.reuters.com",
+    "rss": {
+      "feedUrl": "https://www.reutersagency.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -91,8 +147,16 @@
     "id": "nytimes",
     "name": "NY Times",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "books", "art"],
-    "rss": { "feedUrl": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml" },
+    "topics": [
+      "world news",
+      "politics",
+      "books",
+      "art"
+    ],
+    "siteUrl": "https://www.nytimes.com",
+    "rss": {
+      "feedUrl": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -102,14 +166,24 @@
     "id": "guardian",
     "name": "The Guardian",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "climate", "philosophy"],
-    "rss": { "feedUrl": "https://www.theguardian.com/world/rss" },
+    "topics": [
+      "world news",
+      "politics",
+      "climate",
+      "philosophy"
+    ],
+    "siteUrl": "https://www.theguardian.com",
+    "rss": {
+      "feedUrl": "https://www.theguardian.com/world/rss"
+    },
     "search": {
       "endpoint": "https://content.guardianapis.com/search",
       "searchParam": "q",
       "resultPath": "response.results",
       "limitParam": "page-size",
-      "extraParams": { "api-key": "ENV:GUARDIAN_API_KEY" }
+      "extraParams": {
+        "api-key": "ENV:GUARDIAN_API_KEY"
+      }
     },
     "normalize": {
       "titlePath": "webTitle",
@@ -125,8 +199,16 @@
     "id": "al-jazeera",
     "name": "Al Jazeera",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "human rights", "economics"],
-    "rss": { "feedUrl": "https://www.aljazeera.com/xml/rss/all.xml" },
+    "topics": [
+      "world news",
+      "politics",
+      "human rights",
+      "economics"
+    ],
+    "siteUrl": "https://www.aljazeera.com",
+    "rss": {
+      "feedUrl": "https://www.aljazeera.com/xml/rss/all.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -136,8 +218,16 @@
     "id": "ap-news",
     "name": "AP News",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "business", "science"],
-    "rss": { "feedUrl": "https://apnews.com/index.rss" },
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "science"
+    ],
+    "siteUrl": "https://apnews.com",
+    "rss": {
+      "feedUrl": "https://apnews.com/index.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -147,8 +237,16 @@
     "id": "npr",
     "name": "NPR News",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "education", "cultural studies"],
-    "rss": { "feedUrl": "https://feeds.npr.org/1001/rss.xml" },
+    "topics": [
+      "world news",
+      "politics",
+      "education",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.npr.org",
+    "rss": {
+      "feedUrl": "https://feeds.npr.org/1001/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -158,8 +256,16 @@
     "id": "economist",
     "name": "The Economist",
     "category": "News & Tech",
-    "topics": ["economics", "politics", "business", "world news"],
-    "rss": { "feedUrl": "https://www.economist.com/rss" },
+    "topics": [
+      "economics",
+      "politics",
+      "business",
+      "world news"
+    ],
+    "siteUrl": "https://www.economist.com",
+    "rss": {
+      "feedUrl": "https://www.economist.com/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -169,8 +275,16 @@
     "id": "cnn",
     "name": "CNN",
     "category": "News & Tech",
-    "topics": ["world news", "politics", "business", "health"],
-    "rss": { "feedUrl": "http://rss.cnn.com/rss/edition.rss" },
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "health"
+    ],
+    "siteUrl": "https://www.cnn.com",
+    "rss": {
+      "feedUrl": "http://rss.cnn.com/rss/edition.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -180,8 +294,16 @@
     "id": "washingtonpost",
     "name": "Washington Post",
     "category": "News & Tech",
-    "topics": ["politics", "world news", "economics", "law"],
-    "rss": { "feedUrl": "https://feeds.washingtonpost.com/rss/world" },
+    "topics": [
+      "politics",
+      "world news",
+      "economics",
+      "law"
+    ],
+    "siteUrl": "https://www.washingtonpost.com",
+    "rss": {
+      "feedUrl": "https://feeds.washingtonpost.com/rss/world"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -191,8 +313,16 @@
     "id": "vice",
     "name": "Vice",
     "category": "News & Tech",
-    "topics": ["cultural studies", "world news", "music", "sociology"],
-    "rss": { "feedUrl": "https://www.vice.com/en/rss" },
+    "topics": [
+      "cultural studies",
+      "world news",
+      "music",
+      "sociology"
+    ],
+    "siteUrl": "https://www.vice.com",
+    "rss": {
+      "feedUrl": "https://www.vice.com/en/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -202,8 +332,16 @@
     "id": "slate",
     "name": "Slate",
     "category": "News & Tech",
-    "topics": ["politics", "media criticism", "law", "cultural studies"],
-    "rss": { "feedUrl": "https://slate.com/feeds/all.rss" },
+    "topics": [
+      "politics",
+      "media criticism",
+      "law",
+      "cultural studies"
+    ],
+    "siteUrl": "https://slate.com",
+    "rss": {
+      "feedUrl": "https://slate.com/feeds/all.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -213,8 +351,16 @@
     "id": "propublica",
     "name": "ProPublica",
     "category": "News & Tech",
-    "topics": ["politics", "law", "human rights", "environment"],
-    "rss": { "feedUrl": "https://www.propublica.org/feeds/propublica/main" },
+    "topics": [
+      "politics",
+      "law",
+      "human rights",
+      "environment"
+    ],
+    "siteUrl": "https://www.propublica.org",
+    "rss": {
+      "feedUrl": "https://www.propublica.org/feeds/propublica/main"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -224,8 +370,16 @@
     "id": "vox",
     "name": "Vox",
     "category": "News & Tech",
-    "topics": ["politics", "economics", "sociology", "climate"],
-    "rss": { "feedUrl": "https://www.vox.com/rss/index.xml" },
+    "topics": [
+      "politics",
+      "economics",
+      "sociology",
+      "climate"
+    ],
+    "siteUrl": "https://www.vox.com",
+    "rss": {
+      "feedUrl": "https://www.vox.com/rss/index.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -235,8 +389,713 @@
     "id": "foreign-affairs",
     "name": "Foreign Affairs",
     "category": "News & Tech",
-    "topics": ["politics", "world news", "economics", "human rights"],
-    "rss": { "feedUrl": "https://www.foreignaffairs.com/rss.xml" },
+    "topics": [
+      "politics",
+      "world news",
+      "economics",
+      "human rights"
+    ],
+    "siteUrl": "https://www.foreignaffairs.com",
+    "rss": {
+      "feedUrl": "https://www.foreignaffairs.com/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "abc-news",
+    "name": "ABC News",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "health",
+      "entertainment"
+    ],
+    "siteUrl": "https://abcnews.go.com",
+    "rss": {
+      "feedUrl": "https://abcnews.go.com/abcnews/topstories"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cbs-news",
+    "name": "CBS News",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "health",
+      "business"
+    ],
+    "siteUrl": "https://www.cbsnews.com",
+    "rss": {
+      "feedUrl": "https://www.cbsnews.com/latest/rss/main"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "fox-news",
+    "name": "Fox News",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "world news",
+      "business",
+      "entertainment"
+    ],
+    "siteUrl": "https://www.foxnews.com",
+    "rss": {
+      "feedUrl": "https://moxie.foxnews.com/google-publisher/latest.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "usa-today",
+    "name": "USA Today",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "sports",
+      "entertainment"
+    ],
+    "siteUrl": "https://www.usatoday.com",
+    "rss": {
+      "feedUrl": "https://www.usatoday.com/rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "la-times",
+    "name": "LA Times",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "entertainment",
+      "food"
+    ],
+    "siteUrl": "https://www.latimes.com",
+    "rss": {
+      "feedUrl": "https://www.latimes.com/rss2.0.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "chicago-tribune",
+    "name": "Chicago Tribune",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "sports",
+      "business"
+    ],
+    "siteUrl": "https://www.chicagotribune.com",
+    "rss": {
+      "feedUrl": "https://www.chicagotribune.com/arcio/rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "wall-street-journal",
+    "name": "Wall Street Journal",
+    "category": "News & Tech",
+    "topics": [
+      "finance",
+      "business",
+      "economics",
+      "stock market",
+      "investing"
+    ],
+    "siteUrl": "https://www.wsj.com",
+    "rss": {
+      "feedUrl": "https://feeds.a.dj.com/rss/RSSWorldNews.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bloomberg",
+    "name": "Bloomberg",
+    "category": "News & Tech",
+    "topics": [
+      "finance",
+      "business",
+      "economics",
+      "stock market",
+      "technology"
+    ],
+    "siteUrl": "https://www.bloomberg.com",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "daily-telegraph",
+    "name": "The Daily Telegraph",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "sports"
+    ],
+    "siteUrl": "https://www.telegraph.co.uk",
+    "rss": {
+      "feedUrl": "https://www.telegraph.co.uk/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "independent",
+    "name": "The Independent",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "climate",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.independent.co.uk",
+    "rss": {
+      "feedUrl": "https://www.independent.co.uk/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sky-news",
+    "name": "Sky News",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "science"
+    ],
+    "siteUrl": "https://news.sky.com",
+    "rss": {
+      "feedUrl": "https://feeds.skynews.com/feeds/rss/home.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "france24",
+    "name": "France 24",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "economics",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.france24.com/en/",
+    "rss": {
+      "feedUrl": "https://www.france24.com/en/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "dw-news",
+    "name": "DW News",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "environment",
+      "economics"
+    ],
+    "siteUrl": "https://www.dw.com/en/",
+    "rss": {
+      "feedUrl": "https://rss.dw.com/rdf/rss-en-all"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nhk-world",
+    "name": "NHK World",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "science",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www3.nhk.or.jp/nhkworld/",
+    "rss": {
+      "feedUrl": "https://www3.nhk.or.jp/rss/news/cat0.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cbc-news",
+    "name": "CBC News",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "health",
+      "science"
+    ],
+    "siteUrl": "https://www.cbc.ca/news",
+    "rss": {
+      "feedUrl": "https://www.cbc.ca/webfeed/rss/rss-topstories"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "south-china-morning-post",
+    "name": "South China Morning Post",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "technology"
+    ],
+    "siteUrl": "https://www.scmp.com",
+    "rss": {
+      "feedUrl": "https://www.scmp.com/rss/91/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "times-of-india",
+    "name": "Times of India",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "sports"
+    ],
+    "siteUrl": "https://timesofindia.indiatimes.com",
+    "rss": {
+      "feedUrl": "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "japan-times",
+    "name": "The Japan Times",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.japantimes.co.jp",
+    "rss": {
+      "feedUrl": "https://www.japantimes.co.jp/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sydney-morning-herald",
+    "name": "Sydney Morning Herald",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "environment"
+    ],
+    "siteUrl": "https://www.smh.com.au",
+    "rss": {
+      "feedUrl": "https://www.smh.com.au/rss/feed.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-atlantic",
+    "name": "The Atlantic",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "cultural studies",
+      "philosophy",
+      "education"
+    ],
+    "siteUrl": "https://www.theatlantic.com",
+    "rss": {
+      "feedUrl": "https://www.theatlantic.com/feed/all/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "new-yorker",
+    "name": "The New Yorker",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "cultural studies",
+      "books",
+      "art"
+    ],
+    "siteUrl": "https://www.newyorker.com",
+    "rss": {
+      "feedUrl": "https://www.newyorker.com/feed/everything"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "time-magazine",
+    "name": "Time Magazine",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "health",
+      "science"
+    ],
+    "siteUrl": "https://time.com",
+    "rss": {
+      "feedUrl": "https://time.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "newsweek",
+    "name": "Newsweek",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "science",
+      "health"
+    ],
+    "siteUrl": "https://www.newsweek.com",
+    "rss": {
+      "feedUrl": "https://www.newsweek.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "politico",
+    "name": "Politico",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "law",
+      "economics",
+      "world news"
+    ],
+    "siteUrl": "https://www.politico.com",
+    "rss": {
+      "feedUrl": "https://www.politico.com/rss/politicopicks.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "axios",
+    "name": "Axios",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "technology",
+      "business",
+      "world news"
+    ],
+    "siteUrl": "https://www.axios.com",
+    "rss": {
+      "feedUrl": "https://api.axios.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-hill",
+    "name": "The Hill",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "law",
+      "economics",
+      "world news"
+    ],
+    "siteUrl": "https://thehill.com",
+    "rss": {
+      "feedUrl": "https://thehill.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "buzzfeed-news",
+    "name": "BuzzFeed News",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "media criticism",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.buzzfeednews.com",
+    "rss": {
+      "feedUrl": "https://www.buzzfeednews.com/index.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "daily-beast",
+    "name": "The Daily Beast",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "media criticism",
+      "entertainment",
+      "world news"
+    ],
+    "siteUrl": "https://www.thedailybeast.com",
+    "rss": {
+      "feedUrl": "https://feeds.thedailybeast.com/rss/articles"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-intercept",
+    "name": "The Intercept",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "human rights",
+      "law",
+      "environment"
+    ],
+    "siteUrl": "https://theintercept.com",
+    "rss": {
+      "feedUrl": "https://theintercept.com/feed/?rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mother-jones",
+    "name": "Mother Jones",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "environment",
+      "human rights",
+      "law"
+    ],
+    "siteUrl": "https://www.motherjones.com",
+    "rss": {
+      "feedUrl": "https://www.motherjones.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "reason",
+    "name": "Reason",
+    "category": "News & Tech",
+    "topics": [
+      "politics",
+      "economics",
+      "law",
+      "philosophy"
+    ],
+    "siteUrl": "https://reason.com",
+    "rss": {
+      "feedUrl": "https://reason.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-diplomat",
+    "name": "The Diplomat",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "economics",
+      "human rights"
+    ],
+    "siteUrl": "https://thediplomat.com",
+    "rss": {
+      "feedUrl": "https://thediplomat.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nikkei-asia",
+    "name": "Nikkei Asia",
+    "category": "News & Tech",
+    "topics": [
+      "business",
+      "economics",
+      "world news",
+      "technology"
+    ],
+    "siteUrl": "https://asia.nikkei.com",
+    "rss": {
+      "feedUrl": "https://asia.nikkei.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "toronto-star",
+    "name": "Toronto Star",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "sports"
+    ],
+    "siteUrl": "https://www.thestar.com",
+    "rss": {
+      "feedUrl": "https://www.thestar.com/search/?f=rss&t=article&bl=2827102"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-wire",
+    "name": "The Wire India",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "human rights"
+    ],
+    "siteUrl": "https://thewire.in",
+    "rss": {
+      "feedUrl": "https://thewire.in/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "rest-of-world",
+    "name": "Rest of World",
+    "category": "News & Tech",
+    "topics": [
+      "technology",
+      "world news",
+      "business"
+    ],
+    "siteUrl": "https://restofworld.org",
+    "rss": {
+      "feedUrl": "https://restofworld.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "semafor",
+    "name": "Semafor",
+    "category": "News & Tech",
+    "topics": [
+      "world news",
+      "politics",
+      "business",
+      "technology"
+    ],
+    "siteUrl": "https://www.semafor.com",
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

@@ -3,8 +3,16 @@
     "id": "espn",
     "name": "ESPN",
     "category": "Sports",
-    "topics": ["sports", "esports", "fitness", "basketball"],
-    "rss": { "feedUrl": "https://www.espn.com/espn/rss/news" },
+    "topics": [
+      "sports",
+      "esports",
+      "fitness",
+      "basketball"
+    ],
+    "siteUrl": "https://www.espn.com",
+    "rss": {
+      "feedUrl": "https://www.espn.com/espn/rss/news"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -14,8 +22,16 @@
     "id": "bbc-sport",
     "name": "BBC Sport",
     "category": "Sports",
-    "topics": ["sports", "soccer", "tennis", "olympics"],
-    "rss": { "feedUrl": "https://feeds.bbci.co.uk/sport/rss.xml" },
+    "topics": [
+      "sports",
+      "soccer",
+      "tennis",
+      "olympics"
+    ],
+    "siteUrl": "https://www.bbc.com/sport",
+    "rss": {
+      "feedUrl": "https://feeds.bbci.co.uk/sport/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -25,8 +41,16 @@
     "id": "bleacher-report",
     "name": "Bleacher Report",
     "category": "Sports",
-    "topics": ["sports", "basketball", "soccer", "combat sports"],
-    "rss": { "feedUrl": "https://bleacherreport.com/articles/feed" },
+    "topics": [
+      "sports",
+      "basketball",
+      "soccer",
+      "combat sports"
+    ],
+    "siteUrl": "https://bleacherreport.com",
+    "rss": {
+      "feedUrl": "https://bleacherreport.com/articles/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -36,8 +60,16 @@
     "id": "the-athletic",
     "name": "The Athletic",
     "category": "Sports",
-    "topics": ["sports", "basketball", "soccer", "tennis"],
-    "rss": { "feedUrl": "https://theathletic.com/feeds/rss/news/" },
+    "topics": [
+      "sports",
+      "basketball",
+      "soccer",
+      "tennis"
+    ],
+    "siteUrl": "https://theathletic.com",
+    "rss": {
+      "feedUrl": "https://theathletic.com/feeds/rss/news/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -47,8 +79,16 @@
     "id": "sky-sports",
     "name": "Sky Sports",
     "category": "Sports",
-    "topics": ["sports", "soccer", "tennis", "combat sports"],
-    "rss": { "feedUrl": "https://www.skysports.com/rss/12040" },
+    "topics": [
+      "sports",
+      "soccer",
+      "tennis",
+      "combat sports"
+    ],
+    "siteUrl": "https://www.skysports.com",
+    "rss": {
+      "feedUrl": "https://www.skysports.com/rss/12040"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -58,8 +98,16 @@
     "id": "sports-illustrated",
     "name": "Sports Illustrated",
     "category": "Sports",
-    "topics": ["sports", "basketball", "olympics", "soccer"],
-    "rss": { "feedUrl": "https://www.si.com/rss/si_topstories.rss" },
+    "topics": [
+      "sports",
+      "basketball",
+      "olympics",
+      "soccer"
+    ],
+    "siteUrl": "https://www.si.com",
+    "rss": {
+      "feedUrl": "https://www.si.com/rss/si_topstories.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -69,8 +117,15 @@
     "id": "mma-fighting",
     "name": "MMA Fighting",
     "category": "Sports",
-    "topics": ["combat sports", "sports", "fitness"],
-    "rss": { "feedUrl": "https://www.mmafighting.com/rss/current" },
+    "topics": [
+      "combat sports",
+      "sports",
+      "fitness"
+    ],
+    "siteUrl": "https://www.mmafighting.com",
+    "rss": {
+      "feedUrl": "https://www.mmafighting.com/rss/current"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -80,8 +135,503 @@
     "id": "nba-news",
     "name": "NBA.com",
     "category": "Sports",
-    "topics": ["basketball", "sports"],
-    "rss": { "feedUrl": "https://www.nba.com/feeds/promopage_articles/landing_nba.rss" },
+    "topics": [
+      "basketball",
+      "sports"
+    ],
+    "siteUrl": "https://www.nba.com",
+    "rss": {
+      "feedUrl": "https://www.nba.com/feeds/promopage_articles/landing_nba.rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "fox-sports",
+    "name": "Fox Sports",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "soccer",
+      "basketball",
+      "combat sports"
+    ],
+    "siteUrl": "https://www.foxsports.com",
+    "rss": {
+      "feedUrl": "https://api.foxsports.com/v2/content/optimized-rss?partnerKey=MB0Wehpmuj2lUhuRhQaafhBjAJqaPU244mlTDK1i&size=30"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nbc-sports",
+    "name": "NBC Sports",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "olympics",
+      "soccer",
+      "basketball"
+    ],
+    "siteUrl": "https://www.nbcsports.com",
+    "rss": {
+      "feedUrl": "https://www.nbcsports.com/rss/headlines"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cbs-sports",
+    "name": "CBS Sports",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "basketball",
+      "soccer",
+      "tennis"
+    ],
+    "siteUrl": "https://www.cbssports.com",
+    "rss": {
+      "feedUrl": "https://www.cbssports.com/rss/headlines/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "deadspin",
+    "name": "Deadspin",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "basketball",
+      "soccer",
+      "media criticism"
+    ],
+    "siteUrl": "https://deadspin.com",
+    "rss": {
+      "feedUrl": "https://deadspin.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sb-nation",
+    "name": "SB Nation",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "basketball",
+      "soccer",
+      "combat sports"
+    ],
+    "siteUrl": "https://www.sbnation.com",
+    "rss": {
+      "feedUrl": "https://www.sbnation.com/rss/current"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "fivethirtyeight-sports",
+    "name": "FiveThirtyEight Sports",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "data science",
+      "basketball",
+      "soccer"
+    ],
+    "siteUrl": "https://fivethirtyeight.com/sports/",
+    "rss": {
+      "feedUrl": "https://fivethirtyeight.com/sports/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-ringer",
+    "name": "The Ringer",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "basketball",
+      "podcasts",
+      "film"
+    ],
+    "siteUrl": "https://www.theringer.com",
+    "rss": {
+      "feedUrl": "https://www.theringer.com/rss/current"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "f1-official",
+    "name": "Formula 1",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "technology",
+      "streaming"
+    ],
+    "siteUrl": "https://www.formula1.com",
+    "rss": {
+      "feedUrl": "https://www.formula1.com/content/fom-website/en/latest/all.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "motogp-official",
+    "name": "MotoGP Official",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "technology",
+      "streaming"
+    ],
+    "siteUrl": "https://www.motogp.com",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "ufc-news",
+    "name": "UFC News",
+    "category": "Sports",
+    "topics": [
+      "combat sports",
+      "sports",
+      "fitness",
+      "streaming"
+    ],
+    "siteUrl": "https://www.ufc.com",
+    "rss": {
+      "feedUrl": "https://www.ufc.com/rss/news"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "boxing-news",
+    "name": "Boxing News",
+    "category": "Sports",
+    "topics": [
+      "combat sports",
+      "sports",
+      "fitness"
+    ],
+    "siteUrl": "https://www.boxingnews24.com",
+    "rss": {
+      "feedUrl": "https://www.boxingnews24.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "wwe",
+    "name": "WWE",
+    "category": "Sports",
+    "topics": [
+      "combat sports",
+      "sports",
+      "streaming"
+    ],
+    "siteUrl": "https://www.wwe.com",
+    "rss": {
+      "feedUrl": "https://www.wwe.com/feeds/all"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nfl-official",
+    "name": "NFL Official",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "streaming"
+    ],
+    "siteUrl": "https://www.nfl.com",
+    "rss": {
+      "feedUrl": "https://www.nfl.com/rss/rsslanding?searchString=home"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mlb-official",
+    "name": "MLB Official",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "streaming"
+    ],
+    "siteUrl": "https://www.mlb.com",
+    "rss": {
+      "feedUrl": "https://www.mlb.com/feeds/news/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nhl-official",
+    "name": "NHL Official",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "streaming"
+    ],
+    "siteUrl": "https://www.nhl.com",
+    "rss": {
+      "feedUrl": "https://www.nhl.com/rss/news.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "fifa-news",
+    "name": "FIFA News",
+    "category": "Sports",
+    "topics": [
+      "soccer",
+      "sports",
+      "olympics"
+    ],
+    "siteUrl": "https://www.fifa.com",
+    "rss": {
+      "feedUrl": "https://www.fifa.com/rss-feeds/news"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "uefa-news",
+    "name": "UEFA News",
+    "category": "Sports",
+    "topics": [
+      "soccer",
+      "sports",
+      "olympics"
+    ],
+    "siteUrl": "https://www.uefa.com",
+    "rss": {
+      "feedUrl": "https://www.uefa.com/rssfeed/news/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "world-rugby",
+    "name": "World Rugby",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "olympics"
+    ],
+    "siteUrl": "https://www.world.rugby",
+    "rss": {
+      "feedUrl": "https://www.world.rugby/news/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cricket-world",
+    "name": "Cricket World",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "olympics"
+    ],
+    "siteUrl": "https://www.cricketworld.com",
+    "rss": {
+      "feedUrl": "https://www.cricketworld.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "tennis-world",
+    "name": "Tennis World",
+    "category": "Sports",
+    "topics": [
+      "tennis",
+      "sports",
+      "olympics"
+    ],
+    "siteUrl": "https://www.tennisworldusa.org",
+    "rss": {
+      "feedUrl": "https://www.tennisworldusa.org/rss/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "espn-fc",
+    "name": "ESPN FC",
+    "category": "Sports",
+    "topics": [
+      "soccer",
+      "sports",
+      "streaming"
+    ],
+    "siteUrl": "https://www.espn.com/soccer/",
+    "rss": {
+      "feedUrl": "https://www.espn.com/espn/rss/soccer/news"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "golf-digest",
+    "name": "Golf Digest",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "fitness",
+      "travel"
+    ],
+    "siteUrl": "https://www.golfdigest.com",
+    "rss": {
+      "feedUrl": "https://www.golfdigest.com/feed/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cycling-news",
+    "name": "Cycling News",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "fitness",
+      "olympics"
+    ],
+    "siteUrl": "https://www.cyclingnews.com",
+    "rss": {
+      "feedUrl": "https://www.cyclingnews.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "running-world",
+    "name": "Runner's World",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "fitness",
+      "health",
+      "nutrition"
+    ],
+    "siteUrl": "https://www.runnersworld.com",
+    "rss": {
+      "feedUrl": "https://www.runnersworld.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "swim-swam",
+    "name": "SwimSwam",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "olympics",
+      "fitness"
+    ],
+    "siteUrl": "https://swimswam.com",
+    "rss": {
+      "feedUrl": "https://swimswam.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-guardian-sport",
+    "name": "The Guardian Sport",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "soccer",
+      "tennis",
+      "olympics"
+    ],
+    "siteUrl": "https://www.theguardian.com/sport",
+    "rss": {
+      "feedUrl": "https://www.theguardian.com/uk/sport/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "yahoo-sports",
+    "name": "Yahoo Sports",
+    "category": "Sports",
+    "topics": [
+      "sports",
+      "basketball",
+      "soccer",
+      "combat sports"
+    ],
+    "siteUrl": "https://sports.yahoo.com",
+    "rss": {
+      "feedUrl": "https://sports.yahoo.com/rss/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

@@ -1,0 +1,426 @@
+[
+  {
+    "id": "google",
+    "name": "Google Search",
+    "category": "Universal",
+    "topics": [],
+    "siteUrl": "https://www.google.com",
+    "search": {
+      "_type": "google_web_search"
+    },
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "x",
+    "name": "X (Twitter)",
+    "category": "Universal",
+    "topics": [
+      "technology",
+      "world news",
+      "politics",
+      "business",
+      "startups",
+      "sports",
+      "entertainment"
+    ],
+    "siteUrl": "https://x.com",
+    "rss": {
+      "feedUrl": "https://nitter.privacydev.net/search/rss?f=tweets&q={query}"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "medium",
+    "name": "Medium",
+    "category": "Universal",
+    "topics": [
+      "technology",
+      "startups",
+      "artificial intelligence",
+      "web development",
+      "design",
+      "creative writing",
+      "business"
+    ],
+    "siteUrl": "https://medium.com",
+    "rss": {
+      "feedUrl": "https://medium.com/feed/tag/{query}"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "substack",
+    "name": "Substack",
+    "category": "Universal",
+    "topics": [
+      "technology",
+      "politics",
+      "economics",
+      "media criticism",
+      "creative writing",
+      "philosophy"
+    ],
+    "siteUrl": "https://substack.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "quora",
+    "name": "Quora",
+    "category": "Universal",
+    "topics": [
+      "education",
+      "technology",
+      "science",
+      "health",
+      "philosophy",
+      "business"
+    ],
+    "siteUrl": "https://www.quora.com",
+    "rss": {
+      "feedUrl": "https://www.quora.com/rss/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "zhihu",
+    "name": "Zhihu (知乎)",
+    "category": "Universal",
+    "topics": [
+      "technology",
+      "science",
+      "education",
+      "philosophy",
+      "business",
+      "artificial intelligence"
+    ],
+    "siteUrl": "https://www.zhihu.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "xiaohongshu",
+    "name": "Xiaohongshu (小红书)",
+    "category": "Universal",
+    "topics": [
+      "fashion",
+      "food",
+      "travel",
+      "design",
+      "photography",
+      "fitness",
+      "cooking"
+    ],
+    "siteUrl": "https://www.xiaohongshu.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bilibili",
+    "name": "Bilibili (哔哩哔哩)",
+    "category": "Universal",
+    "topics": [
+      "gaming",
+      "anime",
+      "technology",
+      "science",
+      "music",
+      "education"
+    ],
+    "siteUrl": "https://www.bilibili.com",
+    "search": {
+      "endpoint": "https://api.bilibili.com/x/web-interface/search/type",
+      "searchParam": "keyword",
+      "resultPath": "data.result",
+      "limitParam": "page_size",
+      "extraParams": {
+        "search_type": "video"
+      }
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "description",
+      "urlTemplate": "https://www.bilibili.com/video/{bvid}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "weibo",
+    "name": "Weibo (微博)",
+    "category": "Universal",
+    "topics": [
+      "world news",
+      "entertainment",
+      "sports",
+      "technology",
+      "politics"
+    ],
+    "siteUrl": "https://weibo.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "douyin",
+    "name": "Douyin/TikTok (抖音)",
+    "category": "Universal",
+    "topics": [
+      "entertainment",
+      "music",
+      "food",
+      "travel",
+      "fashion",
+      "comedy"
+    ],
+    "siteUrl": "https://www.douyin.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "telegram",
+    "name": "Telegram",
+    "category": "Universal",
+    "topics": [
+      "technology",
+      "cryptocurrency",
+      "world news",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://t.me",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "category": "Universal",
+    "topics": [
+      "business",
+      "startups",
+      "marketing",
+      "entrepreneurship",
+      "technology"
+    ],
+    "siteUrl": "https://www.linkedin.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pinterest",
+    "name": "Pinterest",
+    "category": "Universal",
+    "topics": [
+      "design",
+      "art",
+      "fashion",
+      "food",
+      "home improvement",
+      "photography"
+    ],
+    "siteUrl": "https://www.pinterest.com",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "instagram",
+    "name": "Instagram",
+    "category": "Universal",
+    "topics": [
+      "photography",
+      "fashion",
+      "food",
+      "travel",
+      "art",
+      "fitness"
+    ],
+    "siteUrl": "https://www.instagram.com",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "tumblr",
+    "name": "Tumblr",
+    "category": "Universal",
+    "topics": [
+      "art",
+      "creative writing",
+      "photography",
+      "anime",
+      "comics",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.tumblr.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bluesky",
+    "name": "Bluesky",
+    "category": "Universal",
+    "topics": [
+      "technology",
+      "politics",
+      "media criticism",
+      "cultural studies"
+    ],
+    "siteUrl": "https://bsky.app",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "threads",
+    "name": "Threads",
+    "category": "Universal",
+    "topics": [
+      "entertainment",
+      "fashion",
+      "sports",
+      "technology",
+      "cultural studies"
+    ],
+    "siteUrl": "https://www.threads.net",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "category": "Universal",
+    "topics": [
+      "gaming",
+      "technology",
+      "cryptocurrency",
+      "music",
+      "anime"
+    ],
+    "siteUrl": "https://discord.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "twitch",
+    "name": "Twitch",
+    "category": "Universal",
+    "topics": [
+      "gaming",
+      "esports",
+      "streaming",
+      "music",
+      "entertainment"
+    ],
+    "siteUrl": "https://www.twitch.tv",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "spotify",
+    "name": "Spotify",
+    "category": "Universal",
+    "topics": [
+      "music",
+      "podcasts",
+      "entertainment",
+      "comedy"
+    ],
+    "siteUrl": "https://open.spotify.com",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "goodreads",
+    "name": "Goodreads",
+    "category": "Universal",
+    "topics": [
+      "books",
+      "literature",
+      "creative writing",
+      "history",
+      "philosophy"
+    ],
+    "siteUrl": "https://www.goodreads.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "flickr",
+    "name": "Flickr",
+    "category": "Universal",
+    "topics": [
+      "photography",
+      "art",
+      "travel",
+      "nature",
+      "architecture"
+    ],
+    "siteUrl": "https://www.flickr.com",
+    "rss": {
+      "feedUrl": "https://www.flickr.com/services/feeds/photos_public.gne?format=rss2"
+    },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "lemon8",
+    "name": "Lemon8",
+    "category": "Universal",
+    "topics": [
+      "photography",
+      "fashion",
+      "food",
+      "travel"
+    ],
+    "siteUrl": "https://www.lemon8-app.com",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  }
+]

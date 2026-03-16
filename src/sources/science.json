@@ -3,13 +3,24 @@
     "id": "nasa",
     "name": "NASA",
     "category": "Science & Nature",
-    "topics": ["space", "science", "physics", "climate", "space exploration"],
-    "rss": { "feedUrl": "https://www.nasa.gov/rss/dyn/breaking_news.rss" },
+    "topics": [
+      "space",
+      "science",
+      "physics",
+      "climate",
+      "space exploration"
+    ],
+    "siteUrl": "https://www.nasa.gov",
+    "rss": {
+      "feedUrl": "https://www.nasa.gov/rss/dyn/breaking_news.rss"
+    },
     "search": {
       "endpoint": "https://images-api.nasa.gov/search",
       "searchParam": "q",
       "resultPath": "collection.items",
-      "extraParams": { "media_type": "image" }
+      "extraParams": {
+        "media_type": "image"
+      }
     },
     "normalize": {
       "titlePath": "data.0.title",
@@ -25,8 +36,17 @@
     "id": "nature",
     "name": "Nature",
     "category": "Science & Nature",
-    "topics": ["science", "biology", "physics", "climate", "genetics"],
-    "rss": { "feedUrl": "https://www.nature.com/nature.rss" },
+    "topics": [
+      "science",
+      "biology",
+      "physics",
+      "climate",
+      "genetics"
+    ],
+    "siteUrl": "https://www.nature.com",
+    "rss": {
+      "feedUrl": "https://www.nature.com/nature.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -36,8 +56,16 @@
     "id": "sciencedaily",
     "name": "ScienceDaily",
     "category": "Science & Nature",
-    "topics": ["science", "health", "biology", "space"],
-    "rss": { "feedUrl": "https://www.sciencedaily.com/rss/all.xml" },
+    "topics": [
+      "science",
+      "health",
+      "biology",
+      "space"
+    ],
+    "siteUrl": "https://www.sciencedaily.com",
+    "rss": {
+      "feedUrl": "https://www.sciencedaily.com/rss/all.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -47,8 +75,16 @@
     "id": "newscientist",
     "name": "New Scientist",
     "category": "Science & Nature",
-    "topics": ["science", "space", "physics", "artificial intelligence"],
-    "rss": { "feedUrl": "https://www.newscientist.com/feed/home/" },
+    "topics": [
+      "science",
+      "space",
+      "physics",
+      "artificial intelligence"
+    ],
+    "siteUrl": "https://www.newscientist.com",
+    "rss": {
+      "feedUrl": "https://www.newscientist.com/feed/home/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -58,8 +94,16 @@
     "id": "phys-org",
     "name": "Phys.org",
     "category": "Science & Nature",
-    "topics": ["physics", "science", "space", "climate"],
-    "rss": { "feedUrl": "https://phys.org/rss-feed/" },
+    "topics": [
+      "physics",
+      "science",
+      "space",
+      "climate"
+    ],
+    "siteUrl": "https://phys.org",
+    "rss": {
+      "feedUrl": "https://phys.org/rss-feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -69,8 +113,16 @@
     "id": "scientific-american",
     "name": "Scientific American",
     "category": "Science & Nature",
-    "topics": ["science", "biology", "physics", "neuroscience"],
-    "rss": { "feedUrl": "https://www.scientificamerican.com/feed/" },
+    "topics": [
+      "science",
+      "biology",
+      "physics",
+      "neuroscience"
+    ],
+    "siteUrl": "https://www.scientificamerican.com",
+    "rss": {
+      "feedUrl": "https://www.scientificamerican.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -80,8 +132,16 @@
     "id": "science-mag",
     "name": "Science Magazine",
     "category": "Science & Nature",
-    "topics": ["science", "biology", "chemistry", "genetics"],
-    "rss": { "feedUrl": "https://www.science.org/rss/news_current.xml" },
+    "topics": [
+      "science",
+      "biology",
+      "chemistry",
+      "genetics"
+    ],
+    "siteUrl": "https://www.science.org",
+    "rss": {
+      "feedUrl": "https://www.science.org/rss/news_current.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -91,8 +151,16 @@
     "id": "space-com",
     "name": "Space.com",
     "category": "Science & Nature",
-    "topics": ["space", "astronomy", "physics", "space exploration"],
-    "rss": { "feedUrl": "https://www.space.com/feeds/all" },
+    "topics": [
+      "space",
+      "astronomy",
+      "physics",
+      "space exploration"
+    ],
+    "siteUrl": "https://www.space.com",
+    "rss": {
+      "feedUrl": "https://www.space.com/feeds/all"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -102,8 +170,16 @@
     "id": "livescience",
     "name": "Live Science",
     "category": "Science & Nature",
-    "topics": ["science", "biology", "space", "geology"],
-    "rss": { "feedUrl": "https://www.livescience.com/feeds/all" },
+    "topics": [
+      "science",
+      "biology",
+      "space",
+      "geology"
+    ],
+    "siteUrl": "https://www.livescience.com",
+    "rss": {
+      "feedUrl": "https://www.livescience.com/feeds/all"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -113,8 +189,16 @@
     "id": "eurekalert",
     "name": "EurekAlert!",
     "category": "Science & Nature",
-    "topics": ["science", "medical research", "biology", "chemistry"],
-    "rss": { "feedUrl": "https://www.eurekalert.org/feed/press?type=all" },
+    "topics": [
+      "science",
+      "medical research",
+      "biology",
+      "chemistry"
+    ],
+    "siteUrl": "https://www.eurekalert.org",
+    "rss": {
+      "feedUrl": "https://www.eurekalert.org/feed/press?type=all"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -124,8 +208,577 @@
     "id": "quantamagazine",
     "name": "Quanta Magazine",
     "category": "Science & Nature",
-    "topics": ["mathematics", "physics", "biology", "quantum computing"],
-    "rss": { "feedUrl": "https://www.quantamagazine.org/feed/" },
+    "topics": [
+      "mathematics",
+      "physics",
+      "biology",
+      "quantum computing"
+    ],
+    "siteUrl": "https://www.quantamagazine.org",
+    "rss": {
+      "feedUrl": "https://www.quantamagazine.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "esa",
+    "name": "European Space Agency",
+    "category": "Science & Nature",
+    "topics": [
+      "space",
+      "space exploration",
+      "astronomy",
+      "science"
+    ],
+    "siteUrl": "https://www.esa.int",
+    "rss": {
+      "feedUrl": "https://www.esa.int/rssfeed/Our_Activities/Space_Science"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cern",
+    "name": "CERN",
+    "category": "Science & Nature",
+    "topics": [
+      "physics",
+      "quantum computing",
+      "science",
+      "mathematics"
+    ],
+    "siteUrl": "https://home.cern",
+    "rss": {
+      "feedUrl": "https://home.cern/api/news/feed.rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "fermilab",
+    "name": "Fermilab",
+    "category": "Science & Nature",
+    "topics": [
+      "physics",
+      "science",
+      "quantum computing"
+    ],
+    "siteUrl": "https://www.fnal.gov",
+    "rss": {
+      "feedUrl": "https://news.fnal.gov/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "noaa",
+    "name": "NOAA",
+    "category": "Science & Nature",
+    "topics": [
+      "climate",
+      "ecology",
+      "science",
+      "environment"
+    ],
+    "siteUrl": "https://www.noaa.gov",
+    "rss": {
+      "feedUrl": "https://www.noaa.gov/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "smithsonian-magazine",
+    "name": "Smithsonian Magazine",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "history",
+      "biology",
+      "ecology"
+    ],
+    "siteUrl": "https://www.smithsonianmag.com",
+    "rss": {
+      "feedUrl": "https://www.smithsonianmag.com/rss/latest_articles/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cosmos-magazine",
+    "name": "Cosmos Magazine",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "space",
+      "physics",
+      "biology"
+    ],
+    "siteUrl": "https://cosmosmagazine.com",
+    "rss": {
+      "feedUrl": "https://cosmosmagazine.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-conversation-science",
+    "name": "The Conversation - Science",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "climate",
+      "biology",
+      "education"
+    ],
+    "siteUrl": "https://theconversation.com/us/science",
+    "rss": {
+      "feedUrl": "https://theconversation.com/us/science/articles.atom"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "science-news",
+    "name": "Science News",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "physics",
+      "biology",
+      "neuroscience",
+      "chemistry"
+    ],
+    "siteUrl": "https://www.sciencenews.org",
+    "rss": {
+      "feedUrl": "https://www.sciencenews.org/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nautilus-science",
+    "name": "Nautilus",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "philosophy",
+      "neuroscience",
+      "physics"
+    ],
+    "siteUrl": "https://nautil.us",
+    "rss": {
+      "feedUrl": "https://nautil.us/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "undark",
+    "name": "Undark",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "public health",
+      "climate",
+      "biology"
+    ],
+    "siteUrl": "https://undark.org",
+    "rss": {
+      "feedUrl": "https://undark.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "discover-magazine",
+    "name": "Discover Magazine",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "space",
+      "biology",
+      "neuroscience"
+    ],
+    "siteUrl": "https://www.discovermagazine.com",
+    "rss": {
+      "feedUrl": "https://www.discovermagazine.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "astronomy-magazine",
+    "name": "Astronomy Magazine",
+    "category": "Science & Nature",
+    "topics": [
+      "astronomy",
+      "space",
+      "physics",
+      "space exploration"
+    ],
+    "siteUrl": "https://www.astronomy.com",
+    "rss": {
+      "feedUrl": "https://www.astronomy.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sky-and-telescope",
+    "name": "Sky & Telescope",
+    "category": "Science & Nature",
+    "topics": [
+      "astronomy",
+      "space",
+      "physics",
+      "space exploration"
+    ],
+    "siteUrl": "https://skyandtelescope.org",
+    "rss": {
+      "feedUrl": "https://skyandtelescope.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "geology-com",
+    "name": "Geology.com",
+    "category": "Science & Nature",
+    "topics": [
+      "geology",
+      "science",
+      "ecology",
+      "climate"
+    ],
+    "siteUrl": "https://geology.com",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "american-chemical-society",
+    "name": "American Chemical Society",
+    "category": "Science & Nature",
+    "topics": [
+      "chemistry",
+      "science",
+      "biotechnology",
+      "biology"
+    ],
+    "siteUrl": "https://www.acs.org",
+    "rss": {
+      "feedUrl": "https://www.acs.org/content/acs/en/pressroom/rss-feed.html"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "royal-society",
+    "name": "Royal Society",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "biology",
+      "physics",
+      "chemistry"
+    ],
+    "siteUrl": "https://royalsociety.org",
+    "rss": {
+      "feedUrl": "https://royalsociety.org/news/rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "max-planck",
+    "name": "Max Planck Society",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "physics",
+      "biology",
+      "neuroscience",
+      "chemistry"
+    ],
+    "siteUrl": "https://www.mpg.de/en",
+    "rss": {
+      "feedUrl": "https://www.mpg.de/en/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "chemistry-world",
+    "name": "Chemistry World",
+    "category": "Science & Nature",
+    "topics": [
+      "chemistry",
+      "science",
+      "biotechnology"
+    ],
+    "siteUrl": "https://www.chemistryworld.com",
+    "rss": {
+      "feedUrl": "https://www.chemistryworld.com/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "physics-today",
+    "name": "Physics Today",
+    "category": "Science & Nature",
+    "topics": [
+      "physics",
+      "quantum computing",
+      "science",
+      "mathematics"
+    ],
+    "siteUrl": "https://physicstoday.scitation.org",
+    "rss": {
+      "feedUrl": "https://physicstoday.scitation.org/action/showFeed?type=etoc&feed=rss&jc=pto"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "biology-letters",
+    "name": "Biology Letters",
+    "category": "Science & Nature",
+    "topics": [
+      "biology",
+      "genetics",
+      "ecology",
+      "science"
+    ],
+    "siteUrl": "https://royalsocietypublishing.org/journal/rsbl",
+    "rss": {
+      "feedUrl": "https://royalsocietypublishing.org/action/showFeed?type=etoc&feed=rss&jc=rsbl"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cell-press",
+    "name": "Cell Press",
+    "category": "Science & Nature",
+    "topics": [
+      "biology",
+      "genetics",
+      "neuroscience",
+      "medical research"
+    ],
+    "siteUrl": "https://www.cell.com",
+    "rss": {
+      "feedUrl": "https://www.cell.com/cell/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pnas",
+    "name": "PNAS",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "biology",
+      "chemistry",
+      "genetics",
+      "neuroscience"
+    ],
+    "siteUrl": "https://www.pnas.org",
+    "rss": {
+      "feedUrl": "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-lancet-news",
+    "name": "The Lancet News",
+    "category": "Science & Nature",
+    "topics": [
+      "medical research",
+      "public health",
+      "biology",
+      "science"
+    ],
+    "siteUrl": "https://www.thelancet.com",
+    "rss": {
+      "feedUrl": "https://www.thelancet.com/rssfeed/lancet_current.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bmj-news",
+    "name": "BMJ News",
+    "category": "Science & Nature",
+    "topics": [
+      "medical research",
+      "public health",
+      "health",
+      "science"
+    ],
+    "siteUrl": "https://www.bmj.com",
+    "rss": {
+      "feedUrl": "https://www.bmj.com/rss/recent.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "who-research",
+    "name": "WHO Research",
+    "category": "Science & Nature",
+    "topics": [
+      "public health",
+      "medical research",
+      "science",
+      "health"
+    ],
+    "siteUrl": "https://www.who.int",
+    "rss": {
+      "feedUrl": "https://www.who.int/rss-feeds/news-english.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "iaea",
+    "name": "IAEA",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "physics",
+      "renewable energy",
+      "climate"
+    ],
+    "siteUrl": "https://www.iaea.org",
+    "rss": {
+      "feedUrl": "https://www.iaea.org/feeds/topnews"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bulletin-atomic-scientists",
+    "name": "Bulletin of the Atomic Scientists",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "physics",
+      "climate",
+      "politics"
+    ],
+    "siteUrl": "https://thebulletin.org",
+    "rss": {
+      "feedUrl": "https://thebulletin.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "environmental-health-news",
+    "name": "Environmental Health News",
+    "category": "Science & Nature",
+    "topics": [
+      "environment",
+      "public health",
+      "climate",
+      "science"
+    ],
+    "siteUrl": "https://www.ehn.org",
+    "rss": {
+      "feedUrl": "https://www.ehn.org/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "natgeo-science",
+    "name": "National Geographic Science",
+    "category": "Science & Nature",
+    "topics": [
+      "science",
+      "biology",
+      "ecology",
+      "climate"
+    ],
+    "siteUrl": "https://www.nationalgeographic.com/science",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "acs-news",
+    "name": "ACS Chemistry News",
+    "category": "Science & Nature",
+    "topics": [
+      "chemistry",
+      "science",
+      "biotechnology"
+    ],
+    "siteUrl": "https://www.acs.org/pressroom",
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

@@ -3,8 +3,16 @@
     "id": "medlineplus",
     "name": "MedlinePlus",
     "category": "Health & Wellness",
-    "topics": ["health", "nutrition", "fitness", "mental health"],
-    "rss": { "feedUrl": "https://medlineplus.gov/feeds/topic.xml" },
+    "topics": [
+      "health",
+      "nutrition",
+      "fitness",
+      "mental health"
+    ],
+    "siteUrl": "https://medlineplus.gov",
+    "rss": {
+      "feedUrl": "https://medlineplus.gov/feeds/topic.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -14,8 +22,16 @@
     "id": "who-news",
     "name": "WHO News",
     "category": "Health & Wellness",
-    "topics": ["health", "world news", "science", "public health"],
-    "rss": { "feedUrl": "https://www.who.int/rss-feeds/news-english.xml" },
+    "topics": [
+      "health",
+      "world news",
+      "science",
+      "public health"
+    ],
+    "siteUrl": "https://www.who.int",
+    "rss": {
+      "feedUrl": "https://www.who.int/rss-feeds/news-english.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -25,8 +41,17 @@
     "id": "nih-news",
     "name": "NIH News",
     "category": "Health & Wellness",
-    "topics": ["health", "biology", "science", "mental health", "medical research"],
-    "rss": { "feedUrl": "https://www.nih.gov/news-events/news-releases/feed" },
+    "topics": [
+      "health",
+      "biology",
+      "science",
+      "mental health",
+      "medical research"
+    ],
+    "siteUrl": "https://www.nih.gov",
+    "rss": {
+      "feedUrl": "https://www.nih.gov/news-events/news-releases/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -36,8 +61,16 @@
     "id": "webmd",
     "name": "WebMD",
     "category": "Health & Wellness",
-    "topics": ["health", "nutrition", "mental health", "fitness"],
-    "rss": { "feedUrl": "https://rssfeeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC" },
+    "topics": [
+      "health",
+      "nutrition",
+      "mental health",
+      "fitness"
+    ],
+    "siteUrl": "https://www.webmd.com",
+    "rss": {
+      "feedUrl": "https://rssfeeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -47,8 +80,16 @@
     "id": "healthline",
     "name": "Healthline",
     "category": "Health & Wellness",
-    "topics": ["health", "fitness", "nutrition", "mental health"],
-    "rss": { "feedUrl": "https://www.healthline.com/rss" },
+    "topics": [
+      "health",
+      "fitness",
+      "nutrition",
+      "mental health"
+    ],
+    "siteUrl": "https://www.healthline.com",
+    "rss": {
+      "feedUrl": "https://www.healthline.com/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -58,8 +99,16 @@
     "id": "psychology-today",
     "name": "Psychology Today",
     "category": "Health & Wellness",
-    "topics": ["mental health", "neuroscience", "sociology", "meditation"],
-    "rss": { "feedUrl": "https://www.psychologytoday.com/us/blog/feed" },
+    "topics": [
+      "mental health",
+      "neuroscience",
+      "sociology",
+      "meditation"
+    ],
+    "siteUrl": "https://www.psychologytoday.com",
+    "rss": {
+      "feedUrl": "https://www.psychologytoday.com/us/blog/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -69,8 +118,16 @@
     "id": "yoga-journal",
     "name": "Yoga Journal",
     "category": "Health & Wellness",
-    "topics": ["yoga", "meditation", "fitness", "mental health"],
-    "rss": { "feedUrl": "https://www.yogajournal.com/feed/" },
+    "topics": [
+      "yoga",
+      "meditation",
+      "fitness",
+      "mental health"
+    ],
+    "siteUrl": "https://www.yogajournal.com",
+    "rss": {
+      "feedUrl": "https://www.yogajournal.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -80,8 +137,16 @@
     "id": "runners-world",
     "name": "Runner's World",
     "category": "Health & Wellness",
-    "topics": ["fitness", "health", "nutrition", "sports"],
-    "rss": { "feedUrl": "https://www.runnersworld.com/rss/all.xml/" },
+    "topics": [
+      "fitness",
+      "health",
+      "nutrition",
+      "sports"
+    ],
+    "siteUrl": "https://www.runnersworld.com",
+    "rss": {
+      "feedUrl": "https://www.runnersworld.com/rss/all.xml/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -91,8 +156,509 @@
     "id": "mens-health",
     "name": "Men's Health",
     "category": "Health & Wellness",
-    "topics": ["fitness", "health", "nutrition"],
-    "rss": { "feedUrl": "https://www.menshealth.com/rss/all.xml/" },
+    "topics": [
+      "fitness",
+      "health",
+      "nutrition"
+    ],
+    "siteUrl": "https://www.menshealth.com",
+    "rss": {
+      "feedUrl": "https://www.menshealth.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "harvard-health",
+    "name": "Harvard Health",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "nutrition",
+      "mental health"
+    ],
+    "siteUrl": "https://www.health.harvard.edu",
+    "rss": {
+      "feedUrl": "https://www.health.harvard.edu/blog/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cleveland-clinic",
+    "name": "Cleveland Clinic",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "nutrition",
+      "fitness"
+    ],
+    "siteUrl": "https://health.clevelandclinic.org",
+    "rss": {
+      "feedUrl": "https://health.clevelandclinic.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "johns-hopkins-health",
+    "name": "Johns Hopkins Health",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "public health",
+      "science"
+    ],
+    "siteUrl": "https://www.hopkinsmedicine.org",
+    "rss": {
+      "feedUrl": "https://www.hopkinsmedicine.org/news/media/releases/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mount-sinai-blog",
+    "name": "Mount Sinai Blog",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "public health",
+      "neuroscience"
+    ],
+    "siteUrl": "https://health.mountsinai.org",
+    "rss": {
+      "feedUrl": "https://health.mountsinai.org/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "everyday-health",
+    "name": "Everyday Health",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "fitness",
+      "nutrition",
+      "mental health"
+    ],
+    "siteUrl": "https://www.everydayhealth.com",
+    "rss": {
+      "feedUrl": "https://www.everydayhealth.com/rss/all-articles"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "medical-news-today",
+    "name": "Medical News Today",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "nutrition",
+      "science"
+    ],
+    "siteUrl": "https://www.medicalnewstoday.com",
+    "rss": {
+      "feedUrl": "https://rss.medicalnewstoday.com/featurednews.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "verywell-health",
+    "name": "Verywell Health",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "mental health",
+      "fitness",
+      "nutrition"
+    ],
+    "siteUrl": "https://www.verywellhealth.com",
+    "rss": {
+      "feedUrl": "https://www.verywellhealth.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mindful-org",
+    "name": "Mindful.org",
+    "category": "Health & Wellness",
+    "topics": [
+      "meditation",
+      "mental health",
+      "yoga",
+      "health"
+    ],
+    "siteUrl": "https://www.mindful.org",
+    "rss": {
+      "feedUrl": "https://www.mindful.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "womens-health",
+    "name": "Women's Health",
+    "category": "Health & Wellness",
+    "topics": [
+      "fitness",
+      "health",
+      "nutrition",
+      "mental health"
+    ],
+    "siteUrl": "https://www.womenshealthmag.com",
+    "rss": {
+      "feedUrl": "https://www.womenshealthmag.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "prevention-magazine",
+    "name": "Prevention Magazine",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "nutrition",
+      "fitness",
+      "public health"
+    ],
+    "siteUrl": "https://www.prevention.com",
+    "rss": {
+      "feedUrl": "https://www.prevention.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "self-magazine",
+    "name": "Self Magazine",
+    "category": "Health & Wellness",
+    "topics": [
+      "fitness",
+      "nutrition",
+      "mental health",
+      "health"
+    ],
+    "siteUrl": "https://www.self.com",
+    "rss": {
+      "feedUrl": "https://www.self.com/feed/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "shape-magazine",
+    "name": "Shape Magazine",
+    "category": "Health & Wellness",
+    "topics": [
+      "fitness",
+      "health",
+      "nutrition",
+      "yoga"
+    ],
+    "siteUrl": "https://www.shape.com",
+    "rss": {
+      "feedUrl": "https://www.shape.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bicycling",
+    "name": "Bicycling",
+    "category": "Health & Wellness",
+    "topics": [
+      "fitness",
+      "health",
+      "sports",
+      "nutrition"
+    ],
+    "siteUrl": "https://www.bicycling.com",
+    "rss": {
+      "feedUrl": "https://www.bicycling.com/rss/all.xml/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "outside-online",
+    "name": "Outside Online",
+    "category": "Health & Wellness",
+    "topics": [
+      "fitness",
+      "health",
+      "travel",
+      "sports"
+    ],
+    "siteUrl": "https://www.outsideonline.com",
+    "rss": {
+      "feedUrl": "https://www.outsideonline.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "healthshots",
+    "name": "Healthshots",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "fitness",
+      "nutrition",
+      "mental health"
+    ],
+    "siteUrl": "https://www.healthshots.com",
+    "rss": {
+      "feedUrl": "https://www.healthshots.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "goodrx-health",
+    "name": "GoodRx Health",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "public health",
+      "medical research",
+      "nutrition"
+    ],
+    "siteUrl": "https://www.goodrx.com/health-topic",
+    "rss": {
+      "feedUrl": "https://www.goodrx.com/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "stat-news",
+    "name": "Stat News",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "public health",
+      "biotechnology"
+    ],
+    "siteUrl": "https://www.statnews.com",
+    "rss": {
+      "feedUrl": "https://www.statnews.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "medscape",
+    "name": "Medscape",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "public health",
+      "science"
+    ],
+    "siteUrl": "https://www.medscape.com",
+    "rss": {
+      "feedUrl": "https://www.medscape.com/cx/rssfeeds/2711.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "psychiatric-times",
+    "name": "Psychiatric Times",
+    "category": "Health & Wellness",
+    "topics": [
+      "mental health",
+      "neuroscience",
+      "medical research",
+      "health"
+    ],
+    "siteUrl": "https://www.psychiatrictimes.com",
+    "rss": {
+      "feedUrl": "https://www.psychiatrictimes.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "pharmacy-times",
+    "name": "Pharmacy Times",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "public health",
+      "science"
+    ],
+    "siteUrl": "https://www.pharmacytimes.com",
+    "rss": {
+      "feedUrl": "https://www.pharmacytimes.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "infection-control-today",
+    "name": "Infection Control Today",
+    "category": "Health & Wellness",
+    "topics": [
+      "public health",
+      "health",
+      "medical research",
+      "science"
+    ],
+    "siteUrl": "https://www.infectioncontroltoday.com",
+    "rss": {
+      "feedUrl": "https://www.infectioncontroltoday.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "genetic-engineering-news",
+    "name": "Genetic Engineering News",
+    "category": "Health & Wellness",
+    "topics": [
+      "genetics",
+      "biotechnology",
+      "medical research",
+      "science"
+    ],
+    "siteUrl": "https://www.genengnews.com",
+    "rss": {
+      "feedUrl": "https://www.genengnews.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mayo-clinic",
+    "name": "Mayo Clinic",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "medical research",
+      "nutrition",
+      "public health"
+    ],
+    "siteUrl": "https://www.mayoclinic.org",
+    "rss": {
+      "feedUrl": "https://newsnetwork.mayoclinic.org/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cdc-news",
+    "name": "CDC News",
+    "category": "Health & Wellness",
+    "topics": [
+      "public health",
+      "health",
+      "science",
+      "medical research"
+    ],
+    "siteUrl": "https://www.cdc.gov",
+    "rss": {
+      "feedUrl": "https://tools.cdc.gov/api/v2/resources/media/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "verywell-mind",
+    "name": "Verywell Mind",
+    "category": "Health & Wellness",
+    "topics": [
+      "mental health",
+      "meditation",
+      "neuroscience",
+      "health"
+    ],
+    "siteUrl": "https://www.verywellmind.com",
+    "rss": {
+      "feedUrl": "https://www.verywellmind.com/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nhs-health",
+    "name": "NHS Health",
+    "category": "Health & Wellness",
+    "topics": [
+      "health",
+      "public health",
+      "mental health",
+      "nutrition"
+    ],
+    "siteUrl": "https://www.nhs.uk",
+    "rss": {
+      "feedUrl": "https://www.nhs.uk/rss/news"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

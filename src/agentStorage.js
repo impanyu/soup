@@ -9,6 +9,7 @@ const DATA_DIR = path.join(__dirname, '..', 'data', 'agents');
 
 const DOWNLOAD_TIMEOUT_MS = 15000;
 const MAX_DOWNLOAD_SIZE = 10 * 1024 * 1024; // 10MB
+const AGENT_STORAGE_QUOTA = 1 * 1024 * 1024 * 1024; // 1GB per agent
 
 // ─── Directory helpers ──────────────────────────────────────────────────────────
 
@@ -255,10 +256,70 @@ export function writeMcpServers(agentId, servers) {
   fs.writeFileSync(path.join(agentDir(agentId), 'mcp-servers.json'), JSON.stringify(servers, null, 2), 'utf8');
 }
 
+// ─── Storage quota ──────────────────────────────────────────────────────────────
+
+/**
+ * Calculate total size of an agent's files directory in bytes.
+ */
+function getStorageUsage(agentId) {
+  const dir = filesDir(agentId);
+  if (!fs.existsSync(dir)) return 0;
+  let total = 0;
+  for (const filename of fs.readdirSync(dir)) {
+    try {
+      total += fs.statSync(path.join(dir, filename)).size;
+    } catch { /* file may have been removed concurrently */ }
+  }
+  return total;
+}
+
+/**
+ * Enforce storage quota by removing oldest files until under the limit.
+ * Skips the file that was just written (protectedFilename).
+ */
+function enforceStorageQuota(agentId, protectedFilename) {
+  const dir = filesDir(agentId);
+  if (!fs.existsSync(dir)) return;
+
+  let total = 0;
+  const entries = [];
+  for (const filename of fs.readdirSync(dir)) {
+    try {
+      const filePath = path.join(dir, filename);
+      const stat = fs.statSync(filePath);
+      total += stat.size;
+      entries.push({ filename, filePath, size: stat.size, mtimeMs: stat.mtimeMs });
+    } catch { /* skip */ }
+  }
+
+  if (total <= AGENT_STORAGE_QUOTA) return;
+
+  // Sort oldest first (lowest mtime)
+  entries.sort((a, b) => a.mtimeMs - b.mtimeMs);
+
+  for (const entry of entries) {
+    if (total <= AGENT_STORAGE_QUOTA) break;
+    if (entry.filename === protectedFilename) continue;
+    try {
+      fs.unlinkSync(entry.filePath);
+      total -= entry.size;
+      console.log(`[storage-quota] Removed ${entry.filename} from agent ${agentId} (freed ${entry.size} bytes)`);
+    } catch { /* skip */ }
+  }
+}
+
+export { getStorageUsage, AGENT_STORAGE_QUOTA };
+
 // ─── File operations ────────────────────────────────────────────────────────────
 
 export async function downloadToAgentStorage(agentId, url) {
   ensureAgentDirs(agentId);
+
+  // Handle local /agents/{id}/files/{filename} paths — copy from disk
+  const localPath = resolveAgentFilePath(url);
+  if (localPath) {
+    return copyFileToAgentStorage(agentId, localPath);
+  }
 
   const response = await fetch(url, {
     signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
@@ -283,11 +344,50 @@ export async function downloadToAgentStorage(agentId, url) {
   const filePath = path.join(filesDir(agentId), filename);
 
   fs.writeFileSync(filePath, buffer);
+  enforceStorageQuota(agentId, filename);
+
+  const typeMap = {
+    jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image', svg: 'image',
+    mp4: 'video', webm: 'video', mov: 'video',
+    pdf: 'document', txt: 'document', md: 'document'
+  };
 
   return {
     filename,
-    localUrl: `/agents/${agentId}/files/${filename}`
+    localUrl: `/agents/${agentId}/files/${filename}`,
+    size: buffer.length,
+    mediaType: typeMap[ext] || 'other'
   };
+}
+
+export function copyFileToAgentStorage(targetAgentId, sourceFilePath) {
+  ensureAgentDirs(targetAgentId);
+  if (!fs.existsSync(sourceFilePath)) throw new Error(`Source file not found: ${sourceFilePath}`);
+  const buffer = fs.readFileSync(sourceFilePath);
+  const ext = path.extname(sourceFilePath).slice(1).toLowerCase() || 'bin';
+  const hash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 12);
+  const filename = `${hash}.${ext}`;
+  const destPath = path.join(filesDir(targetAgentId), filename);
+  fs.writeFileSync(destPath, buffer);
+  enforceStorageQuota(targetAgentId, filename);
+  const typeMap = {
+    jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image', svg: 'image',
+    mp4: 'video', webm: 'video', mov: 'video',
+    pdf: 'document', txt: 'document', md: 'document'
+  };
+  return {
+    filename,
+    localUrl: `/agents/${targetAgentId}/files/${filename}`,
+    size: buffer.length,
+    mediaType: typeMap[ext] || 'other'
+  };
+}
+
+export function resolveAgentFilePath(localUrl) {
+  // Convert /agents/{id}/files/{filename} to absolute disk path
+  const match = localUrl.match(/^\/agents\/([^/]+)\/files\/([^/]+)$/);
+  if (!match) return null;
+  return path.join(filesDir(match[1]), path.basename(match[2]));
 }
 
 export function listAgentFiles(agentId) {
@@ -348,3 +448,4 @@ function extFromContentType(ct) {
   const base = (ct || '').split(';')[0].trim().toLowerCase();
   return map[base] || null;
 }
+

@@ -224,16 +224,55 @@ function renderComposer() {
   });
 }
 
-// ── Feed ─────────────────────────────────────────────
-async function loadFeed() {
+// ── Feed (infinite scroll) ────────────────────────────
+let _feedPage = 0;
+let _feedHasMore = true;
+let _feedLoading = false;
+let _feedAllContents = []; // accumulated for trends/suggestions
+let _scrollObserver = null;
+
+async function loadFeedPage(reset = false) {
+  if (_feedLoading) return;
   const wrap = document.getElementById('feed-wrap');
+
+  if (reset) {
+    _feedPage = 0;
+    _feedHasMore = true;
+    _feedAllContents = [];
+    wrap.innerHTML = '';
+    if (_scrollObserver) { _scrollObserver.disconnect(); _scrollObserver = null; }
+    const oldSentinel = document.getElementById('feed-sentinel');
+    if (oldSentinel) oldSentinel.remove();
+    const oldLoader = document.getElementById('feed-loader');
+    if (oldLoader) oldLoader.remove();
+  }
+
+  if (!_feedHasMore) return;
+  _feedLoading = true;
+  _feedPage += 1;
+
+  // Show loading indicator
+  let loader = document.getElementById('feed-loader');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.id = 'feed-loader';
+    loader.className = 'feed-loader';
+    loader.innerHTML = '<div class="spinner" style="margin:20px auto;"></div>';
+    wrap.parentNode.insertBefore(loader, wrap.nextSibling);
+  }
+  loader.style.display = '';
+
   try {
-    let url = '/api/contents';
+    let url = `/api/contents?page=${_feedPage}&pageSize=20`;
     if (state.userId) {
-      url += `?viewerKind=user&viewerId=${encodeURIComponent(state.userId)}`;
+      url += `&viewerKind=user&viewerId=${encodeURIComponent(state.userId)}`;
     }
-    const { contents } = await api(url);
-    if (!contents.length) {
+    const data = await api(url);
+    const contents = data.contents || [];
+    _feedHasMore = data.hasMore;
+    _feedAllContents.push(...contents);
+
+    if (_feedPage === 1 && !contents.length) {
       const isLoggedIn = !!state.userId;
       wrap.innerHTML = `
         <div class="empty-state">
@@ -245,21 +284,73 @@ async function loadFeed() {
             : '<a href="/register" class="btn btn-accent">Get Started</a>'}
         </div>
       `;
+      loader.style.display = 'none';
       return;
     }
-    wrap.innerHTML = contents.map(c => renderFeedItem(c, {
-      actorUserId: state.userId
-    })).join('');
+
+    // Render new items and append
+    const fragment = document.createDocumentFragment();
+    for (const c of contents) {
+      const div = document.createElement('div');
+      div.innerHTML = renderFeedItem(c, { actorUserId: state.userId });
+      while (div.firstChild) fragment.appendChild(div.firstChild);
+    }
+    wrap.appendChild(fragment);
+
     bindFeedActions(wrap, {
       getActorAgentId: () => null,
       getActorUserId: () => state.userId,
-      onDone: () => { showToast('Done!'); loadFeed(); }
+      onDone: () => { showToast('Done!'); loadFeedPage(true); }
     });
-    renderTrends(contents);
-    renderSuggestions(contents);
+
+    // Update sidebar widgets with accumulated data
+    renderTrends(_feedAllContents);
+    renderSuggestions(_feedAllContents);
+
+    // Setup intersection observer for infinite scroll
+    if (_feedHasMore) {
+      ensureSentinel(wrap);
+    } else {
+      // No more pages — remove sentinel, show end marker
+      const sentinel = document.getElementById('feed-sentinel');
+      if (sentinel) sentinel.remove();
+    }
+
+    loader.style.display = 'none';
   } catch (err) {
-    wrap.innerHTML = `<div class="empty-state"><p>${escapeHtml(err.message)}</p></div>`;
+    if (_feedPage === 1) {
+      wrap.innerHTML = `<div class="empty-state"><p>${escapeHtml(err.message)}</p></div>`;
+    }
+    loader.style.display = 'none';
+  } finally {
+    _feedLoading = false;
   }
+}
+
+function ensureSentinel(wrap) {
+  let sentinel = document.getElementById('feed-sentinel');
+  if (!sentinel) {
+    sentinel = document.createElement('div');
+    sentinel.id = 'feed-sentinel';
+    sentinel.style.height = '1px';
+    wrap.parentNode.insertBefore(sentinel, wrap.nextSibling);
+  } else {
+    // Move sentinel after wrap content
+    wrap.parentNode.insertBefore(sentinel, wrap.nextSibling);
+  }
+
+  if (_scrollObserver) _scrollObserver.disconnect();
+  _scrollObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && _feedHasMore && !_feedLoading) {
+      loadFeedPage();
+    }
+  }, { rootMargin: '300px' });
+  _scrollObserver.observe(sentinel);
+}
+
+// Backward compat wrapper
+async function loadFeed() {
+  await loadFeedPage(true);
 }
 
 // ── Trending ──────────────────────────────────────────

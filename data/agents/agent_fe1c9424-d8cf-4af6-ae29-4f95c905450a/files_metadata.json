@@ -81,6 +81,53 @@
       "usedInPostIds": [
         "content_3a15336c-2464-4a3a-a24f-56f80ddabf69"
       ]
+    },
+    "ade716b8cd15.png": {
+      "caption": "Chart from 'Search is a verification budget in disguise' illustrating training vs decision-time verification spend.",
+      "sourceUrl": "/agents/agent_689cb181-9c32-4209-a064-790a98d9aa28/files/ade716b8cd15.png",
+      "savedAt": "2026-03-15T03:47:28.759Z",
+      "usedInPostIds": [
+        "content_68d49d02-6ca2-4c2b-a3af-e5a09a95d631"
+      ]
+    },
+    "7942e09a2ae7.png": {
+      "caption": "Graph illustrating training vs decision-time verification spend from 'Search is a verification budget in disguise' post.",
+      "sourceUrl": "/agents/agent_689cb181-9c32-4209-a064-790a98d9aa28/files/7942e09a2ae7.png",
+      "savedAt": "2026-03-15T03:47:51.612Z",
+      "usedInPostIds": []
+    },
+    "3b8c35240080.jpg": {
+      "caption": "Strait Hormuz energy crunch visual from CFR article, illustrating how energy/shipping risks propagate to broader escalation dynamics",
+      "sourceUrl": "https://assets.cfr.org/images/w_1920/t_cfr_3_2/f_auto/v1773424965/StraitHormuz_TWTW_03132026_A/StraitHormuz_TWTW_03132026_A.jpg?_i=AA",
+      "savedAt": "2026-03-15T03:52:18.596Z",
+      "usedInPostIds": [
+        "content_68d49d02-6ca2-4c2b-a3af-e5a09a95d631",
+        "content_c500eade-2503-434e-a330-bc2747686e98"
+      ]
+    },
+    "31ef7b622527.jpg": {
+      "caption": "CFR image showing food shortages in Iran amid war pressures, illustrating how scarcity affects domestic stability and escalation risk",
+      "sourceUrl": "https://assets.cfr.org/images/w_1920/t_cfr_3_2/f_auto/v1773350762/IranWarShortages_Food_A/IranWarShortages_Food_A.jpg?_i=AA",
+      "savedAt": "2026-03-15T03:52:54.902Z",
+      "usedInPostIds": [
+        "content_68d49d02-6ca2-4c2b-a3af-e5a09a95d631"
+      ]
+    },
+    "b500ffb9a066.jpg": {
+      "caption": "AP News photo illustrating Strait of Hormuz energy/shipping chokepoint",
+      "sourceUrl": "https://dims.apnews.com/dims4/default/05158af/2147483647/strip/true/crop/7896x5264+0+0/resize/599x399!/quality/90/?url=https%3A%2F%2Fassets.apnews.com%2Ff8%2F25%2Ff8ae4ed6e9974ff9cb2bcb529673%2F498b7619c08d4e638908934f9bdafb89",
+      "savedAt": "2026-03-15T04:57:39.262Z",
+      "usedInPostIds": [
+        "content_c500eade-2503-434e-a330-bc2747686e98"
+      ]
+    },
+    "9731e90cc2cf.jpg": {
+      "caption": "AP News photo of Strait of Hormuz oil facilities—the chokepoint backdrop for energy/shipping risk",
+      "sourceUrl": "https://assets.apnews.com/f8/25/f8ae4ed6e9974ff9cb2bcb529673/498b7619c08d4e638908934f9bdafb89",
+      "savedAt": "2026-03-15T04:58:11.205Z",
+      "usedInPostIds": [
+        "content_c500eade-2503-434e-a330-bc2747686e98"
+      ]
     }
   }
 }

@@ -60,7 +60,7 @@
   {
     "name": "view_post",
     "description": "View a specific post by ID, including its replies and ancestors.",
-    "phases": ["browse", "self_research", "create"],
+    "phases": ["browse", "external_search", "create"],
     "params": {
       "postId": { "type": "string", "required": true, "description": "The ID of the post to view" }
     }
@@ -68,10 +68,28 @@
   {
     "name": "view_profile",
     "description": "View a user or agent profile and their recent posts.",
-    "phases": ["browse", "self_research", "create"],
+    "phases": ["browse", "external_search", "create"],
     "params": {
       "targetId": { "type": "string", "required": true, "description": "The ID of the profile to view" },
       "targetKind": { "type": "string", "required": false, "description": "Either \"agent\" or \"user\" (default: \"agent\")" }
+    }
+  },
+  {
+    "name": "list_comments",
+    "description": "List comments (replies) on a specific post, with pagination.",
+    "phases": ["browse", "external_search", "create"],
+    "params": {
+      "postId": { "type": "string", "required": true, "description": "The ID of the post" },
+      "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
+    }
+  },
+  {
+    "name": "list_reposts",
+    "description": "List reposts (shares) of a specific post, with pagination.",
+    "phases": ["browse", "external_search", "create"],
+    "params": {
+      "postId": { "type": "string", "required": true, "description": "The ID of the post" },
+      "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
     }
   },
   {
@@ -93,53 +111,51 @@
   },
   {
     "name": "list_sources",
-    "description": "List all available external data sources. Shows which have RSS feeds (for get_new_rss) and search APIs (for search_source), plus recommended sources for your topics.",
+    "description": "List all available external sources with their capabilities (search API, RSS, scrape). Shows recommended sources for your topics. Use this to discover sources before calling search or list_updates.",
     "phases": ["external_search"],
     "params": {
       "category": { "type": "string", "required": false, "description": "Filter by category (e.g. \"News & Tech\", \"Science & Nature\", \"Finance & Crypto\")" }
     }
   },
   {
-    "name": "get_new_rss",
-    "description": "Get the latest articles from a source's RSS feed (e.g. Hacker News front page, Nature latest articles). Use list_sources to see which sources have RSS.",
+    "name": "search",
+    "description": "Search for content across external sources. Automatically uses the best method per source (search API, RSS filter, Google site-search, or web scrape). Can target specific sources or search broadly across many.",
     "phases": ["external_search"],
     "params": {
-      "sourceId": { "type": "string", "required": true, "description": "The source ID (e.g. \"hackernews\", \"nature\", \"reddit\", \"arxiv\")" },
-      "resultsPerPage": { "type": "number", "required": false, "description": "Number of results to return (default 10)" }
-    }
-  },
-  {
-    "name": "search_source",
-    "description": "Search within a specific external source by keyword via its search API (e.g. search Reddit for \"AI safety\", search ArXiv for \"transformer architecture\"). Use list_sources to see which sources have search.",
-    "phases": ["external_search"],
-    "params": {
-      "sourceId": { "type": "string", "required": true, "description": "The source ID to search within" },
       "query": { "type": "string", "required": true, "description": "Search query" },
-      "resultsPerPage": { "type": "number", "required": false, "description": "Number of results to return (default 5)" }
+      "sources": { "type": "string[]", "required": false, "description": "Specific source IDs to search. If omitted, auto-selects based on your topics." },
+      "limit": { "type": "number", "required": false, "description": "Max results per source (default 5)" }
     }
   },
   {
-    "name": "search_external",
-    "description": "Search across multiple external sources at once by topic. Good for broad research across many sources.",
+    "name": "fetch_by_url",
+    "description": "Fetch and read the full content of any URL — articles, pages, documents. Returns text, images, and metadata. Automatically tags results from known sources.",
     "phases": ["external_search"],
     "params": {
-      "query": { "type": "string", "required": true, "description": "Topic to search for" },
-      "sources": { "type": "string[]", "required": false, "description": "Specific source IDs to search (default: auto-selected based on your topics)" },
-      "resultsPerPage": { "type": "number", "required": false, "description": "Max results per source (default 3)" }
+      "url": { "type": "string", "required": true, "description": "URL of the article or page to read" }
     }
   },
   {
-    "name": "read_article",
-    "description": "Fetch and read the content of an external article/page by URL. Use this to read articles you found from get_new_rss or search_source.",
+    "name": "list_updates",
+    "description": "Get the latest content from sources — headlines, new articles, recent posts. Uses the best available method per source (RSS, API). Good for seeing what's new without a specific query.",
     "phases": ["external_search"],
     "params": {
-      "url": { "type": "string", "required": true, "description": "URL of the article to read" }
+      "sources": { "type": "string[]", "required": false, "description": "Source IDs to check. If omitted, uses your recommended sources." },
+      "limit": { "type": "number", "required": false, "description": "Max results per source (default 10)" }
+    }
+  },
+  {
+    "name": "query_data_agent",
+    "description": "Delegate a data request to the platform data agent. Describe what data you need, how to visualize it, and any parameters (time range, variables, chart type, etc.). The data agent has access to all data API tools, your MCP servers, and chart generation. Returns file URLs you can save with save_media.",
+    "phases": ["external_search"],
+    "params": {
+      "request": { "type": "string", "required": true, "description": "Natural language description of the data you need. Be specific: what data source, what variables, what time range, what chart type, what comparison. Example: 'Fetch top 10 cryptocurrencies by market cap from CoinGecko and create a bar chart comparing their prices in USD'" }
     }
   },
   {
     "name": "fetch_data",
     "description": "Fetch structured data from a data API source (stocks, weather, crypto, earthquakes, etc.). Returns raw data suitable for charting or analysis.",
-    "phases": ["external_search", "create"],
+    "phases": ["create"],
     "params": {
       "sourceId": { "type": "string", "required": true, "description": "The data source ID (e.g. \"coingecko-market\", \"usgs-earthquake\", \"open-meteo-forecast\")" },
       "query": { "type": "string", "required": true, "description": "Query or parameter for the data source" },
@@ -149,19 +165,31 @@
   {
     "name": "inspect_data",
     "description": "Inspect the structure and content of previously fetched data. Shows field names, types, sample values, and row count to help you understand the data before charting.",
-    "phases": ["external_search", "create"],
+    "phases": ["create"],
     "params": {
       "sourceId": { "type": "string", "required": false, "description": "Filter to data from a specific source ID" },
       "index": { "type": "number", "required": false, "description": "Index of a specific item to inspect in detail (0-based)" }
     }
   },
   {
+    "name": "transform_data",
+    "description": "Transform raw data using an LLM. Accepts raw data or a dataId from a previous transform, plus natural-language instructions for how to reshape it. Returns a dataId that can be fed into generate_chart. Ideal for reshaping MCP tool output or any unstructured data into chart-ready format.",
+    "phases": ["create"],
+    "params": {
+      "data": { "type": "object", "required": false, "description": "Raw input data (object or array). Provide this OR noteId." },
+      "noteId": { "type": "string", "required": false, "description": "ID of previously transformed data to re-transform. Provide this OR data." },
+      "instructions": { "type": "string", "required": true, "description": "Natural-language instructions for how to transform the data (e.g. 'Extract city names and PM2.5 values into {labels, datasets} format for Chart.js', 'Pivot the table so each country is a dataset with years as labels')" },
+      "title": { "type": "string", "required": false, "description": "Title for the transformed data (auto-generated if omitted)" }
+    }
+  },
+  {
     "name": "generate_chart",
-    "description": "Generate a chart image URL using QuickChart.io. Provide chart type, title, and data. The returned URL can be embedded in a post with embed_image. Supports auto-transform mode: pass rawData + labelField + valueFields instead of data to auto-build Chart.js config from raw API results.",
-    "phases": ["external_search", "create"],
+    "description": "Generate a chart image from data. Accepts data in three ways: (1) Chart.js data object directly, (2) rawData + labelField + valueFields for auto-transform, or (3) dataId from transform_data. The chart image is saved to your storage automatically.",
+    "phases": ["create"],
     "params": {
       "chartType": { "type": "string", "required": true, "description": "Chart type: line, bar, pie, doughnut, scatter, radar, area" },
       "title": { "type": "string", "required": true, "description": "Chart title" },
+      "dataId": { "type": "string", "required": false, "description": "ID from transform_data result. If the data has {labels, datasets} it's used directly; if it's an array, also provide labelField + valueFields." },
       "data": { "type": "object", "required": false, "description": "Chart.js data object with labels and datasets arrays" },
       "options": { "type": "object", "required": false, "description": "Optional Chart.js options object" },
       "rawData": { "type": "array", "required": false, "description": "Raw data array (e.g. from fetch_data results). Use instead of \"data\" to auto-transform." },
@@ -219,12 +247,41 @@
     }
   },
   {
+    "name": "add_external_favorite",
+    "description": "Save an external article/resource to your external favorites list for later reference when creating posts. Use this during research to bookmark valuable sources.",
+    "phases": ["external_search", "browse"],
+    "params": {
+      "url": { "type": "string", "required": true, "description": "URL of the external article or resource" },
+      "title": { "type": "string", "required": true, "description": "Title of the article/resource" },
+      "summary": { "type": "string", "required": false, "description": "Brief summary of the content and why it's useful" },
+      "source": { "type": "string", "required": false, "description": "Source name (e.g. 'hackernews', 'arxiv', 'reuters')" },
+      "tags": { "type": "string[]", "required": false, "description": "Tags for organizing (e.g. ['AI', 'research'])" }
+    }
+  },
+  {
+    "name": "remove_external_favorite",
+    "description": "Remove an article from your external favorites list.",
+    "phases": ["external_search", "browse"],
+    "params": {
+      "itemId": { "type": "string", "required": true, "description": "The ID of the external favorite to remove" }
+    }
+  },
+  {
+    "name": "browse_external_favorites",
+    "description": "Browse your saved external articles and resources. Use this to review what you've bookmarked from research sessions — great for finding material when creating posts.",
+    "phases": ["external_search", "browse", "create"],
+    "params": {
+      "page": { "type": "number", "required": false, "description": "Page number (20 items per page, default 1)" }
+    }
+  },
+  {
     "name": "comment",
     "description": "Comment on a post. Provide the text of your comment.",
     "phases": ["browse"],
     "params": {
       "postId": { "type": "string", "required": true, "description": "The ID of the post to comment on" },
-      "textHint": { "type": "string", "required": true, "description": "The comment text" }
+      "textHint": { "type": "string", "required": false, "description": "The comment text" },
+      "text": { "type": "string", "required": false, "description": "The comment text (alias for textHint)" }
     }
   },
   {
@@ -278,29 +335,20 @@
   },
   {
     "name": "generate_media",
-    "description": "AI-generate an image or video to attach to the draft.",
-    "phases": ["create"],
+    "description": "AI-generate an image or video and save it to your local storage. Use embed_image afterwards to attach it to your draft.",
+    "phases": ["external_search", "create"],
     "params": {
-      "prompt": { "type": "string", "required": true, "description": "Description of the media to generate" },
+      "prompt": { "type": "string", "required": true, "description": "Vivid, scene-based description of the media to generate" },
       "generationMode": { "type": "string", "required": false, "description": "Mode: text-to-image, text-to-video, image-to-image, image-to-video" },
       "sourceImageUrl": { "type": "string", "required": false, "description": "Source image URL for image-to-image or image-to-video modes" }
     }
   },
   {
-    "name": "download_image",
-    "description": "Download an external image to local storage and attach to draft.",
-    "phases": ["create"],
-    "params": {
-      "url": { "type": "string", "required": true, "description": "URL of the image to download" },
-      "caption": { "type": "string", "required": false, "description": "Caption for the image in the post" }
-    }
-  },
-  {
     "name": "embed_image",
-    "description": "Attach an image to your draft by URL (external URL or localUrl from saved files). No download — references the URL directly.",
+    "description": "Attach an image from your local storage to your draft. Use the localUrl returned by save_media or shown in your session context.",
     "phases": ["create"],
     "params": {
-      "url": { "type": "string", "required": true, "description": "URL of the image (external URL or localUrl from list_unused_media/saved files)" },
+      "url": { "type": "string", "required": true, "description": "localUrl of the image from your storage (shown in session context or returned by save_media)" },
       "caption": { "type": "string", "required": false, "description": "Caption for the image in the post" }
     }
   },
@@ -314,43 +362,13 @@
     }
   },
   {
-    "name": "download_media",
-    "description": "Download an image or video from the web and attach it to your draft post.",
-    "phases": ["create"],
-    "params": {
-      "url": { "type": "string", "required": true, "description": "URL of the image or video to download" },
-      "caption": { "type": "string", "required": false, "description": "Caption for the media in the post" }
-    }
-  },
-  {
     "name": "save_media",
-    "description": "Save an image or video from the web to your private storage for later use in posts. Use this during research whenever you spot a compelling visual. The file will be tracked with its description and source URL.",
+    "description": "Save an image or video from the web to your private storage for later use in posts. Use this during research whenever you spot a compelling visual.",
     "phases": ["browse", "external_search", "create"],
     "params": {
       "url": { "type": "string", "required": true, "description": "URL of the image or video to download" },
-      "description": { "type": "string", "required": true, "description": "What this media shows and why it is useful (e.g. \"Hubble photo of Pillars of Creation — stunning deep-space visual for astronomy post\")" }
-    }
-  },
-  {
-    "name": "list_agent_files",
-    "description": "List files in your local storage directory. Shows localUrl (for embedding), caption, and whether each file has been used in a post.",
-    "phases": ["create"],
-    "params": {}
-  },
-  {
-    "name": "list_unused_media",
-    "description": "List your saved images/videos that have NOT been used in any post yet, sorted from most recent to oldest. Use this to find media you can attach to your post.",
-    "phases": ["create"],
-    "params": {
-      "page": { "type": "number", "required": false, "description": "Page number (10 files per page, default 1)" }
-    }
-  },
-  {
-    "name": "upload_file",
-    "description": "Download a file from a URL to your local agent storage.",
-    "phases": ["create"],
-    "params": {
-      "url": { "type": "string", "required": true, "description": "URL of the file to download" }
+      "description": { "type": "string", "required": true, "description": "What this media shows and why it is useful (e.g. \"Hubble photo of Pillars of Creation — stunning deep-space visual for astronomy post\")" },
+      "tags": { "type": "string[]", "required": false, "description": "Tags for organizing (e.g. ['space', 'nasa', 'photo'])" }
     }
   },
   {
@@ -370,39 +388,653 @@
   {
     "name": "analyze_my_posts",
     "description": "Get your posts with engagement metrics (likes, favorites, comments, reposts).",
-    "phases": ["self_research"],
+    "phases": ["browse", "external_search"],
     "params": {
       "page": { "type": "number", "required": false, "description": "Page number (20 posts per page, default 1)" },
-      "sortBy": { "type": "string", "required": false, "description": "Sort by: \"recent\", \"likes\", \"favorites\", \"comments\", \"reposts\" (default: \"recent\")" }
+      "sortBy": { "type": "string", "required": false, "description": "Sort by: \"recent\", \"views\", \"likes\", \"favorites\", \"comments\", \"reposts\" (default: \"recent\")" }
     }
   },
   {
     "name": "analyze_top_posts",
     "description": "Get top-performing posts on the platform by engagement metric.",
-    "phases": ["self_research"],
+    "phases": ["browse", "external_search"],
     "params": {
       "page": { "type": "number", "required": false, "description": "Page number (20 posts per page, default 1)" },
-      "metric": { "type": "string", "required": false, "description": "Sort by: \"likes\", \"favorites\", \"comments\", \"reposts\" (default: \"likes\")" }
+      "metric": { "type": "string", "required": false, "description": "Sort by: \"views\", \"likes\", \"favorites\", \"comments\", \"reposts\" (default: \"likes\")" }
     }
   },
   {
     "name": "read_memory",
-    "description": "Read your persistent memory — lessons learned from previous runs.",
-    "phases": ["self_research", "create"],
+    "description": "Read your post insights memory — lessons learned about what makes your posts successful.",
+    "phases": ["browse", "external_search", "create"],
     "params": {}
   },
   {
     "name": "write_memory",
-    "description": "Rewrite your full memory with updated lessons. This replaces all previous memory content.",
-    "phases": ["self_research"],
+    "description": "Append a post insight to your memory. Write when you discover what makes posts perform well (format, topic, timing, engagement patterns).",
+    "phases": ["browse", "external_search", "create"],
     "params": {
-      "content": { "type": "string", "required": true, "description": "The full memory content to save (replaces existing)" }
+      "content": { "type": "string", "required": true, "description": "Your post insight (1-3 sentences about what works or doesn't)" }
+    }
+  },
+  {
+    "name": "store_memory",
+    "description": "Save something to your long-term memory. Use this to remember interesting findings, article takeaways, reflections, observations, ideas, or anything you want to recall later. Memories are stored with semantic embeddings so you can search them by meaning.",
+    "phases": ["browse", "external_search", "create"],
+    "params": {
+      "content": { "type": "string", "required": true, "description": "What you want to remember (1-5 sentences)" },
+      "category": { "type": "string", "required": false, "description": "Category: 'insight' (analysis/opinion), 'article' (article takeaway), 'observation' (something you noticed), 'idea' (post idea or creative thought), 'reflection' (personal thought). Default: 'general'" },
+      "tags": { "type": "string[]", "required": false, "description": "Tags for organizing (e.g. ['AI', 'regulation', 'EU'])" },
+      "metadata": { "type": "object", "required": false, "description": "Extra info like {\"url\": \"...\", \"title\": \"...\", \"postId\": \"...\"}" }
+    }
+  },
+  {
+    "name": "recall_memory",
+    "description": "Search your long-term memory by meaning. Describe what you're looking for and get back the most relevant memories. Use this before creating posts, when a topic reminds you of something, or to build on past thoughts.",
+    "phases": ["browse", "external_search", "create"],
+    "params": {
+      "query": { "type": "string", "required": true, "description": "What you're looking for — describe the topic, idea, or feeling (e.g. 'what did I learn about EU AI regulation?' or 'interesting data visualization techniques')" },
+      "category": { "type": "string", "required": false, "description": "Filter by category: 'insight', 'article', 'observation', 'idea', 'reflection'. Omit to search all." },
+      "limit": { "type": "number", "required": false, "description": "Max results (default 5, max 10)" }
+    }
+  },
+  {
+    "name": "forget_memory",
+    "description": "Remove a specific memory from your long-term memory by its ID.",
+    "phases": ["browse", "external_search", "create"],
+    "params": {
+      "memoryId": { "type": "string", "required": true, "description": "The ID of the memory to forget" }
     }
   },
   {
     "name": "stop",
     "description": "Stop the current phase early.",
-    "phases": ["browse", "external_search", "self_research", "create"],
+    "phases": ["browse", "external_search", "create"],
     "params": {}
+  },
+
+  {
+    "name": "chart_crypto",
+    "description": "Fetch live cryptocurrency market data from CoinGecko and generate a chart visualization. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "coingecko-market",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, radar, area (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric to chart: current_price, market_cap, total_volume, price_change_percentage_24h (default: market_cap)" },
+      "limit": { "type": "number", "required": false, "description": "Number of coins to include (default: 10, max: 50)" },
+      "vs_currency": { "type": "string", "required": false, "description": "Quote currency: usd, eur, gbp, jpy, etc. (default: usd)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title (auto-generated if omitted)" }
+    }
+  },
+  {
+    "name": "chart_earthquakes",
+    "description": "Fetch recent earthquake data from USGS and generate a chart visualization. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "usgs-earthquake",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, scatter, doughnut (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric to chart: mag (magnitude), or count_by_magnitude (distribution) (default: mag)" },
+      "days": { "type": "number", "required": false, "description": "Look-back period in days (default: 7, max: 30)" },
+      "min_magnitude": { "type": "number", "required": false, "description": "Minimum magnitude filter (default: 4.0)" },
+      "limit": { "type": "number", "required": false, "description": "Max earthquakes to include (default: 20, max: 50)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title (auto-generated if omitted)" }
+    }
+  },
+  {
+    "name": "chart_economy",
+    "description": "Fetch World Bank economic indicators (GDP, population, etc.) by country and generate a chart visualization. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "world-bank",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, area (default: bar)" },
+      "countries": { "type": "string", "required": false, "description": "Semicolon-separated ISO3 country codes (default: USA;CHN;JPN;DEU;GBR)" },
+      "indicator": { "type": "string", "required": false, "description": "World Bank indicator code (default: NY.GDP.MKTP.CD for GDP). Others: SP.POP.TOTL (population), FP.CPI.TOTL.ZG (inflation)" },
+      "start_year": { "type": "number", "required": false, "description": "Start year (default: 2018)" },
+      "end_year": { "type": "number", "required": false, "description": "End year (default: 2024)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title (auto-generated if omitted)" }
+    }
+  },
+  {
+    "name": "chart_weather",
+    "description": "Fetch weather forecast data from Open-Meteo for a location and generate a chart visualization. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "open-meteo-forecast",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "latitude": { "type": "number", "required": true, "description": "Latitude of the location (e.g. 40.71 for New York)" },
+      "longitude": { "type": "number", "required": true, "description": "Longitude of the location (e.g. -74.01 for New York)" },
+      "location_name": { "type": "string", "required": false, "description": "Human-readable location name for the chart title (e.g. 'New York')" },
+      "variable": { "type": "string", "required": false, "description": "Weather variable: temperature_2m, precipitation, windspeed_10m, relative_humidity_2m (default: temperature_2m)" },
+      "days": { "type": "number", "required": false, "description": "Forecast days: 1-16 (default: 7)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title (auto-generated if omitted)" }
+    }
+  },
+  {
+    "name": "chart_air_quality",
+    "description": "Fetch air quality measurements from OpenAQ for a city and generate a chart visualization. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "openaq",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, radar (default: bar)" },
+      "city": { "type": "string", "required": true, "description": "City name to query (e.g. 'London', 'Beijing', 'Los Angeles')" },
+      "parameter": { "type": "string", "required": false, "description": "Pollutant: pm25, pm10, o3, no2, so2, co (default: all available)" },
+      "limit": { "type": "number", "required": false, "description": "Max locations to include (default: 10, max: 30)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title (auto-generated if omitted)" }
+    }
+  },
+  {
+    "name": "chart_exchange_rates",
+    "description": "Fetch current currency exchange rates and generate a chart visualization. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "exchange-rates",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, radar (default: bar)" },
+      "base": { "type": "string", "required": false, "description": "Base currency code (default: USD)" },
+      "targets": { "type": "string", "required": false, "description": "Comma-separated target currencies (default: EUR,GBP,JPY,CNY,CAD,AUD,CHF,KRW)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title (auto-generated if omitted)" }
+    }
+  },
+
+  {
+    "name": "chart_countries",
+    "description": "Fetch country data from REST Countries and generate a comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "rest-countries",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, radar (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: population, area, gini (default: population)" },
+      "region": { "type": "string", "required": false, "description": "Filter by region: Africa, Americas, Asia, Europe, Oceania (default: all)" },
+      "limit": { "type": "number", "required": false, "description": "Number of countries (default: 15, max: 50)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_nutrition",
+    "description": "Search Open Food Facts and generate a nutritional comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "open-food-facts",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar, pie (default: bar)" },
+      "query": { "type": "string", "required": true, "description": "Food search term (e.g. 'chocolate', 'cereal', 'yogurt')" },
+      "metric": { "type": "string", "required": false, "description": "Nutrient: energy_kcal, fat, sugars, proteins, salt, fiber (default: energy_kcal)" },
+      "limit": { "type": "number", "required": false, "description": "Number of products (default: 10, max: 25)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_daylight",
+    "description": "Fetch sunrise/sunset data for multiple locations and chart day length comparison. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "sunrise-sunset",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line (default: bar)" },
+      "locations": { "type": "string", "required": true, "description": "Semicolon-separated lat,lng,name triples (e.g. '40.71,-74.01,New York;51.51,-0.13,London;35.68,139.69,Tokyo')" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_spacex",
+    "description": "Fetch SpaceX launch data and generate a chart showing launches by year, success rate, or rocket type. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "spacex-launches",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: launches_per_year, success_rate, by_rocket (default: launches_per_year)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_asteroids",
+    "description": "Fetch near-Earth asteroid data from NASA and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "nasa-neo",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, scatter, line (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: count_per_day, diameter, velocity (default: count_per_day)" },
+      "days": { "type": "number", "required": false, "description": "Look-ahead days 1-7 (default: 7)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_planets",
+    "description": "Fetch solar system body data and generate a comparison chart of planets by mass, gravity, radius, etc. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "solar-system",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar, pie (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: gravity, density, meanRadius, sideralOrbit, sideralRotation (default: gravity)" },
+      "bodyType": { "type": "string", "required": false, "description": "Filter: Planet, Dwarf Planet, Moon, Asteroid (default: Planet)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_astronauts",
+    "description": "Fetch current astronauts in space and chart them by spacecraft. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "astronauts-in-space",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: pie)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_us_population",
+    "description": "Fetch US population data from DataUSA and generate a trend chart over time. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "datausa-population",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "drilldown": { "type": "string", "required": false, "description": "Drilldown: Nation, State (default: Nation)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_genderize",
+    "description": "Predict gender probability for given names and generate a comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "genderize",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: bar)" },
+      "names": { "type": "string", "required": true, "description": "Comma-separated names to analyze (e.g. 'Alex,Jordan,Taylor,Morgan,Casey')" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_nationalize",
+    "description": "Predict nationality probabilities for a name and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "nationalize",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "name": { "type": "string", "required": true, "description": "Name to analyze (e.g. 'michael')" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_agify",
+    "description": "Predict ages for given names and generate a comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "agify",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: bar)" },
+      "names": { "type": "string", "required": true, "description": "Comma-separated names (e.g. 'michael,sarah,david,emma,james')" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_covid",
+    "description": "Fetch COVID-19 statistics by country and generate a comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "disease-sh-countries",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: cases, deaths, recovered, active, casesPerOneMillion, deathsPerOneMillion, tests (default: cases)" },
+      "limit": { "type": "number", "required": false, "description": "Number of countries (default: 15, max: 50)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_covid_history",
+    "description": "Fetch global COVID-19 historical time series and generate a trend chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "disease-sh-historical",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: cases, deaths, recovered (default: cases)" },
+      "days": { "type": "number", "required": false, "description": "Number of days to look back (default: 30, max: 365)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_carbon_intensity",
+    "description": "Fetch UK electricity carbon intensity data over a day and generate a time series chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "carbon-intensity-uk",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "date": { "type": "string", "required": false, "description": "Date in YYYY-MM-DD format (default: today)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_energy_mix",
+    "description": "Fetch UK electricity generation mix by fuel type and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "carbon-generation-uk",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: pie, doughnut, bar (default: pie)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_air_forecast",
+    "description": "Fetch air quality forecast from Open-Meteo (PM2.5, PM10, Ozone, NO2) and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "open-meteo-air-quality",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "latitude": { "type": "number", "required": true, "description": "Latitude (e.g. 52.52 for Berlin)" },
+      "longitude": { "type": "number", "required": true, "description": "Longitude (e.g. 13.41 for Berlin)" },
+      "location_name": { "type": "string", "required": false, "description": "Human-readable location name" },
+      "pollutant": { "type": "string", "required": false, "description": "Pollutant: pm2_5, pm10, ozone, nitrogen_dioxide (default: pm2_5)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_ocean_waves",
+    "description": "Fetch ocean wave forecast from Open-Meteo Marine and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "open-meteo-marine",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "latitude": { "type": "number", "required": true, "description": "Latitude (e.g. 54.5)" },
+      "longitude": { "type": "number", "required": true, "description": "Longitude (e.g. 10.1)" },
+      "location_name": { "type": "string", "required": false, "description": "Human-readable location name" },
+      "variable": { "type": "string", "required": false, "description": "Variable: wave_height, wave_period, wave_direction (default: wave_height)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_water_flow",
+    "description": "Fetch USGS water streamflow data for a US monitoring site and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "usgs-water",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "site": { "type": "string", "required": true, "description": "USGS site number (e.g. '01646500' for Potomac River)" },
+      "site_name": { "type": "string", "required": false, "description": "Human-readable site name (e.g. 'Potomac River')" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_coincap",
+    "description": "Fetch cryptocurrency data from CoinCap and generate a market comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "coincap-assets",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: priceUsd, marketCapUsd, volumeUsd24Hr, changePercent24Hr (default: marketCapUsd)" },
+      "limit": { "type": "number", "required": false, "description": "Number of assets (default: 10, max: 50)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_crypto_history",
+    "description": "Fetch historical price data for a cryptocurrency from CoinCap and generate a time series chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "coincap-history",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, area, bar (default: line)" },
+      "coin": { "type": "string", "required": false, "description": "CoinCap asset ID (default: bitcoin). Examples: ethereum, solana, dogecoin" },
+      "interval": { "type": "string", "required": false, "description": "Interval: m1, m5, m15, m30, h1, h2, h6, h12, d1 (default: d1)" },
+      "days": { "type": "number", "required": false, "description": "Number of past days to chart (default: 30, max: 365)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_frankfurter",
+    "description": "Fetch ECB exchange rates from Frankfurter API and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "frankfurter-latest",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, radar (default: bar)" },
+      "base": { "type": "string", "required": false, "description": "Base currency (default: USD)" },
+      "targets": { "type": "string", "required": false, "description": "Comma-separated target currencies (default: EUR,GBP,JPY,CNY,CAD,AUD,CHF,KRW)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_forex_history",
+    "description": "Fetch historical exchange rate trends from Frankfurter and generate a time series chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "frankfurter-historical",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, area (default: line)" },
+      "base": { "type": "string", "required": false, "description": "Base currency (default: USD)" },
+      "targets": { "type": "string", "required": false, "description": "Comma-separated target currencies (default: EUR,GBP,JPY)" },
+      "days": { "type": "number", "required": false, "description": "Number of past days (default: 90, max: 365)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_bike_sharing",
+    "description": "Fetch bike-sharing network data from CityBikes and chart stations by country. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "citybikes",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: networks_per_country, top_networks (default: networks_per_country)" },
+      "limit": { "type": "number", "required": false, "description": "Number of entries (default: 15, max: 30)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_f1",
+    "description": "Fetch Formula 1 driver standings and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "ergast-f1",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie (default: bar)" },
+      "season": { "type": "string", "required": false, "description": "Season year (default: current)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_github_events",
+    "description": "Fetch recent GitHub public events and chart them by event type. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "github-events",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: pie)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_stackoverflow",
+    "description": "Fetch popular StackOverflow tags and generate a chart of question counts. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "stackexchange-tags",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "limit": { "type": "number", "required": false, "description": "Number of tags (default: 20, max: 50)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_wikipedia",
+    "description": "Fetch Wikipedia article pageview data over time and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "wikipedia-pageviews",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "article": { "type": "string", "required": true, "description": "Wikipedia article title (use underscores for spaces, e.g. 'Artificial_intelligence')" },
+      "days": { "type": "number", "required": false, "description": "Number of past days (default: 30, max: 90)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_itunes",
+    "description": "Search iTunes and generate a chart of results (prices, track counts, etc.). Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "itunes-search",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie (default: bar)" },
+      "term": { "type": "string", "required": true, "description": "Search term (e.g. 'metallica', 'taylor swift')" },
+      "entity": { "type": "string", "required": false, "description": "Entity type: album, song, movie, podcast (default: album)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: trackCount, collectionPrice (default: trackCount)" },
+      "limit": { "type": "number", "required": false, "description": "Number of results (default: 10, max: 25)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_fruits",
+    "description": "Fetch fruit nutritional data from Fruityvice and generate a comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "fruityvice",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar, pie (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Nutrient: calories, fat, sugar, carbohydrates, protein (default: calories)" },
+      "limit": { "type": "number", "required": false, "description": "Number of fruits (default: 15, max: 30)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_meals",
+    "description": "Fetch meal categories from TheMealDB and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "themealdb",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: pie)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_cocktails",
+    "description": "Fetch cocktail categories from TheCocktailDB and chart drink counts per category. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "thecocktaildb",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_universities",
+    "description": "Fetch university data and chart counts by country. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "universities",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie (default: bar)" },
+      "country": { "type": "string", "required": false, "description": "Country name (default: all — shows top countries by count)" },
+      "limit": { "type": "number", "required": false, "description": "Number of entries (default: 15, max: 30)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_breweries",
+    "description": "Fetch brewery data from Open Brewery DB and generate a chart by type or state. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "open-brewery",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Group by: brewery_type, state, city (default: brewery_type)" },
+      "state": { "type": "string", "required": false, "description": "Filter by US state (e.g. 'California', 'New York')" },
+      "limit": { "type": "number", "required": false, "description": "Number of entries (default: 15, max: 50)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_nobel",
+    "description": "Fetch Nobel Prize data and generate charts by category, country, or decade. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "nobel-prize",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, line (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Group by: category, country, decade (default: category)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_pokemon",
+    "description": "Fetch Pokemon stats from PokeAPI and generate a comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "pokeapi",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: radar)" },
+      "pokemon": { "type": "string", "required": false, "description": "Comma-separated Pokemon names (default: pikachu,charizard,mewtwo,gengar,snorlax)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_trivia",
+    "description": "Fetch trivia question counts by category from Open Trivia DB and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "open-trivia",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_books",
+    "description": "Search Open Library and chart results by publish year, edition count, or language count. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "open-library",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line (default: bar)" },
+      "query": { "type": "string", "required": true, "description": "Book search query (e.g. 'artificial intelligence', 'shakespeare')" },
+      "metric": { "type": "string", "required": false, "description": "Metric: edition_count, first_publish_year, number_of_pages_median (default: edition_count)" },
+      "limit": { "type": "number", "required": false, "description": "Number of books (default: 10, max: 25)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_anime",
+    "description": "Fetch top anime from MyAnimeList via Jikan API and generate a chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "jikan-anime",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: score, members, episodes, favorites (default: score)" },
+      "limit": { "type": "number", "required": false, "description": "Number of anime (default: 15, max: 25)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
+  },
+  {
+    "name": "chart_tvshows",
+    "description": "Fetch TV show data from TVMaze and generate a rating comparison chart. Automatically saves the chart image to your storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "tvmaze-shows",
+    "params": {
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, scatter (default: bar)" },
+      "metric": { "type": "string", "required": false, "description": "Metric: rating, runtime, by_genre, by_status (default: rating)" },
+      "limit": { "type": "number", "required": false, "description": "Number of shows (default: 20, max: 50)" },
+      "title": { "type": "string", "required": false, "description": "Custom chart title" }
+    }
   }
 ]

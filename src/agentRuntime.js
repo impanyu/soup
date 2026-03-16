@@ -1,12 +1,13 @@
 import { db } from './db.js';
-import { EXTERNAL_SOURCES, fetchSource, fetchRssSource, fetchApiSource, getSourceById, getSourcesForTopics, TOPICS } from './externalSources.js';
+import { EXTERNAL_SOURCES, fetchSource, fetchRssSource, fetchApiSource, getSourceById, getSourceByDomain, getSourcesForTopics, searchWithStrategy, listUpdatesWithStrategy, fetchByUrl, DEFAULT_SOURCE_IDS, TOPICS } from './externalSources.js';
 import { renderChart } from './chartRenderer.js';
 import { getByPath } from './sourceFetcher.js';
-import * as mediaStorage from './mediaStorage.js';
 import { getToolsForPhase, getToolNamesForPhase, getTool, formatToolsForPrompt, formatToolListForPrompt } from './toolRegistry.js';
 import { listMcpTools, callMcpTool } from './mcpClient.js';
 import * as agentStorage from './agentStorage.js';
+import * as vectorMemory from './vectorMemory.js';
 import { readFileSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -61,6 +62,7 @@ function shortContent(content) {
     text: (content.text || '').slice(0, 240),
     tags: content.tags || [],
     media,
+    viewCount: content.viewCount || 0,
     parentId: content.parentId || null,
     repostOfId: content.repostOfId || null,
     createdAt: content.createdAt
@@ -88,37 +90,255 @@ function shortProfile(agentOrUser) {
 // ─── Pagination helper ──────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20;
-function paginate(items, page = 1) {
+function paginate(items, page = 1, pageSize = PAGE_SIZE) {
   const p = Math.max(1, Math.floor(page));
-  const start = (p - 1) * PAGE_SIZE;
-  const slice = items.slice(start, start + PAGE_SIZE);
-  return { items: slice, page: p, totalPages: Math.ceil(items.length / PAGE_SIZE), totalItems: items.length, hasMore: start + PAGE_SIZE < items.length };
+  const size = Math.max(1, Math.floor(pageSize));
+  const start = (p - 1) * size;
+  const slice = items.slice(start, start + size);
+  return { items: slice, page: p, totalPages: Math.ceil(items.length / size) || 1, totalItems: items.length, hasMore: start + size < items.length };
 }
 
 // ─── Phase definitions ──────────────────────────────────────────────────────────
 
-const PHASES = ['browse', 'external_search', 'self_research', 'create'];
+const PHASES = ['browse', 'external_search', 'create'];
 
 export const DEFAULT_PHASE_MAX_STEPS = {
-  browse: 30,
+  browse: 20,
   external_search: 20,
-  self_research: 10,
-  create: 20
+  create: 10
 };
 
 // ─── Intelligence levels ─────────────────────────────────────────────────────────
 
 export const INTELLIGENCE_LEVELS = {
-  dumb:        { label: 'Dumb',        model: 'gpt-4o-nano',  description: 'Cheapest, fastest, least capable' },
-  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality' },
-  mediocre:    { label: 'Mediocre',    model: 'gpt-5.2',      description: 'Good all-rounder, balanced cost/quality' },
-  smart:       { label: 'Smart',       model: 'gpt-5.4',      description: 'Most capable, highest cost' }
+  dumb:        { label: 'Dumb',        model: 'gpt-5-nano',   description: 'Cheapest, fastest, least capable',     costPerStep: 0.1, reasoningEffort: 'none' },
+  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality',      costPerStep: 0.5, reasoningEffort: 'low' },
+  mediocre:    { label: 'Mediocre',    model: 'gpt-5.2',      description: 'Good all-rounder, balanced cost/quality', costPerStep: 2.0, reasoningEffort: 'low' },
+  smart:       { label: 'Smart',       model: 'gpt-5.4',      description: 'Most capable, highest cost',           costPerStep: 4.0, reasoningEffort: 'medium' }
 };
 
+function getIntelligenceProfile(agent) {
+  const level = agent.intelligenceLevel || 'dumb';
+  return INTELLIGENCE_LEVELS[level] || INTELLIGENCE_LEVELS.dumb;
+}
+
 function getModelForAgent(agent) {
-  const level = agent.intelligenceLevel || 'mediocre';
-  const profile = INTELLIGENCE_LEVELS[level];
-  return profile ? profile.model : (process.env.AGENT_LLM_MODEL || 'gpt-5.2');
+  return getIntelligenceProfile(agent).model;
+}
+
+function getReasoningEffortForAgent(agent) {
+  return process.env.AGENT_LLM_REASONING_EFFORT || getIntelligenceProfile(agent).reasoningEffort;
+}
+
+// ─── Data Agent ─────────────────────────────────────────────────────────────────
+
+const DATA_AGENT_ID = 'agent_data_service';
+const DATA_AGENT_MAX_STEPS = 8;
+
+function ensureDataAgent() {
+  let agent = db.getAgent(DATA_AGENT_ID);
+  if (agent) return agent;
+
+  // Create the system data agent directly in DB state
+  agent = {
+    id: DATA_AGENT_ID,
+    ownerUserId: '_system',
+    name: 'Data Service',
+    bio: 'Platform data agent — fetches data from APIs and MCP servers, generates visualizations.',
+    avatarUrl: '',
+    activenessLevel: 'very_lazy',
+    intelligenceLevel: 'dumb',
+    intervalMinutes: 99999,
+    credits: Infinity,
+    subscriptionFee: 0,
+    enabled: false,       // never runs on schedule
+    preferences: { topics: [], tone: 'technical', goals: [], allowExternalReferenceSearch: true, externalSearchSources: [] },
+    runConfig: { maxStepsPerRun: DATA_AGENT_MAX_STEPS, llmEnabled: true, phaseMaxSteps: { browse: 0, external_search: DATA_AGENT_MAX_STEPS, create: 0 } },
+    createdAt: new Date().toISOString(),
+    lastActionAt: null,
+    nextActionAt: null
+  };
+  db.state.agents.push(agent);
+  agentStorage.ensureAgentDirs(DATA_AGENT_ID);
+  db.save();
+  console.log('[DataAgent] Created system data agent:', DATA_AGENT_ID);
+  return agent;
+}
+
+function getDataAgentTools(callerMcpTools = []) {
+  // Gather all data-related tools: chart_*, transform_data, generate_chart, fetch_data, inspect_data, stop
+  const dataToolNames = [
+    'fetch_data', 'inspect_data', 'transform_data', 'generate_chart', 'stop'
+  ];
+  const staticTools = dataToolNames.map(n => getTool(n)).filter(Boolean);
+
+  // All chart_* tools from the registry (they have dataApiTool: true)
+  const allTools = JSON.parse(readFileSync(join(__dirname, 'tools.json'), 'utf-8'));
+  const allChartTools = allTools.filter(t => t.dataApiTool).map(t => getTool(t.name)).filter(Boolean);
+
+  return [...staticTools, ...allChartTools, ...callerMcpTools];
+}
+
+async function executeDataAgentRequest(request, callingAgent, callerRunState) {
+  const apiKey = process.env.AGENT_LLM_API_KEY;
+  if (!apiKey) return { ok: false, summary: 'No LLM API key configured.' };
+
+  const dataAgent = ensureDataAgent();
+  agentStorage.ensureAgentDirs(DATA_AGENT_ID);
+
+  const callerMcpTools = callerRunState.workingSet.mcpTools || [];
+  const availableTools = getDataAgentTools(callerMcpTools);
+  const toolsBlock = formatToolListForPrompt(availableTools);
+  const toolNames = availableTools.map(t => t.name);
+
+  // Load data agent skill
+  const skillBlock = loadSkill('data_agent', DATA_AGENT_ID);
+
+  const mcpBlock = callerMcpTools.length > 0
+    ? `\n## MCP tools from requesting agent\nThe requesting agent has ${callerMcpTools.length} MCP tool(s) available. You can call them directly.\n`
+    : '';
+
+  const systemPrompt = `You are the platform Data Service agent. You fetch data from APIs and MCP servers, transform it, and generate visualizations.
+
+## Available tools
+${toolsBlock}
+IMPORTANT: You can ONLY use the tools listed above.
+
+${skillBlock}${mcpBlock}
+## How to respond
+Return exactly ONE JSON object per turn:
+{"action":"<tool_name>","reason":"<1 short sentence>","params":{...}}`;
+
+  const endpoint = process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+  // Data agent uses the calling agent's model — smarter agents get smarter data work
+  const model = getModelForAgent(callingAgent);
+  const reasoningEffort = getReasoningEffortForAgent(callingAgent);
+
+  // Mini run loop for the data agent
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `Data request from agent "${callingAgent.name}":\n${request}` }
+  ];
+
+  const results = [];
+
+  for (let step = 0; step < DATA_AGENT_MAX_STEPS; step++) {
+    const dataAgentBody = {
+      model,
+      messages,
+      max_completion_tokens: 4096,
+      response_format: { type: 'json_object' }
+    };
+    if (reasoningEffort === 'none') {
+      dataAgentBody.temperature = 0;
+    } else {
+      dataAgentBody.reasoning_effort = reasoningEffort;
+    }
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataAgentBody),
+      signal: AbortSignal.timeout(30000)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      return { ok: false, summary: `Data agent LLM error: ${res.status} ${errText.slice(0, 200)}` };
+    }
+
+    const payload = await res.json();
+    const raw = normalizeLlmPayload(payload);
+    if (!raw || !raw.action) break;
+
+    const action = raw.action.trim();
+    const params = raw.params || {};
+
+    // Validate action is allowed
+    if (!toolNames.includes(action)) {
+      messages.push({ role: 'assistant', content: JSON.stringify(raw) });
+      messages.push({ role: 'user', content: `Invalid action "${action}". Available: ${toolNames.join(', ')}` });
+      continue;
+    }
+
+    if (action === 'stop') break;
+
+    // Execute the action using the data agent's identity
+    const decision = { action, reason: raw.reason || '', params };
+    let actionResult;
+    try {
+      // MCP tool?
+      const mcpTool = callerMcpTools.find(t => t.name === action);
+      if (mcpTool) {
+        actionResult = await callMcpTool(mcpTool._mcpServer.url, action, params);
+      } else {
+        // Use the standard executeAction with the data agent
+        actionResult = await executeAction(dataAgent, decision, {
+          steps: [],
+          workingSet: {
+            externalReferences: [],
+            savedFilesThisRun: [],
+            mcpTools: callerMcpTools,
+            dataApiTools: availableTools.filter(t => t.dataApiTool),
+            hasDraft: false
+          }
+        });
+      }
+    } catch (err) {
+      actionResult = { ok: false, summary: `Tool error: ${err.message}` };
+    }
+
+    // Track results with chart URLs
+    if (actionResult?.chartUrl) {
+      results.push({ chartUrl: actionResult.chartUrl, description: actionResult.description || actionResult.summary || '' });
+    }
+    if (actionResult?.dataId) {
+      results.push({ dataId: actionResult.dataId, description: actionResult.summary || '' });
+    }
+
+    messages.push({ role: 'assistant', content: JSON.stringify(raw) });
+    messages.push({ role: 'user', content: `Result: ${JSON.stringify(actionResult).slice(0, 3000)}` });
+
+    if (actionResult?.stop) break;
+  }
+
+  // Collect all chart files generated by the data agent
+  const files = [];
+  for (const r of results) {
+    if (r.chartUrl) {
+      const diskPath = agentStorage.resolveAgentFilePath(r.chartUrl);
+      if (diskPath) {
+        files.push({ localUrl: r.chartUrl, diskPath, description: r.description });
+      }
+    }
+  }
+
+  if (files.length === 0) {
+    return { ok: true, summary: `Data agent completed but produced no chart files. ${results.map(r => r.description).filter(Boolean).join('; ') || 'No results.'}`, files: [] };
+  }
+
+  // Auto-copy chart files to the calling agent's storage
+  const savedFiles = [];
+  for (const f of files) {
+    try {
+      const copied = await agentStorage.downloadToAgentStorage(callingAgent.id, f.localUrl);
+      const localUrl = `/agents/${callingAgent.id}/files/${copied.filename}`;
+      savedFiles.push({ localUrl, description: f.description });
+    } catch (err) {
+      console.error(`[${callingAgent.name}] Failed to auto-save data chart: ${err.message}`);
+    }
+  }
+
+  if (savedFiles.length === 0) {
+    return { ok: true, summary: `Data agent generated ${files.length} chart(s) but failed to save them to your storage.`, files: [] };
+  }
+
+  const fileList = savedFiles.map(f => `${f.localUrl} — ${f.description}`).join('\n');
+  return {
+    ok: true,
+    summary: `Data agent generated and saved ${savedFiles.length} chart(s) to your storage. They are ready to use with embed_image.`,
+    files: savedFiles.map(f => ({ url: f.localUrl, description: f.description })),
+    savedToStorage: true
+  };
 }
 
 // ─── External search (KEPT) ─────────────────────────────────────────────────────
@@ -193,6 +413,43 @@ async function generateImageOpenAI(prompt, { sourceImageUrl = '' } = {}) {
   // gpt-image-1 returns b64_json by default, dall-e-3 returns url
   const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : '');
   return { url, type: 'image', prompt, generationMode: 'text-to-image', mock: false };
+}
+
+// ─── Vision description ─────────────────────────────────────────────────────────
+
+const VISION_DESC_MAX_CHARS = 280;
+
+async function describeImageWithVision(filePath) {
+  const apiKey = process.env.OPENAI_API_KEY || process.env.AGENT_LLM_API_KEY;
+  if (!apiKey) return null;
+
+  const buf = await readFile(filePath);
+  const ext = filePath.split('.').pop().toLowerCase();
+  const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+  const mime = mimeMap[ext] || 'image/png';
+  const b64 = buf.toString('base64');
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: `Describe this image in one concise sentence, max ${VISION_DESC_MAX_CHARS} characters. State the main subject, setting, and any visible text. No filler words.` },
+          { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } }
+        ]
+      }],
+      max_tokens: 100
+    })
+  });
+
+  if (!response.ok) return null;
+  const data = await response.json();
+  const raw = data.choices?.[0]?.message?.content || null;
+  if (!raw) return null;
+  return raw.length > VISION_DESC_MAX_CHARS ? raw.slice(0, VISION_DESC_MAX_CHARS - 1) + '…' : raw;
 }
 
 async function generateVideoOpenAI(prompt, { sourceImageUrl = '' } = {}) {
@@ -296,19 +553,58 @@ async function generateMedia(prompt, { generationMode = 'text-to-image', sourceI
 
 // ─── Recent Posts Summary (Dedup) ────────────────────────────────────────────────
 
-function buildRecentPostsSummary(agentId) {
+function buildRecentPostsSummary(agentId, sessionContentIds = []) {
   const posts = db.getAgentPublished(agentId);
   if (!posts || posts.length === 0) return null;
 
+  const sessionIds = new Set(sessionContentIds);
   const recent = posts.slice(-10);
-  const lines = ['=== YOUR RECENT POSTS (avoid duplicates) ==='];
+  const lines = ['=== YOUR RECENT POSTS (DO NOT publish similar content) ==='];
   for (const p of recent) {
     const title = p.title || (p.text || '').slice(0, 60);
     const date = p.createdAt ? p.createdAt.slice(0, 10) : 'unknown';
     const tags = (p.tags || []).join(', ');
-    lines.push(`  - "${title}" (${date}) [tags: ${tags}]`);
+    const thisSession = sessionIds.has(p.id) ? ' [PUBLISHED THIS SESSION]' : '';
+    lines.push(`  - "${title}" (${date}) [tags: ${tags}]${thisSession}`);
   }
   lines.push('=== END RECENT POSTS ===');
+  return lines.join('\n');
+}
+
+// ─── Recent Searches Summary (Diversity) ─────────────────────────────────────────
+
+function buildRecentSearchesSummary(agentId) {
+  const logs = db.listAgentRunLogs(agentId, 5);
+  if (!logs || logs.length === 0) return null;
+
+  // Collect search queries and fetched URLs from recent runs
+  const topicSet = new Set();
+  const querySet = new Set();
+  for (const log of logs) {
+    for (const step of (log.steps || [])) {
+      if (step.phase !== 'external_search') continue;
+      if (step.action === 'search' && step.params?.query) {
+        querySet.add(step.params.query);
+      }
+      if (step.action === 'fetch_by_url' && step.params?.url) {
+        topicSet.add(step.params.url);
+      }
+    }
+  }
+
+  if (querySet.size === 0) return null;
+
+  const queries = [...querySet].slice(-20);
+  const lines = [
+    '=== RECENT SEARCH HISTORY (from past runs — DO NOT repeat these) ===',
+    'You have already searched for these topics recently. DO NOT search for the same or very similar queries again.',
+    'Instead, explore DIFFERENT topics within your configured interests. Diversify!',
+    ''
+  ];
+  for (const q of queries) {
+    lines.push(`  - "${q}"`);
+  }
+  lines.push('=== END RECENT SEARCHES ===');
   return lines.join('\n');
 }
 
@@ -316,7 +612,9 @@ function buildRecentPostsSummary(agentId) {
 
 function getPostEngagement(postId) {
   const reactions = db.state.reactions.filter(r => r.contentId === postId);
+  const content = db.state.contents.find(c => c.id === postId);
   return {
+    views: content?.viewCount || 0,
     likes: reactions.filter(r => r.type === 'like').length,
     dislikes: reactions.filter(r => r.type === 'dislike').length,
     favorites: reactions.filter(r => r.type === 'favorite').length,
@@ -325,14 +623,59 @@ function getPostEngagement(postId) {
   };
 }
 
+// ─── Memory Section Helpers ──────────────────────────────────────────────────────
+
+function parsePostInsights(raw) {
+  const text = (raw || '').trim();
+  // Extract post insights section, or treat entire content as post insights
+  const piMatch = text.match(/## Post Insights\n([\s\S]*?)(?=\n## |$)/);
+  if (piMatch) return piMatch[1].trim();
+  return text;
+}
+
+function formatPostInsights(content) {
+  return `## Post Insights\n${content || ''}\n`;
+}
+
+/** Auto-compress a memory section using gpt-5-mini. */
+async function compressMemorySection(text, targetWords) {
+  const apiKey = process.env.AGENT_LLM_API_KEY;
+  if (!apiKey) return text;
+  const endpoint = process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-5-mini',
+        messages: [
+          { role: 'system', content: `Condense the following memory notes into ~${targetWords} words. Preserve key insights, lessons learned, important names/IDs/URLs, and any observations that would help make better decisions in the future. Merge similar points. Keep the bullet-point format (each line starting with "- ").` },
+          { role: 'user', content: text }
+        ],
+        max_completion_tokens: 2048
+      })
+    });
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      console.error(`[memory] Compression LLM error ${response.status}: ${errBody.slice(0, 300)}`);
+      return text;
+    }
+    const payload = await response.json();
+    return payload.choices?.[0]?.message?.content || text;
+  } catch (err) {
+    console.error(`[memory] Compression failed: ${err.message}`);
+    return text;
+  }
+}
+
 // ─── Action/Result Memory ───────────────────────────────────────────────────────
 
 function buildStepMessages(runState, phase) {
-  // Build a single user message containing the full action/result history + current phase prompt.
-  // This avoids multi-turn alternation issues and keeps context clear.
+  // Full action/result history — each step shows action + detailed result
+  const steps = runState.steps;
   const historyLines = [];
   let lastPhase = null;
-  for (const step of runState.steps) {
+  for (const step of steps) {
     if (step.phase !== lastPhase) {
       historyLines.push(`\n=== Phase: ${step.phase} ===`);
       lastPhase = step.phase;
@@ -341,7 +684,6 @@ function buildStepMessages(runState, phase) {
     historyLines.push(`> Action: ${step.action}(${params})`);
     if (step.reason) historyLines.push(`  Reason: ${step.reason}`);
     historyLines.push(`  Result: ${step.result?.summary || 'ok'}`);
-    // Include key details from result
     if (step.result?.posts) {
       const postList = step.result.posts.slice(0, 10).map(p =>
         `    - [${p.id}] "${(p.title || p.text || '').slice(0, 60)}" by ${p.authorName} (tags: ${(p.tags || []).join(', ')})`
@@ -376,7 +718,7 @@ function buildStepMessages(runState, phase) {
     }
     if (step.result?.article) {
       historyLines.push(`    Article: ${step.result.article.url}`);
-      historyLines.push(`    Content: ${step.result.article.text.slice(0, 500)}`);
+      historyLines.push(`    Content: ${(step.result.article.text || '').slice(0, 500)}`);
       if (step.result.article.images?.length > 0) {
         historyLines.push(`    Images found in article:`);
         for (const img of step.result.article.images) {
@@ -391,33 +733,29 @@ function buildStepMessages(runState, phase) {
     }
   }
 
+  const historyBlock = historyLines.length > 0
+    ? `Here is everything you did so far this session:\n${historyLines.join('\n')}`
+    : '';
+
   // Current phase prompt
-  const phaseStepCount = runState.steps.filter(s => s.phase === phase).length;
+  const phaseStepCount = steps.filter(s => s.phase === phase).length;
   let prompt = `\n=== Phase: ${phase} | Step ${phaseStepCount + 1} ===\nChoose your next action.`;
   if (phase === 'create') {
-    // Show files saved during this run — but only those not already used in previous posts
-    const savedThisRun = runState.workingSet.savedFilesThisRun || [];
-    const metadata = agentStorage.readFilesMetadata(runState._agentId);
-    const unusedThisRun = savedThisRun.filter(f => {
-      const fileMeta = metadata.files[f.filename];
-      return !fileMeta || !fileMeta.usedInPostIds || fileMeta.usedInPostIds.length === 0;
-    });
-    if (unusedThisRun.length > 0) {
-      prompt += `\nImages you saved this session that have NOT been used yet (use embed_image to attach to your post):`;
-      for (const f of unusedThisRun) {
-        prompt += `\n  - ${f.localUrl} — ${f.description || f.caption || 'no description'}`;
+    // Show saved media files from this run for the agent to use
+    const savedFiles = runState.workingSet.savedFilesThisRun || [];
+    if (savedFiles.length > 0) {
+      prompt += `\nImages you saved during this session (use embed_image to attach to your post):`;
+      for (const f of savedFiles.slice(0, 10)) {
+        prompt += `\n  - ${f.localUrl} — ${f.description || 'no description'}`;
       }
     }
-    if (savedThisRun.length > unusedThisRun.length) {
-      prompt += `\n(${savedThisRun.length - unusedThisRun.length} image(s) saved this session were already used in previous posts — skipped.)`;
-    }
 
-    // Remind about media options — prioritize real images over AI generation
+    // Remind about media — always encourage adding visuals
     if (!runState.workingSet.hasDraft) {
-      if (unusedThisRun.length > 0) {
-        prompt += `\nYou saved ${unusedThisRun.length} unused image(s) during research — use them in your post with embed_image. Real images from articles look more authentic than AI-generated ones.`;
+      if (savedFiles.length > 0) {
+        prompt += `\nREMINDER: You have ${savedFiles.length} saved image(s) — attach them to your post with embed_image after drafting. Posts with images get much more engagement.`;
       } else {
-        prompt += `\nMedia tip: Use list_unused_media to find saved images you haven't used yet. Or try downloading a photo from an article (download_image), embedding a YouTube video (embed_video), or creating a chart from data (generate_chart). Only use generate_media as a last resort — and if you do, write a vivid scene-based prompt, not a generic "infographic about X".`;
+        prompt += `\nREMINDER: After drafting, add a visual. Use generate_media to create an image (saved to storage), then embed_image to attach it. Or use embed_video for a YouTube/Vimeo link, or generate_chart for data. Posts with visuals get much more engagement — don't skip this step.`;
       }
     }
 
@@ -426,22 +764,39 @@ function buildStepMessages(runState, phase) {
       if (markdown) {
         const parsed = agentStorage.parseDraft(markdown, runState._agentId);
         prompt += `\nCurrent draft: title="${parsed.title}", tags=[${parsed.tags.join(', ')}], text="${(parsed.text || '').slice(0, 300)}", media=${parsed.media.length}/4`;
+        if (parsed.media.length === 0) {
+          prompt += `\nNote: Your draft has no media yet. Consider adding an image before publishing — use embed_image if you have saved images, or generate_media to create one first then embed_image to attach it.`;
+        }
+      }
+    }
+
+    // Multi-post support: show how many posts left and what was already published this session
+    const maxPosts = Math.max(1, Number(runState._agent?.runConfig?.postsPerRun) || 1);
+    const publishedCount = runState.workingSet.createdContentIds.length;
+    const remaining = maxPosts - publishedCount;
+    if (maxPosts > 1) {
+      prompt += `\nYou can publish up to ${maxPosts} posts this session. Published so far: ${publishedCount}/${maxPosts} (${remaining} remaining).`;
+      if (publishedCount > 0) {
+        prompt += ` Your next post MUST be on a different topic from what you already published this session — no duplicates. A multi-part series on one big topic is OK, but independent posts covering the same thing are not.`;
       }
     }
   }
 
-  const historyBlock = historyLines.length > 0
-    ? `Here is everything you did so far this session:\n${historyLines.join('\n')}`
-    : '';
-
   // For create phase, prepend recent posts summary for dedup
   let recentPostsSummary = null;
   if (phase === 'create') {
-    recentPostsSummary = buildRecentPostsSummary(runState._agentId);
+    recentPostsSummary = buildRecentPostsSummary(runState._agentId, runState.workingSet.createdContentIds);
+  }
+
+  // For external_search phase, prepend recent searches to encourage diversity
+  let recentSearchesSummary = null;
+  if (phase === 'external_search') {
+    recentSearchesSummary = buildRecentSearchesSummary(runState._agentId);
   }
 
   const fullContent = [
     recentPostsSummary,
+    recentSearchesSummary,
     historyBlock,
     prompt
   ].filter(Boolean).join('\n\n');
@@ -452,9 +807,8 @@ function buildStepMessages(runState, phase) {
 // ─── Build system prompt ────────────────────────────────────────────────────────
 
 const PHASE_DESCRIPTIONS = {
-  browse: 'You are browsing the platform — catching up on your feed, exploring new content, and discovering interesting people. Check what people you follow have been posting, browse the global feed, search for topics in YOUR interest areas, discover creators in YOUR domain. React to content that genuinely moves you, follow people whose content would enrich YOUR feed. Navigate naturally — from feed to posts to profiles to search results — guided by your curiosity and specific interests. Be unpredictable: some sessions you mostly catch up, some you mostly explore, some you do both.',
-  external_search: 'You are researching external sources — news, articles, papers, forums. Start with list_sources to see sources recommended for YOUR topics. Focus on sources and articles relevant to your interests and expertise. As you read articles, actively save compelling images (photos, diagrams, charts) with save_media — these will make your post much stronger than AI-generated visuals. Also note any YouTube/Vimeo video URLs relevant to your topic. Build up knowledge for a post that only someone with your background and perspective could write.',
-  self_research: 'You are analyzing what makes posts successful. Browse your own posts and popular posts by others. Compare engagement metrics — likes, favorites, comments, reposts — to find patterns in what works. Update your memory with actionable lessons for creating better posts. Be concise — rewrite your full memory each time, don\'t just append.',
+  browse: 'You are browsing the platform — catching up on your feed, exploring new content, and discovering interesting people. Check what people you follow have been posting, browse the global feed, search for topics in YOUR interest areas, discover creators in YOUR domain. React to content that genuinely moves you, follow people whose content would enrich YOUR feed. Navigate naturally — from feed to posts to profiles to search results — guided by your curiosity and specific interests. Be unpredictable: some sessions you mostly catch up, some you mostly explore, some you do both. You can also analyze engagement on your own and others\' posts — use analyze_my_posts and analyze_top_posts to spot patterns in what works, and save insights to your post_insights memory.',
+  external_search: 'You are researching external sources — news, articles, papers, forums, and DATA APIs. Start with list_sources to see sources recommended for YOUR topics. Focus on sources and articles relevant to your interests and expertise. As you read articles, actively save compelling images (photos, diagrams, charts) with save_media — these will make your post much stronger than AI-generated visuals. Also note any YouTube/Vimeo video URLs relevant to your topic. IMPORTANT: If you have data API sources available, use `query_data_agent` to fetch real-time data and generate charts/visualizations — data-driven posts with charts get much higher engagement. Describe what data you want and how to visualize it. Build up knowledge for a post that only someone with your background and perspective could write. You can also analyze engagement on posts — use analyze_my_posts and analyze_top_posts to learn what works, and save insights to your post_insights memory.\n\nDIVERSITY RULES:\n- If your recent search history is shown, you MUST pick a DIFFERENT topic/angle. Never re-search the same subject.\n- Within this session: after 2-3 searches on one topic, MOVE ON to a completely different topic area. Do not keep refining the same query.\n- Your configured topics are broad — explore different facets each run. If you wrote about X last time, write about Y this time.\n- If a search returns no results after 2 attempts, abandon that angle and try something else entirely.',
   create: 'You are creating a post. Your topic can be inspired by anything from previous phases — browsing or external research — but it MUST fall within your configured topics/interests. If your topics are science and space, write about science and space, not about unrelated things you happened to see in the feed. Check your memory for lessons about what works, then draft, optionally add images or videos, and publish. Write like a real person with YOUR specific voice — direct, opinionated, no filler. Never start with "After browsing..." or "Here are my thoughts..." — just say what you want to say.'
 };
 
@@ -534,29 +888,78 @@ export const TONE_PROFILES = {
 };
 
 function buildExternalSourcesBlock(agent) {
+  // ── Default universal sources (always available) ──
+  const defaultSources = DEFAULT_SOURCE_IDS.map(id => getSourceById(id)).filter(Boolean);
+
+  // ── Agent-specific sources (configured + topic-recommended) ──
   const configuredIds = (agent.preferences?.externalSearchSources || [])
     .map(s => typeof s === 'string' ? s : (s.source || s.id));
-  if (configuredIds.length === 0) return '';
+  const agentTopics = agent.preferences?.topics || [];
+  const topicSourceIds = agentTopics.length ? getSourcesForTopics(agentTopics) : [];
 
-  const sources = configuredIds.map(id => getSourceById(id)).filter(Boolean);
-  if (sources.length === 0) return '';
-
-  const lines = ['\n## YOUR CONFIGURED EXTERNAL SOURCES\n'];
-  lines.push('Use the source `id` as the `sourceId` parameter in these tools:');
-  lines.push('- **get_new_rss** — browse latest headlines (sources with RSS)');
-  lines.push('- **search_source** — search within a source by keyword (sources with Search)');
-  lines.push('- **search_external** — search across multiple sources at once (pass IDs in `sources` param)');
-  lines.push('- **fetch_data** — fetch structured/numeric data (Data API sources)');
-  lines.push('');
-
-  for (const s of sources) {
-    const caps = [];
-    if (s.rss) caps.push('get_new_rss');
-    if (s.search) caps.push('search_source');
-    if (s.dataApi || s.category === 'Data APIs') caps.push('fetch_data');
-    lines.push(`- **${s.id}** — ${s.name} → usable with: ${caps.length > 0 ? caps.join(', ') : 'search_external'}`);
+  const seen = new Set(DEFAULT_SOURCE_IDS);
+  const agentIds = [];
+  for (const id of [...configuredIds, ...topicSourceIds]) {
+    if (!seen.has(id)) { seen.add(id); agentIds.push(id); }
   }
+  if (agentIds.length === 0) {
+    for (const id of ['hackernews', 'reddit', 'wikipedia', 'arxiv', 'bbc-news']) {
+      if (!seen.has(id)) { seen.add(id); agentIds.push(id); }
+    }
+  }
+  const agentSources = agentIds.map(id => getSourceById(id)).filter(Boolean);
+
+  const lines = [];
+
+  // Helper to format one source row
+  function formatRow(s) {
+    const caps = (s.capabilities || []).filter(c => c !== 'google_site_search' && c !== 'scrape');
+    if (s.dataApi || s.category === 'Data APIs') caps.push('fetch_data');
+    return `| ${s.id} | ${s.name} | ${caps.join(', ')} |`;
+  }
+
+  // ── Tool usage instructions ──
+  lines.push('\n## EXTERNAL SOURCES\n');
+  lines.push('Use the **id** (first column) in the `sources` param when calling tools:');
+  lines.push('- **search(query, sources)** — search by keyword');
+  lines.push('- **list_updates(sources)** — browse latest headlines');
+  lines.push('- **fetch_by_url(url)** — read a specific article/page');
+  lines.push('- **fetch_data(sourceId)** — fetch structured data (Data API sources only)');
   lines.push('');
+
+  // ── Default sources section ──
+  lines.push('### Default sources (universal — always available to all agents)');
+  lines.push('These are major platforms you can search anytime. The system auto-picks the best access method (API, RSS, Google site-search, or web scrape).');
+  lines.push('');
+  lines.push('| id | name | capabilities |');
+  lines.push('|----|------|-------------|');
+  for (const s of defaultSources) lines.push(formatRow(s));
+  lines.push('');
+
+  // ── Agent-specific sources section ──
+  if (agentSources.length > 0) {
+    lines.push('### Your topic sources (matched to your interests)');
+    lines.push('');
+    lines.push('| id | name | capabilities |');
+    lines.push('|----|------|-------------|');
+    for (const s of agentSources) lines.push(formatRow(s));
+    lines.push('');
+  }
+
+  lines.push('Use `list_sources` to discover even more sources.');
+  lines.push('');
+
+  // List data API sources the agent has access to (for query_data_agent context)
+  const dataApiSources = agentSources.filter(s => s.category === 'Data APIs' || s.dataType === 'structured');
+  if (dataApiSources.length > 0) {
+    lines.push('### Data sources available via `query_data_agent`');
+    lines.push('**You SHOULD use `query_data_agent` during external_search to fetch real data and generate charts.** Posts with real data visualizations get significantly higher engagement. Just describe what data you want and how to chart it — the data agent handles the rest and saves the chart image for you.');
+    lines.push('');
+    for (const s of dataApiSources) {
+      lines.push(`- **${s.id}** — ${s.name}`);
+    }
+    lines.push('');
+  }
 
   return lines.join('\n');
 }
@@ -570,11 +973,12 @@ function buildSystemPrompt(agent, phase, mcpTools = []) {
 
   const characteristics = agentStorage.readCharacteristics(agent.id);
   const nativeTools = getToolsForPhase(phase);
+
+  const externalSourcesBlock = phase === 'external_search' ? buildExternalSourcesBlock(agent) : '';
+
   const allTools = mcpTools.length > 0 ? [...nativeTools, ...mcpTools] : nativeTools;
   const toolsBlock = formatToolListForPrompt(allTools);
   const skillBlock = loadSkill(phase, agent.id);
-
-  const externalSourcesBlock = phase === 'external_search' ? buildExternalSourcesBlock(agent) : '';
 
   const postingStyleBlock = phase === 'create' ? `
 
@@ -585,15 +989,20 @@ function buildSystemPrompt(agent, phase, mcpTools = []) {
 
 These are your defaults — follow them in general, but vary a little from post to post to stay fresh. Maybe go slightly shorter or longer, try a different format, open with a different hook. Same voice, slightly different shape each time. Check your recent posts and consciously avoid repeating the exact same structure.` : '';
 
-  const memory = agentStorage.readMemory(agent.id);
-  const memoryBlock = memory
-    ? `\n## YOUR MEMORY\nThese are lessons you've learned from analyzing your past posts and engagement:\n${memory}\n`
-    : '\n## YOUR MEMORY\nNo memories yet. You haven\'t analyzed your post performance yet.\n';
+  const rawMemory = agentStorage.readMemory(agent.id);
+  const postInsights = parsePostInsights(rawMemory);
+  const memStats = vectorMemory.getMemoryStats(agent.id);
+  const memoryBlock = postInsights
+    ? `\n## YOUR POST INSIGHTS\nLessons you've learned about creating engaging posts:\n${postInsights}\n`
+    : '\n## YOUR POST INSIGHTS\nNo post insights yet. Analyze your post performance to build these.\n';
+  const ltmBlock = memStats.total > 0
+    ? `\n## YOUR LONG-TERM MEMORY\nYou have ${memStats.total} memories stored (${Object.entries(memStats.categories).map(([k,v]) => `${k}: ${v}`).join(', ')}). Use \`recall_memory\` to search them by topic. Use \`store_memory\` to save new memories.\n`
+    : '\n## YOUR LONG-TERM MEMORY\nNo long-term memories yet. Use `store_memory` to save interesting findings, reflections, article takeaways, and ideas as you browse and research. Use `recall_memory` to search them later.\n';
 
   return `You are ${agent.name}, a real person using a social media platform. You have genuine interests, opinions, and taste. You surf the platform the way a human does — sometimes deeply engaged, sometimes just skimming, always authentic.
 
 ${characteristics ? `## YOUR CHARACTERISTICS\n${characteristics}` : `## Who you are\n${bio ? bio + '\n' : ''}- Interests: ${topics}\n- Tone: ${tone} — ${toneProfile.personality}`}
-${memoryBlock}
+${memoryBlock}${ltmBlock}
 ## YOUR IDENTITY DRIVES EVERY ACTION
 Your bio, interests, and tone are not decorative — they are your decision-making filter for EVERY action you take:
 - **What to read/skip**: Only stop for content that relates to your interests or surprises you given your expertise. Scroll past things outside your domain unless they're genuinely remarkable.
@@ -634,10 +1043,14 @@ function validateLlmDecisionSchema(raw, phase, extraTools = []) {
     return { ok: false, errors: ['LLM output must be a JSON object.'] };
   }
 
+  // Auto-fix: move stray top-level fields into params (cheap models often flatten the structure)
   const allowedTopKeys = new Set(['action', 'reason', 'params']);
-  for (const key of Object.keys(raw)) {
-    if (!allowedTopKeys.has(key)) {
-      errors.push(`Unknown top-level field: ${key}`);
+  const strayKeys = Object.keys(raw).filter(k => !allowedTopKeys.has(k));
+  if (strayKeys.length > 0 && typeof raw.action === 'string') {
+    if (!isPlainObject(raw.params)) raw.params = {};
+    for (const key of strayKeys) {
+      if (raw.params[key] === undefined) raw.params[key] = raw[key];
+      delete raw[key];
     }
   }
 
@@ -774,20 +1187,22 @@ async function llmDecision(agent, phase, runState) {
     ...stepMessages
   ];
 
-  const reasoningEffort = process.env.AGENT_LLM_REASONING_EFFORT || 'low';
+  const reasoningEffort = getReasoningEffortForAgent(agent);
   const requestBody = {
     model,
     messages,
     max_completion_tokens: 16384,
-    reasoning_effort: reasoningEffort,
     response_format: { type: 'json_object' }
   };
-  // Only set temperature when reasoning is off — reasoning models ignore/reject temperature
+  // Only set temperature when reasoning is off and model supports it
+  const TEMPERATURE_UNSUPPORTED_MODELS = ['gpt-5-nano'];
   if (reasoningEffort === 'none') {
     const temperature = process.env.AGENT_LLM_TEMPERATURE;
-    if (temperature !== undefined && temperature !== '') {
+    if (temperature !== undefined && temperature !== '' && !TEMPERATURE_UNSUPPORTED_MODELS.includes(model)) {
       requestBody.temperature = Number(temperature);
     }
+  } else {
+    requestBody.reasoning_effort = reasoningEffort;
   }
 
   const response = await fetch(endpoint, {
@@ -821,6 +1236,25 @@ async function llmDecision(agent, phase, runState) {
   return { decision, tokenUsage };
 }
 
+// ─── Data API chart helpers ──────────────────────────────────────────────────────
+
+async function saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags, description, fillArea }) {
+  const datasets = [{ label: datasetLabel, data: values }];
+  if (fillArea) datasets[0].fill = true;
+  const data = { labels, datasets };
+  return saveDataApiChartRaw({ agent, chartType, title, data, tags, description });
+}
+
+async function saveDataApiChartRaw({ agent, chartType, title, data, tags, description }) {
+  const chartUrl = renderChart({ chartType, title, data });
+  try {
+    const stored = await agentStorage.downloadToAgentStorage(agent.id, chartUrl);
+    return { ok: true, summary: `Chart saved: "${title}". Use embed_image with localUrl in create phase.`, chartUrl: stored.localUrl, description };
+  } catch {
+    return { ok: true, summary: `Chart generated: "${title}" (remote URL — local save failed).`, chartUrl, description };
+  }
+}
+
 // ─── Execute action ─────────────────────────────────────────────────────────────
 
 async function executeAction(agent, decision, runState) {
@@ -830,24 +1264,27 @@ async function executeAction(agent, decision, runState) {
 
     case 'browse_new_feed': {
       const allPosts = db.listFeed()
-        .filter((c) => c.authorAgentId !== agent.id)
-        .map(shortContent);
+        .filter((c) => c.authorAgentId !== agent.id);
       const pg = paginate(allPosts, decision.params?.page);
+      for (const c of pg.items) c.viewCount = (c.viewCount || 0) + 1;
+      db.save();
+      pg.items = pg.items.map(c => ({ ...shortContent(c), engagement: getPostEngagement(c.id) }));
       return { ok: true, summary: `Global feed page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'browse_following_feed': {
-      let allPosts = db.getPersonalizedFeed({ followerKind: 'agent', followerId: agent.id })
-        .filter((c) => c.authorAgentId !== agent.id)
-        .map(shortContent);
+      let rawPosts = db.getPersonalizedFeed({ followerKind: 'agent', followerId: agent.id })
+        .filter((c) => c.authorAgentId !== agent.id);
       let feedType = 'following';
-      if (allPosts.length === 0) {
-        allPosts = db.listFeed()
-          .filter((c) => c.authorAgentId !== agent.id)
-          .map(shortContent);
+      if (rawPosts.length === 0) {
+        rawPosts = db.listFeed()
+          .filter((c) => c.authorAgentId !== agent.id);
         feedType = 'global_fallback';
       }
-      const pg = paginate(allPosts, decision.params?.page);
+      const pg = paginate(rawPosts, decision.params?.page);
+      for (const c of pg.items) c.viewCount = (c.viewCount || 0) + 1;
+      db.save();
+      pg.items = pg.items.map(c => ({ ...shortContent(c), engagement: getPostEngagement(c.id) }));
       return { ok: true, summary: `${feedType === 'following' ? 'Following' : 'Global'} feed page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore, feedType };
     }
 
@@ -869,6 +1306,43 @@ async function executeAction(agent, decision, runState) {
         .map(shortContent);
       const pg = paginate(posts, decision.params?.page);
       return { ok: true, summary: `Favorited posts page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
+    }
+
+    // ── External Favorites ──
+
+    case 'add_external_favorite': {
+      const url = safeString(decision.params?.url);
+      const title = safeString(decision.params?.title);
+      if (!url) return { ok: false, summary: 'url is required.' };
+      if (!title) return { ok: false, summary: 'title is required.' };
+      const item = db.addExternalFavorite(agent.id, {
+        title,
+        summary: safeString(decision.params?.summary),
+        url,
+        source: safeString(decision.params?.source),
+        tags: decision.params?.tags || []
+      });
+      return { ok: true, summary: `Saved to external favorites: "${title}"`, item };
+    }
+
+    case 'remove_external_favorite': {
+      const itemId = safeString(decision.params?.itemId);
+      if (!itemId) return { ok: false, summary: 'itemId is required.' };
+      const removed = db.removeExternalFavorite(agent.id, itemId);
+      if (!removed) return { ok: false, summary: 'Item not found in your external favorites.' };
+      return { ok: true, summary: `Removed from external favorites.` };
+    }
+
+    case 'browse_external_favorites': {
+      const result = db.getExternalFavorites(agent.id, { page: decision.params?.page || 1 });
+      return {
+        ok: true,
+        summary: `External favorites page ${result.page}/${result.totalPages} (${result.total} total)`,
+        items: result.items,
+        page: result.page,
+        totalPages: result.totalPages,
+        hasMore: result.page < result.totalPages
+      };
     }
 
     case 'browse_my_posts': {
@@ -899,13 +1373,42 @@ async function executeAction(agent, decision, runState) {
 
       db.recordView({ actorKind: 'agent', actorId: agent.id, targetKind: 'content', targetId: content.id });
       runState.workingSet.viewedContentIds.add(content.id);
-      const sc = shortContent(content);
+      const sc = { ...shortContent(content), engagement: getPostEngagement(content.id) };
       runState.workingSet.viewedContents.push(sc);
 
-      const children = db.getChildren(content.id).slice(0, 10).map(shortContent);
+      const comments = db.getChildren(content.id).slice(0, 10).map(c => ({ ...shortContent(c), childType: 'comment' }));
+      const reposts = db.state.contents
+        .filter(c => c.repostOfId === content.id)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .slice(0, 10)
+        .map(c => ({ ...shortContent(c), childType: 'repost' }));
+      const children = [...comments, ...reposts].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       const ancestors = db.getAncestors(content.id).map(shortContent);
 
-      return { ok: true, summary: `Viewed post ${content.id}`, viewed: sc, children, ancestors };
+      return { ok: true, summary: `Viewed post ${content.id} (${sc.engagement.likes} likes, ${sc.engagement.favorites} favs, ${comments.length} comments, ${reposts.length} reposts)`, viewed: sc, children, ancestors };
+    }
+
+    case 'list_comments': {
+      const postId = decision.params?.postId;
+      if (!postId) return { ok: false, summary: 'postId is required.' };
+      const post = db.state.contents.find(c => c.id === postId);
+      if (!post) return { ok: false, summary: 'Post not found.' };
+      const allComments = db.getChildren(postId).map(shortContent);
+      const pg = paginate(allComments, decision.params?.page, 10);
+      return { ok: true, summary: `${pg.totalItems} comment(s) on post ${postId}, page ${pg.page}/${pg.totalPages}`, comments: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
+    }
+
+    case 'list_reposts': {
+      const postId = decision.params?.postId;
+      if (!postId) return { ok: false, summary: 'postId is required.' };
+      const post = db.state.contents.find(c => c.id === postId);
+      if (!post) return { ok: false, summary: 'Post not found.' };
+      const allReposts = db.state.contents
+        .filter(c => c.repostOfId === postId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map(shortContent);
+      const pg = paginate(allReposts, decision.params?.page, 10);
+      return { ok: true, summary: `${pg.totalItems} repost(s) of post ${postId}, page ${pg.page}/${pg.totalPages}`, reposts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'view_profile': {
@@ -988,11 +1491,17 @@ async function executeAction(agent, decision, runState) {
       if (!targetId) return { ok: false, summary: 'targetId is required for follow.' };
       if (targetKind === 'agent' && targetId === agent.id) return { ok: false, summary: 'You cannot follow yourself.' };
 
-      db.follow({ followerKind: 'agent', followerId: agent.id, followeeKind: targetKind, followeeId: targetId });
+      try {
+        db.follow({ followerKind: 'agent', followerId: agent.id, followeeKind: targetKind, followeeId: targetId });
+      } catch (err) {
+        return { ok: false, summary: err.message };
+      }
       runState.workingSet.knownUserIds.add(targetId);
       runState.workingSet.followedThisRun.push(targetId);
       const target = targetKind === 'user' ? db.getUser(targetId) : db.getAgent(targetId);
-      return { ok: true, summary: `Followed ${targetKind} ${target?.name || targetId}` };
+      const followee = targetKind === 'user' ? db.getUser(targetId) : db.getAgent(targetId);
+      const feeNote = followee?.subscriptionFee > 0 ? ` (${followee.subscriptionFee} cr/month charged to owner)` : '';
+      return { ok: true, summary: `Followed ${targetKind} ${target?.name || targetId}${feeNote}` };
     }
 
     case 'unfollow': {
@@ -1015,7 +1524,7 @@ async function executeAction(agent, decision, runState) {
       const parentPost = db.state.contents.find((c) => c.id === parentId);
       if (!parentPost) return { ok: false, summary: 'Parent post not found.' };
 
-      const text = decision.params?.textHint || 'Interesting post.';
+      const text = decision.params?.textHint || decision.params?.text || 'Interesting post.';
       const content = db.createContent({
         authorKind: 'agent',
         authorId: agent.id,
@@ -1102,76 +1611,34 @@ async function executeAction(agent, decision, runState) {
     }
 
     case 'generate_media': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft to attach media to. Use draft_post first.' };
-
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-      if (parsed.media.length >= 4) return { ok: false, summary: 'Draft already has 4 media items (max).' };
-
-      const prompt = decision.params?.prompt || `${parsed.title}: ${parsed.text.slice(0, 100)}`;
+      const prompt = decision.params?.prompt;
+      if (!prompt) return { ok: false, summary: 'prompt param is required — describe the image you want to generate.' };
       const generationMode = decision.params?.generationMode || 'text-to-image';
       const sourceImageUrl = decision.params?.sourceImageUrl || '';
       const result = await generateMedia(prompt, { generationMode, sourceImageUrl });
 
-      let mediaEntry = { type: result.type, url: result.url, origin: 'ai_generated', caption: prompt };
+      if (!result.url) return { ok: false, summary: 'Media generation failed — no URL returned.' };
+
+      // Save to agent storage (same as save_media)
+      let localUrl = result.url;
+      let filename = '';
       if (!result.mock) {
         try {
-          const stored = await mediaStorage.downloadAiMedia(result);
-          mediaEntry.url = stored.localUrl;
-        } catch {
-          mediaEntry.origin = 'embedded';
+          const stored = await agentStorage.downloadToAgentStorage(agent.id, result.url);
+          localUrl = stored.localUrl;
+          filename = stored.filename;
+          agentStorage.recordFileMetadata(agent.id, stored.filename, { caption: prompt, sourceUrl: result.url, origin: 'ai_generated' });
+        } catch (err) {
+          return { ok: false, summary: `Generated media but failed to save: ${err.message}` };
         }
+      } else {
+        // Mock mode — still track in savedFilesThisRun
+        filename = localUrl.split('/').pop() || 'mock';
       }
 
-      parsed.media.push(mediaEntry);
-      const updated = agentStorage.draftToMarkdown(parsed);
-      agentStorage.writeDraft(agent.id, updated);
+      runState.workingSet.savedFilesThisRun.push({ filename, localUrl, description: `AI-generated ${result.type}: ${prompt}` });
 
-      return { ok: true, summary: `Generated ${result.type} media via ${generationMode}${result.mock ? ' (mock)' : ''} [${parsed.media.length}/4]`, mediaUrl: mediaEntry.url, mock: result.mock };
-    }
-
-    case 'download_image': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft to attach media to. Use draft_post first.' };
-
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-      if (parsed.media.length >= 4) return { ok: false, summary: 'Draft already has 4 media items (max).' };
-
-      const imageUrl = decision.params?.url;
-      if (!imageUrl) return { ok: false, summary: 'url param is required for download_image.' };
-
-      try {
-        const stored = await mediaStorage.downloadImage(imageUrl);
-        const mediaEntry = { type: 'image', url: stored.localUrl, origin: 'downloaded', caption: decision.params?.caption || '' };
-        parsed.media.push(mediaEntry);
-        const updated = agentStorage.draftToMarkdown(parsed);
-        agentStorage.writeDraft(agent.id, updated);
-        return { ok: true, summary: `Downloaded image to local storage [${parsed.media.length}/4]`, mediaUrl: stored.localUrl };
-      } catch (err) {
-        return { ok: false, summary: `Failed to download image: ${err.message}` };
-      }
-    }
-
-    case 'download_media': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft to attach media to. Use draft_post first.' };
-
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-      if (parsed.media.length >= 4) return { ok: false, summary: 'Draft already has 4 media items (max).' };
-
-      const mediaUrl = decision.params?.url;
-      if (!mediaUrl) return { ok: false, summary: 'url param is required for download_media.' };
-
-      try {
-        const stored = await mediaStorage.downloadMedia(mediaUrl);
-        const mediaEntry = { type: stored.type, url: stored.localUrl, origin: 'downloaded', caption: decision.params?.caption || '' };
-        parsed.media.push(mediaEntry);
-        const updated = agentStorage.draftToMarkdown(parsed);
-        agentStorage.writeDraft(agent.id, updated);
-        return { ok: true, summary: `Downloaded ${stored.type} to local storage [${parsed.media.length}/4]`, mediaUrl: stored.localUrl };
-      } catch (err) {
-        return { ok: false, summary: `Failed to download media: ${err.message}` };
-      }
+      return { ok: true, summary: `Generated and saved ${result.type} to your storage: ${localUrl}. Use embed_image to attach it to your draft.`, localUrl, mock: result.mock };
     }
 
     case 'embed_image': {
@@ -1184,21 +1651,49 @@ async function executeAction(agent, decision, runState) {
       const embedUrl = decision.params?.url;
       if (!embedUrl) return { ok: false, summary: 'url param is required for embed_image.' };
 
-      // Block reuse of agent files already used in previous posts
-      const agentFileMatch = (embedUrl || '').match(/^\/agents\/[^/]+\/files\/(.+)$/);
-      if (agentFileMatch) {
-        const meta = agentStorage.readFilesMetadata(agent.id);
-        const fileMeta = meta.files[agentFileMatch[1]];
-        if (fileMeta && fileMeta.usedInPostIds && fileMeta.usedInPostIds.length > 0) {
-          return { ok: false, summary: `This image was already used in a previous post. Use list_unused_media to find images you haven't used yet, or download/generate a new one.` };
+      // Only allow images saved during this run
+      const savedFiles = runState.workingSet.savedFilesThisRun || [];
+      const embedFilename = embedUrl.split('/').pop();
+      const savedEntry = savedFiles.find(f => f.localUrl === embedUrl || f.filename === embedFilename);
+      if (!savedEntry) {
+        return { ok: false, summary: 'You can only embed images saved during this session. This image was not saved in this run — use save_media or generate_media to save a new image first.' };
+      }
+
+      // Block exact URL duplicate
+      if (parsed.media.some(m => m.url === embedUrl)) {
+        return { ok: false, summary: 'This image is already attached to your draft. Use a different image.' };
+      }
+
+      // Block semantically similar images using descriptions
+      const newDesc = (savedEntry.description || '').toLowerCase();
+      if (newDesc) {
+        for (const existing of parsed.media) {
+          if (existing.type !== 'image') continue;
+          // Look up the description of the already-embedded image
+          const existingFilename = (existing.url || '').split('/').pop();
+          const existingSaved = savedFiles.find(f => f.filename === existingFilename || f.localUrl === existing.url);
+          const existingDesc = (existingSaved?.description || existing.caption || '').toLowerCase();
+          if (!existingDesc) continue;
+          // Check word overlap — if >60% of words are shared, it's too similar
+          const newWords = new Set(newDesc.split(/\s+/).filter(w => w.length > 3));
+          const existingWords = new Set(existingDesc.split(/\s+/).filter(w => w.length > 3));
+          if (newWords.size > 0 && existingWords.size > 0) {
+            let overlap = 0;
+            for (const w of newWords) { if (existingWords.has(w)) overlap++; }
+            const similarity = overlap / Math.min(newWords.size, existingWords.size);
+            if (similarity > 0.6) {
+              return { ok: false, summary: `This image is too similar to one already in your draft ("${existingSaved?.description?.slice(0, 80) || existing.caption?.slice(0, 80)}"). Use a visually different image.` };
+            }
+          }
         }
       }
 
-      const mediaEntry = { type: 'image', url: embedUrl, origin: 'embedded', caption: decision.params?.caption || '' };
+      const mediaEntry = { type: 'image', url: embedUrl, origin: 'local', caption: decision.params?.caption || '', description: savedEntry.description || '' };
       parsed.media.push(mediaEntry);
       const updated = agentStorage.draftToMarkdown(parsed);
       agentStorage.writeDraft(agent.id, updated);
-      return { ok: true, summary: `Embedded image [${parsed.media.length}/4]`, mediaUrl: embedUrl };
+      const desc = savedEntry.description || '';
+      return { ok: true, summary: `Embedded image [${parsed.media.length}/4]. Image description: "${desc.slice(0, 150)}". If this image is not relevant to your post topic, remove it with edit_draft (removeMediaIndex: ${parsed.media.length - 1}) and use generate_media to create a relevant one.`, mediaUrl: embedUrl };
     }
 
     case 'embed_video': {
@@ -1244,7 +1739,7 @@ async function executeAction(agent, decision, runState) {
 
       runState.workingSet.createdContentIds.push(content.id);
 
-      // Track media file usage
+      // Track media file usage in sidecar metadata
       const agentFilePattern = /^\/agents\/[^/]+\/files\/(.+)$/;
       for (const m of draftMedia) {
         const match = (m.url || '').match(agentFilePattern);
@@ -1260,37 +1755,6 @@ async function executeAction(agent, decision, runState) {
 
     // ── Agent files ──
 
-    case 'list_agent_files': {
-      const files = agentStorage.listAgentFiles(agent.id);
-      return { ok: true, summary: `Listed ${files.length} agent files`, files };
-    }
-
-    case 'list_unused_media': {
-      const allFiles = agentStorage.listAgentFiles(agent.id);
-      const unused = allFiles
-        .filter(f => !f.used)
-        .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
-      const pageSize = 10;
-      const pg = Math.max(1, Math.floor(decision.params?.page || 1));
-      const start = (pg - 1) * pageSize;
-      const slice = unused.slice(start, start + pageSize).map(f => ({
-        ...f,
-        description: f.caption || 'no description'
-      }));
-      const totalPages = Math.ceil(unused.length / pageSize);
-      return {
-        ok: true,
-        summary: unused.length === 0
-          ? 'No unused media files. Use save_image during research to build your library, or use download_image/embed_video in the create phase.'
-          : `${unused.length} unused media files (page ${pg}/${totalPages || 1}). Use embed_image with the localUrl to attach one to your post.`,
-        files: slice,
-        page: pg,
-        totalPages: totalPages || 1,
-        totalItems: unused.length,
-        hasMore: start + pageSize < unused.length
-      };
-    }
-
     case 'save_image':
     case 'save_media': {
       const mediaUrl = decision.params?.url;
@@ -1300,23 +1764,30 @@ async function executeAction(agent, decision, runState) {
 
       try {
         const result = await agentStorage.downloadToAgentStorage(agent.id, mediaUrl);
+        const localUrl = result.localUrl;
         agentStorage.recordFileMetadata(agent.id, result.filename, { caption: description, sourceUrl: mediaUrl });
-        runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl: result.localUrl, description });
-        return { ok: true, summary: `Saved: ${description}`, filename: result.filename, localUrl: result.localUrl, description };
+
+        // Get AI-generated visual description for images
+        let aiDescription = '';
+        if (result.mediaType === 'image') {
+          try {
+            const localFilePath = join(__dirname, '..', 'data', 'agents', agent.id, 'files', result.filename);
+            aiDescription = await describeImageWithVision(localFilePath) || '';
+          } catch (err) {
+            console.warn(`[save_media] Vision describe failed for ${result.filename}:`, err.message);
+          }
+        }
+
+        runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl, description: aiDescription || description });
+
+        return {
+          ok: true,
+          summary: `Saved: ${aiDescription || description}`,
+          localUrl,
+          description: aiDescription || description
+        };
       } catch (err) {
         return { ok: false, summary: `Failed to save media: ${err.message}` };
-      }
-    }
-
-    case 'upload_file': {
-      const fileUrl = decision.params?.url;
-      if (!fileUrl) return { ok: false, summary: 'url param is required for upload_file.' };
-
-      try {
-        const result = await agentStorage.downloadToAgentStorage(agent.id, fileUrl);
-        return { ok: true, summary: `Downloaded file to agent storage: ${result.filename}`, filename: result.filename, localUrl: result.localUrl };
-      } catch (err) {
-        return { ok: false, summary: `Failed to download file: ${err.message}` };
       }
     }
 
@@ -1349,15 +1820,77 @@ async function executeAction(agent, decision, runState) {
     }
 
     case 'read_memory': {
-      const memory = agentStorage.readMemory(agent.id);
-      return { ok: true, summary: memory ? 'Read your memory.' : 'No memories saved yet.', memory: memory || 'No memories saved yet.' };
+      const raw = agentStorage.readMemory(agent.id);
+      const insights = parsePostInsights(raw);
+      return { ok: true, summary: insights ? 'Post insights loaded.' : 'No post insights yet.', post_insights: insights || '(empty)' };
     }
 
     case 'write_memory': {
       const content = decision.params?.content;
-      if (!content) return { ok: false, summary: 'content param is required for write_memory.' };
-      agentStorage.writeMemory(agent.id, content);
-      return { ok: true, summary: 'Memory updated successfully.' };
+      if (!content) return { ok: false, summary: 'content is required.' };
+
+      const WORD_LIMIT = 1000;
+      const COMPRESS_TARGET = 700;
+      const raw = agentStorage.readMemory(agent.id);
+      let oldContent = parsePostInsights(raw);
+
+      // Auto-compress when over limit
+      const wc = oldContent.split(/\s+/).filter(Boolean).length;
+      if (wc >= WORD_LIMIT) {
+        const compressed = await compressMemorySection(oldContent, COMPRESS_TARGET);
+        console.log(`[memory] Auto-compressed post_insights: ${wc} words → ${compressed.split(/\s+/).filter(Boolean).length} words`);
+        oldContent = compressed;
+      }
+
+      const newContent = oldContent ? oldContent.trim() + '\n- ' + content.trim() : '- ' + content.trim();
+      agentStorage.writeMemory(agent.id, formatPostInsights(newContent));
+      const newWordCount = newContent.split(/\s+/).filter(Boolean).length;
+      return { ok: true, summary: `Post insights updated (${newWordCount} words).` };
+    }
+
+    // ── Long-term vector memory ──
+
+    case 'store_memory': {
+      const content = safeString(decision.params?.content);
+      if (!content) return { ok: false, summary: 'content is required.' };
+      try {
+        const entry = await vectorMemory.storeMemory(agent.id, {
+          content,
+          category: safeString(decision.params?.category) || 'general',
+          tags: decision.params?.tags || [],
+          metadata: decision.params?.metadata || {}
+        });
+        const stats = vectorMemory.getMemoryStats(agent.id);
+        return { ok: true, summary: `Stored to long-term memory (${entry.category}). You now have ${stats.total} memories.`, memoryId: entry.id };
+      } catch (err) {
+        return { ok: false, summary: `Failed to store memory: ${err.message}` };
+      }
+    }
+
+    case 'recall_memory': {
+      const query = safeString(decision.params?.query);
+      if (!query) return { ok: false, summary: 'query is required.' };
+      try {
+        const limit = Math.min(decision.params?.limit || 5, 10);
+        const results = await vectorMemory.recallMemory(agent.id, query, {
+          limit,
+          category: safeString(decision.params?.category) || undefined
+        });
+        if (!results.length) {
+          return { ok: true, summary: 'No matching memories found.', memories: [] };
+        }
+        return { ok: true, summary: `Found ${results.length} relevant memories.`, memories: results };
+      } catch (err) {
+        return { ok: false, summary: `Failed to recall memory: ${err.message}` };
+      }
+    }
+
+    case 'forget_memory': {
+      const memoryId = safeString(decision.params?.memoryId);
+      if (!memoryId) return { ok: false, summary: 'memoryId is required.' };
+      const removed = vectorMemory.forgetMemory(agent.id, memoryId);
+      if (!removed) return { ok: false, summary: 'Memory not found.' };
+      return { ok: true, summary: 'Memory forgotten.' };
     }
 
     // ── Research ──
@@ -1372,65 +1905,25 @@ async function executeAction(agent, decision, runState) {
       const recommendedIds = new Set(agentTopics.length ? getSourcesForTopics(agentTopics) : []);
       const list = sources.map(s => ({
         id: s.id, name: s.name, category: s.category, topics: s.topics,
-        hasRss: !!s.rss, hasSearch: !!s.search,
+        capabilities: s.capabilities || [],
         recommended: recommendedIds.has(s.id)
       }));
-      // Sort recommended first
       list.sort((a, b) => (b.recommended ? 1 : 0) - (a.recommended ? 1 : 0));
       const recCount = list.filter(s => s.recommended).length;
       const topicStr = agentTopics.length ? agentTopics.join(', ') : 'none set';
       return { ok: true, summary: `${list.length} sources available (${recCount} recommended for your topics: ${topicStr})`, sources: list };
     }
 
-    case 'get_new_rss': {
-      const sourceId = decision.params?.sourceId;
-      if (!sourceId) return { ok: false, summary: 'sourceId is required.' };
-      const source = getSourceById(sourceId);
-      if (!source) return { ok: false, summary: `Unknown source "${sourceId}". Use list_sources to see available sources.` };
-      if (!source.rss) return { ok: false, summary: `Source "${sourceId}" has no RSS feed. Use search_source instead.` };
-      const limit = decision.params?.resultsPerPage || 10;
-      try {
-        const items = await fetchRssSource(source, '', limit);
-        runState.workingSet.externalReferences = [
-          ...(runState.workingSet.externalReferences || []),
-          ...items
-        ].slice(-30);
-        return { ok: true, summary: `Latest from ${source.name} RSS: ${items.length} articles.`, references: items };
-      } catch (err) {
-        return { ok: false, summary: `Failed to fetch ${source.name} RSS: ${err.message}` };
-      }
-    }
-
-    case 'search_source': {
-      const sourceId = decision.params?.sourceId;
-      const query = decision.params?.query;
-      if (!sourceId) return { ok: false, summary: 'sourceId is required.' };
-      if (!query) return { ok: false, summary: 'query is required.' };
-      const source = getSourceById(sourceId);
-      if (!source) return { ok: false, summary: `Unknown source "${sourceId}". Use list_sources to see available sources.` };
-      if (!source.search) return { ok: false, summary: `Source "${sourceId}" has no search API. Use get_new_rss to browse its RSS feed instead.` };
-      const limit = decision.params?.resultsPerPage || 5;
-      try {
-        const items = await fetchApiSource(source, query, limit);
-        runState.workingSet.externalReferences = [
-          ...(runState.workingSet.externalReferences || []),
-          ...items
-        ].slice(-30);
-        return { ok: true, summary: `Searched ${source.name} for "${query}": ${items.length} results.`, references: items };
-      } catch (err) {
-        return { ok: false, summary: `Failed to search ${source.name}: ${err.message}` };
-      }
-    }
-
-    case 'search_external': {
+    case 'search': {
       const query = decision.params?.query;
       if (!query) return { ok: false, summary: 'query is required.' };
       const sourceIds = decision.params?.sources;
+      const limit = decision.params?.limit || 5;
       let sources;
+
       if (Array.isArray(sourceIds) && sourceIds.length) {
         sources = sourceIds.map(id => getSourceById(id)).filter(Boolean).slice(0, 8);
       } else {
-        // Auto-select sources based on agent topics
         const agentTopics = agent.preferences?.topics || [];
         const topicSourceIds = agentTopics.length ? getSourcesForTopics(agentTopics) : [];
         const configuredSources = topicSourceIds.length
@@ -1443,15 +1936,14 @@ async function executeAction(agent, decision, runState) {
       if (!sources.length) return { ok: false, summary: 'No valid sources found.' };
 
       const results = await Promise.allSettled(
-        sources.map(source => fetchSource(source, query).catch(() => []))
+        sources.map(source => searchWithStrategy(source, query, limit).catch(() => []))
       );
-      const perSource = decision.params?.resultsPerPage || 3;
       const allRefs = [];
       for (const result of results) {
         const items = result.status === 'fulfilled' ? result.value : [];
-        for (const item of (items || []).slice(0, perSource)) allRefs.push(item);
+        for (const item of (items || []).slice(0, limit)) allRefs.push(item);
       }
-      const newRefs = allRefs.slice(0, 12);
+      const newRefs = allRefs.slice(0, 20);
       runState.workingSet.externalReferences = [
         ...(runState.workingSet.externalReferences || []),
         ...newRefs
@@ -1459,55 +1951,55 @@ async function executeAction(agent, decision, runState) {
       return { ok: true, summary: `Searched ${sources.length} sources for "${query}": ${newRefs.length} results.`, references: newRefs };
     }
 
-    case 'read_article': {
+    case 'fetch_by_url': {
       const url = decision.params?.url;
       if (!url) return { ok: false, summary: 'url is required.' };
       try {
-        const res = await fetch(url, {
-          headers: { 'User-Agent': 'SoupPlatform/1.0', Accept: 'text/html,application/json,text/plain' },
-          signal: AbortSignal.timeout(10000)
-        });
-        if (!res.ok) return { ok: false, summary: `Failed to fetch: HTTP ${res.status}` };
-        const contentType = res.headers.get('content-type') || '';
-        let text;
-        let images = [];
-        if (contentType.includes('json')) {
-          const json = await res.json();
-          text = JSON.stringify(json).slice(0, 2000);
-        } else {
-          const html = await res.text();
-          // Extract image URLs before stripping HTML
-          const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*(?:alt=["']([^"']*)["'])?/gi;
-          let imgMatch;
-          const baseUrl = new URL(url);
-          while ((imgMatch = imgRegex.exec(html)) !== null && images.length < 5) {
-            let imgSrc = imgMatch[1];
-            const imgAlt = imgMatch[2] || '';
-            // Skip tiny icons, tracking pixels, data URIs
-            if (imgSrc.startsWith('data:') || /\b(icon|logo|avatar|pixel|tracking|badge|button)\b/i.test(imgSrc)) continue;
-            // Resolve relative URLs
-            if (imgSrc.startsWith('//')) imgSrc = baseUrl.protocol + imgSrc;
-            else if (imgSrc.startsWith('/')) imgSrc = baseUrl.origin + imgSrc;
-            else if (!imgSrc.startsWith('http')) continue;
-            images.push({ url: imgSrc, alt: imgAlt });
-          }
-          // Strip HTML tags for readable text
-          text = html.replace(/<script[\s\S]*?<\/script>/gi, '')
-                     .replace(/<style[\s\S]*?<\/style>/gi, '')
-                     .replace(/<[^>]+>/g, ' ')
-                     .replace(/\s+/g, ' ')
-                     .trim()
-                     .slice(0, 2000);
-        }
-        const result = { ok: true, summary: `Read article from ${url}`, article: { url, text } };
-        if (images.length > 0) {
-          result.article.images = images;
-          result.summary += ` — found ${images.length} image(s). Use save_image to save any you want for your post.`;
+        const knownSource = getSourceByDomain(url);
+        const item = await fetchByUrl(url, knownSource);
+        const result = { ok: true, summary: `Read article from ${url}`, article: item };
+        if (item.images?.length > 0) {
+          result.summary += ` — found ${item.images.length} image(s). Use save_media to save any you want for your post.`;
         }
         return result;
       } catch (err) {
-        return { ok: false, summary: `Failed to read article: ${err.message}` };
+        return { ok: false, summary: `Failed to fetch URL: ${err.message}` };
       }
+    }
+
+    case 'list_updates': {
+      const sourceIds = decision.params?.sources;
+      const limit = decision.params?.limit || 10;
+      let sources;
+
+      if (Array.isArray(sourceIds) && sourceIds.length) {
+        sources = sourceIds.map(id => getSourceById(id)).filter(Boolean).slice(0, 8);
+      } else {
+        const agentTopics = agent.preferences?.topics || [];
+        const topicSourceIds = agentTopics.length ? getSourcesForTopics(agentTopics) : [];
+        const configuredSources = topicSourceIds.length
+          ? topicSourceIds.slice(0, 5)
+          : (Array.isArray(agent.preferences?.externalSearchSources) && agent.preferences.externalSearchSources.length
+            ? agent.preferences.externalSearchSources.slice(0, 5)
+            : ['hackernews', 'bbc-news', 'reddit']);
+        sources = configuredSources.map(id => getSourceById(id)).filter(Boolean);
+      }
+      if (!sources.length) return { ok: false, summary: 'No valid sources found.' };
+
+      const results = await Promise.allSettled(
+        sources.map(source => listUpdatesWithStrategy(source, limit).catch(() => []))
+      );
+      const allRefs = [];
+      for (const result of results) {
+        const items = result.status === 'fulfilled' ? result.value : [];
+        for (const item of (items || []).slice(0, limit)) allRefs.push(item);
+      }
+      const newRefs = allRefs.slice(0, 30);
+      runState.workingSet.externalReferences = [
+        ...(runState.workingSet.externalReferences || []),
+        ...newRefs
+      ].slice(-30);
+      return { ok: true, summary: `Latest from ${sources.length} sources: ${newRefs.length} items.`, references: newRefs };
     }
 
     case 'fetch_data': {
@@ -1517,7 +2009,7 @@ async function executeAction(agent, decision, runState) {
       const source = getSourceById(sourceId);
       if (!source) return { ok: false, summary: `Unknown source "${sourceId}". Use list_sources to see available sources.` };
       if (source.dataType !== 'structured' && source.dataType !== 'media') {
-        return { ok: false, summary: `Source "${sourceId}" is not a data API. Use search_source instead.` };
+        return { ok: false, summary: `Source "${sourceId}" is not a data API. Use search instead.` };
       }
       try {
         const items = await fetchApiSource(source, query, 10);
@@ -1594,6 +2086,77 @@ async function executeAction(agent, decision, runState) {
       };
     }
 
+    case 'transform_data': {
+      const rawData = decision.params?.data;
+      const noteId = decision.params?.noteId;
+      const instructions = decision.params?.instructions;
+      if (!instructions) return { ok: false, summary: 'instructions is required — describe how to transform the data.' };
+
+      let inputData;
+      if (noteId) {
+        // Load from previously transformed data in runState
+        const storedData = (runState.workingSet._transformedData || {})[noteId];
+        if (!storedData) return { ok: false, summary: `Data ${noteId} not found.` };
+        try { inputData = JSON.parse(storedData); } catch { inputData = storedData; }
+      } else if (rawData) {
+        inputData = rawData;
+      } else {
+        return { ok: false, summary: 'Either "data" or "noteId" is required as input.' };
+      }
+
+      const apiKey = process.env.AGENT_LLM_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'No LLM API key configured.' };
+
+      try {
+        const endpoint = process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+        const model = process.env.AGENT_UTILITY_MODEL || 'gpt-4o-mini';
+        const dataStr = typeof inputData === 'string' ? inputData : JSON.stringify(inputData);
+        const truncatedData = dataStr.length > 30000 ? dataStr.slice(0, 30000) + '\n...(truncated)' : dataStr;
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: 'You are a data transformation assistant. Transform the input data according to the user instructions. Return ONLY valid JSON — no markdown, no explanation, just the JSON output.' },
+              { role: 'user', content: `## Instructions\n${instructions}\n\n## Input Data\n${truncatedData}` }
+            ],
+            max_tokens: 4096,
+            temperature: 0
+          }),
+          signal: AbortSignal.timeout(30000)
+        });
+        if (!res.ok) throw new Error(`LLM API: ${res.status}`);
+        const payload = await res.json();
+        let output = payload.choices?.[0]?.message?.content || '';
+        // Strip markdown code fences if present
+        output = output.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+        // Validate it's parseable JSON
+        let parsed;
+        try { parsed = JSON.parse(output); } catch {
+          // If LLM didn't return valid JSON, save raw text
+          parsed = null;
+        }
+
+        const dataTitle = decision.params?.title || `Transformed data: ${instructions.slice(0, 60)}`;
+        // Store transformed data in runState for use by generate_chart
+        const dataId = `data_${Date.now()}`;
+        runState.workingSet._transformedData ||= {};
+        runState.workingSet._transformedData[dataId] = parsed ? JSON.stringify(parsed) : output;
+
+        return {
+          ok: true,
+          summary: `Data transformed: "${dataTitle}" (id: ${dataId}). ${parsed ? 'Output is valid JSON.' : 'Warning: output is not valid JSON.'} Pass this dataId to generate_chart.`,
+          dataId,
+          preview: (parsed ? JSON.stringify(parsed) : output).slice(0, 500)
+        };
+      } catch (err) {
+        return { ok: false, summary: `transform_data failed: ${err.message}` };
+      }
+    }
+
     case 'generate_chart': {
       const chartType = decision.params?.chartType;
       const title = decision.params?.title || '';
@@ -1602,11 +2165,46 @@ async function executeAction(agent, decision, runState) {
       const labelField = decision.params?.labelField;
       const valueFields = decision.params?.valueFields;
       const datasetLabels = decision.params?.datasetLabels;
+      const dataId = decision.params?.dataId || decision.params?.noteId;
 
       if (!chartType) return { ok: false, summary: 'chartType is required (line, bar, pie, doughnut, scatter, radar, area).' };
 
+      // Load data from transform_data result (stored in runState)
+      if (dataId && !data && !rawData) {
+        const storedData = (runState.workingSet._transformedData || {})[dataId];
+        if (!storedData) return { ok: false, summary: `Data ${dataId} not found. Use transform_data first.` };
+        try {
+          const parsed = JSON.parse(storedData);
+          if (parsed.labels && parsed.datasets) {
+            data = parsed;
+          } else if (Array.isArray(parsed)) {
+            if (labelField && valueFields) {
+              const items = parsed.map(item => item.rawData || item);
+              const labels = items.map(item => {
+                const val = getByPath(item, labelField);
+                return val !== undefined && val !== null ? String(val) : '';
+              });
+              const datasets = valueFields.map((field, i) => ({
+                label: (datasetLabels && datasetLabels[i]) || field,
+                data: items.map(item => {
+                  const val = getByPath(item, field);
+                  return typeof val === 'number' ? val : (parseFloat(val) || 0);
+                })
+              }));
+              data = { labels, datasets };
+            } else {
+              return { ok: false, summary: 'Data is an array — also provide labelField and valueFields to map it to a chart.' };
+            }
+          } else {
+            return { ok: false, summary: 'Data is not in a recognized format. Expected Chart.js {labels, datasets} or a JSON array.' };
+          }
+        } catch {
+          return { ok: false, summary: 'Stored data is not valid JSON. Use transform_data first to convert it.' };
+        }
+      }
+
       // Auto-transform mode: build Chart.js data from raw data + field mappings
-      if (rawData && labelField && valueFields) {
+      if (!data && rawData && labelField && valueFields) {
         const items = rawData.map(item => item.rawData || item);
         const labels = items.map(item => {
           const val = getByPath(item, labelField);
@@ -1622,7 +2220,7 @@ async function executeAction(agent, decision, runState) {
         data = { labels, datasets };
       }
 
-      if (!data) return { ok: false, summary: 'Either "data" or "rawData" + "labelField" + "valueFields" is required.' };
+      if (!data) return { ok: false, summary: 'Provide "data", "dataId", or "rawData" + "labelField" + "valueFields".' };
 
       // Map 'area' to line with fill
       const finalType = chartType === 'area' ? 'line' : chartType;
@@ -1634,9 +2232,1390 @@ async function executeAction(agent, decision, runState) {
       }
       try {
         const chartUrl = renderChart({ chartType: finalType, title, data, options });
-        return { ok: true, summary: `Chart generated: "${title}". Use embed_image with this URL to add it to your post.`, chartUrl };
+        // Download chart to agent storage
+        try {
+          const stored = await agentStorage.downloadToAgentStorage(agent.id, chartUrl);
+          runState.workingSet.savedFilesThisRun.push({ filename: stored.filename, localUrl: stored.localUrl, description: `${chartType} chart: ${title}` });
+          return { ok: true, summary: `Chart generated: "${title}". Use embed_image with the localUrl to add it to your post.`, chartUrl: stored.localUrl };
+        } catch {
+          return { ok: true, summary: `Chart generated: "${title}". Use embed_image with this URL to add it to your post.`, chartUrl };
+        }
       } catch (err) {
         return { ok: false, summary: `Failed to generate chart: ${err.message}` };
+      }
+    }
+
+    // ── Data Agent ──
+
+    case 'query_data_agent': {
+      const request = decision.params?.request;
+      if (!request) return { ok: false, summary: 'request param is required — describe what data/visualization you need.' };
+
+      try {
+        console.log(`[${agent.name}] Delegating to data agent: ${request.slice(0, 120)}`);
+        const result = await executeDataAgentRequest(request, agent, runState);
+        return result;
+      } catch (err) {
+        return { ok: false, summary: `Data agent failed: ${err.message}` };
+      }
+    }
+
+    // ── Data API chart tools ──
+
+    case 'chart_crypto': {
+      const p = decision.params || {};
+      const metric = p.metric || 'market_cap';
+      const limit = Math.min(Math.max(1, p.limit || 10), 50);
+      const vsCurrency = p.vs_currency || 'usd';
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${vsCurrency}&order=market_cap_desc&per_page=${limit}&page=1`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0', Accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`CoinGecko API: ${res.status}`);
+        const coins = await res.json();
+
+        const metricLabels = {
+          current_price: `Price (${vsCurrency.toUpperCase()})`,
+          market_cap: `Market Cap (${vsCurrency.toUpperCase()})`,
+          total_volume: `24h Volume (${vsCurrency.toUpperCase()})`,
+          price_change_percentage_24h: '24h Change (%)'
+        };
+        const title = p.title || `Top ${coins.length} Cryptocurrencies — ${metricLabels[metric] || metric}`;
+        const labels = coins.map(c => c.symbol.toUpperCase());
+        const values = coins.map(c => c[metric] ?? 0);
+
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['crypto', 'coingecko', metric], description: `${chartType} chart of top ${coins.length} cryptocurrencies by ${metric}. ${labels.slice(0, 5).join(', ')} shown.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_crypto failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_earthquakes': {
+      const p = decision.params || {};
+      const days = Math.min(Math.max(1, p.days || 7), 30);
+      const minMag = p.min_magnitude ?? 4.0;
+      const limit = Math.min(Math.max(1, p.limit || 20), 50);
+      const chartType = p.chartType || 'bar';
+      const metric = p.metric || 'mag';
+
+      try {
+        const startTime = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+        const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&minmagnitude=${minMag}&starttime=${startTime}&limit=${limit}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`USGS API: ${res.status}`);
+        const data = await res.json();
+        const quakes = (data.features || []).slice(0, limit);
+
+        let labels, values, title, datasetLabel, desc;
+        if (metric === 'count_by_magnitude') {
+          // Distribution: bucket by magnitude range
+          const buckets = {};
+          for (const q of quakes) {
+            const mag = Math.floor(q.properties.mag);
+            const key = `M${mag}-${mag + 1}`;
+            buckets[key] = (buckets[key] || 0) + 1;
+          }
+          const sorted = Object.entries(buckets).sort((a, b) => a[0].localeCompare(b[0]));
+          labels = sorted.map(e => e[0]);
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Count';
+          title = p.title || `Earthquake Magnitude Distribution (past ${days}d, M≥${minMag})`;
+          desc = `Distribution of ${quakes.length} earthquakes by magnitude range over past ${days} days.`;
+        } else {
+          labels = quakes.map(q => (q.properties.place || '').replace(/^.* of /, '').slice(0, 25));
+          values = quakes.map(q => q.properties.mag);
+          datasetLabel = 'Magnitude';
+          title = p.title || `Recent Earthquakes — Magnitude (past ${days}d, M≥${minMag})`;
+          desc = `${quakes.length} recent earthquakes (M≥${minMag}) over past ${days} days. Strongest: M${Math.max(...values).toFixed(1)}.`;
+        }
+
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags: ['earthquake', 'usgs', 'geology'], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_earthquakes failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_economy': {
+      const p = decision.params || {};
+      const countries = (p.countries || 'USA;CHN;JPN;DEU;GBR').split(';').map(s => s.trim()).filter(Boolean);
+      const indicator = p.indicator || 'NY.GDP.MKTP.CD';
+      const startYear = p.start_year || 2018;
+      const endYear = p.end_year || 2024;
+      const chartType = p.chartType || 'bar';
+
+      const indicatorNames = {
+        'NY.GDP.MKTP.CD': 'GDP (current US$)',
+        'SP.POP.TOTL': 'Population',
+        'FP.CPI.TOTL.ZG': 'Inflation (%)',
+        'NY.GDP.PCAP.CD': 'GDP per capita (US$)',
+        'SL.UEM.TOTL.ZS': 'Unemployment (%)'
+      };
+      const indicatorLabel = indicatorNames[indicator] || indicator;
+
+      try {
+        const countryParam = countries.join(';');
+        const url = `https://api.worldbank.org/v2/country/${countryParam}/indicator/${indicator}?format=json&per_page=200&date=${startYear}:${endYear}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`World Bank API: ${res.status}`);
+        const json = await res.json();
+        const records = json[1] || [];
+
+        // For line chart: group by country, x-axis = year
+        if (chartType === 'line' || chartType === 'area') {
+          const byCountry = {};
+          for (const r of records) {
+            if (r.value == null) continue;
+            const name = r.country?.value || r.countryiso3code;
+            (byCountry[name] ||= []).push({ year: r.date, value: r.value });
+          }
+          const years = [...new Set(records.map(r => r.date))].sort();
+          const datasets = Object.entries(byCountry).map(([name, pts]) => {
+            const byYear = Object.fromEntries(pts.map(p => [p.year, p.value]));
+            return { label: name, data: years.map(y => byYear[y] ?? null) };
+          });
+          const title = p.title || `${indicatorLabel} (${startYear}–${endYear})`;
+          const chartData = { labels: years, datasets };
+          const finalType = chartType === 'area' ? 'line' : chartType;
+          if (chartType === 'area') datasets.forEach(ds => ds.fill = true);
+          return await saveDataApiChartRaw({ agent, chartType: finalType, title, data: chartData, tags: ['economy', 'world-bank', indicator], description: `${chartType} chart of ${indicatorLabel} for ${Object.keys(byCountry).join(', ')} from ${startYear} to ${endYear}.` });
+        }
+
+        // Bar/pie: latest year per country
+        const latest = {};
+        for (const r of records) {
+          if (r.value == null) continue;
+          const name = r.country?.value || r.countryiso3code;
+          if (!latest[name] || r.date > latest[name].year) {
+            latest[name] = { year: r.date, value: r.value };
+          }
+        }
+        const labels = Object.keys(latest);
+        const values = labels.map(n => latest[n].value);
+        const latestYear = labels.length ? latest[labels[0]].year : endYear;
+        const title = p.title || `${indicatorLabel} by Country (${latestYear})`;
+        const desc = `${chartType} chart of ${indicatorLabel} for ${labels.join(', ')} (${latestYear}).`;
+
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: indicatorLabel, tags: ['economy', 'world-bank', indicator], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_economy failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_weather': {
+      const p = decision.params || {};
+      const lat = p.latitude;
+      const lon = p.longitude;
+      if (lat == null || lon == null) return { ok: false, summary: 'latitude and longitude are required.' };
+      const variable = p.variable || 'temperature_2m';
+      const days = Math.min(Math.max(1, p.days || 7), 16);
+      const locName = p.location_name || `${lat},${lon}`;
+      const chartType = p.chartType || 'line';
+
+      const varLabels = {
+        temperature_2m: 'Temperature (°C)',
+        precipitation: 'Precipitation (mm)',
+        windspeed_10m: 'Wind Speed (km/h)',
+        relative_humidity_2m: 'Relative Humidity (%)'
+      };
+
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${variable}&forecast_days=${days}&timezone=auto`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Open-Meteo API: ${res.status}`);
+        const data = await res.json();
+
+        const times = data.hourly?.time || [];
+        const vals = data.hourly?.[variable] || [];
+        // Downsample to daily averages for cleaner chart
+        const dailyMap = {};
+        for (let i = 0; i < times.length; i++) {
+          const day = times[i].split('T')[0];
+          (dailyMap[day] ||= []).push(vals[i]);
+        }
+        const labels = Object.keys(dailyMap).sort();
+        const values = labels.map(d => {
+          const arr = dailyMap[d];
+          return +(arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(1);
+        });
+
+        const title = p.title || `${varLabels[variable] || variable} — ${locName} (${days}-day forecast)`;
+        const desc = `${chartType} chart of ${days}-day ${variable} forecast for ${locName}. Range: ${Math.min(...values)}–${Math.max(...values)}.`;
+
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: varLabels[variable] || variable, tags: ['weather', 'forecast', locName.toLowerCase()], description: desc, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_weather failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_air_quality': {
+      const p = decision.params || {};
+      const city = p.city;
+      if (!city) return { ok: false, summary: 'city is required.' };
+      const chartType = p.chartType || 'bar';
+      const paramFilter = p.parameter;
+      const limit = Math.min(Math.max(1, p.limit || 10), 30);
+
+      try {
+        const url = `https://api.openaq.org/v2/latest?city=${encodeURIComponent(city)}&limit=${limit}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0', Accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`OpenAQ API: ${res.status}`);
+        const data = await res.json();
+        const results = data.results || [];
+
+        if (results.length === 0) return { ok: false, summary: `No air quality data found for "${city}".` };
+
+        // Aggregate measurements across locations
+        const paramValues = {};
+        for (const loc of results) {
+          for (const m of (loc.measurements || [])) {
+            if (paramFilter && m.parameter !== paramFilter) continue;
+            (paramValues[m.parameter] ||= []).push({ location: loc.location, value: m.value, unit: m.unit });
+          }
+        }
+
+        if (Object.keys(paramValues).length === 0) return { ok: false, summary: `No measurements found for "${city}"${paramFilter ? ` with parameter "${paramFilter}"` : ''}.` };
+
+        // Chart: average value per parameter across all locations
+        const labels = Object.keys(paramValues);
+        const values = labels.map(param => {
+          const arr = paramValues[param];
+          return +(arr.reduce((s, v) => s + v.value, 0) / arr.length).toFixed(2);
+        });
+        const unit = paramValues[labels[0]]?.[0]?.unit || '';
+
+        const title = p.title || `Air Quality — ${city} (${results.length} stations)`;
+        const desc = `${chartType} chart of air quality in ${city}. Parameters: ${labels.join(', ')}. From ${results.length} monitoring stations.`;
+
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: `Average value${unit ? ` (${unit})` : ''}`, tags: ['air-quality', 'openaq', city.toLowerCase()], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_air_quality failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_exchange_rates': {
+      const p = decision.params || {};
+      const base = p.base || 'USD';
+      const targets = (p.targets || 'EUR,GBP,JPY,CNY,CAD,AUD,CHF,KRW').split(',').map(s => s.trim()).filter(Boolean);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://open.er-api.com/v6/latest/${base}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Exchange Rate API: ${res.status}`);
+        const data = await res.json();
+        const rates = data.rates || {};
+
+        const labels = targets.filter(t => rates[t] != null);
+        const values = labels.map(t => rates[t]);
+
+        if (labels.length === 0) return { ok: false, summary: `No exchange rate data for targets: ${targets.join(', ')}` };
+
+        const title = p.title || `Exchange Rates — 1 ${base} in Foreign Currencies`;
+        const desc = `${chartType} chart of exchange rates from ${base} to ${labels.join(', ')}. Date: ${data.time_last_update_utc || 'latest'}.`;
+
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: `1 ${base} =`, tags: ['exchange-rates', 'forex', base.toLowerCase()], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_exchange_rates failed: ${err.message}` };
+      }
+    }
+
+    // ── New Data API chart tools ──
+
+    case 'chart_countries': {
+      const p = decision.params || {};
+      const metric = p.metric || 'population';
+      const limit = Math.min(Math.max(1, p.limit || 15), 50);
+      const chartType = p.chartType || 'bar';
+      const region = p.region;
+
+      try {
+        const url = region
+          ? `https://restcountries.com/v3.1/region/${encodeURIComponent(region)}?fields=name,population,area,gini`
+          : `https://restcountries.com/v3.1/all?fields=name,population,area,gini`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`REST Countries API: ${res.status}`);
+        let countries = await res.json();
+        countries.sort((a, b) => (b[metric] || 0) - (a[metric] || 0));
+        countries = countries.slice(0, limit);
+
+        const labels = countries.map(c => c.name?.common || 'Unknown');
+        const values = countries.map(c => {
+          if (metric === 'gini') return c.gini ? Object.values(c.gini)[0] || 0 : 0;
+          return c[metric] || 0;
+        });
+        const metricLabels = { population: 'Population', area: 'Area (km²)', gini: 'Gini Index' };
+        const title = p.title || `Top ${labels.length} Countries — ${metricLabels[metric] || metric}${region ? ` (${region})` : ''}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['countries', metric], description: `${chartType} chart of ${labels.length} countries by ${metric}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_countries failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_nutrition': {
+      const p = decision.params || {};
+      const query = p.query;
+      if (!query) return { ok: false, summary: 'query is required.' };
+      const metric = p.metric || 'energy_kcal';
+      const limit = Math.min(Math.max(1, p.limit || 10), 25);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&json=1&page_size=${limit}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Open Food Facts API: ${res.status}`);
+        const data = await res.json();
+        const products = (data.products || []).filter(p => p.product_name);
+
+        const nutrientMap = { energy_kcal: 'energy-kcal_100g', fat: 'fat_100g', sugars: 'sugars_100g', proteins: 'proteins_100g', salt: 'salt_100g', fiber: 'fiber_100g' };
+        const field = nutrientMap[metric] || nutrientMap.energy_kcal;
+        const labels = products.map(p => (p.product_name || '').slice(0, 30));
+        const values = products.map(p => parseFloat(p.nutriments?.[field]) || 0);
+        const title = p.title || `${query} — ${metric} per 100g`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metric, tags: ['nutrition', 'food', query], description: `${chartType} chart of ${metric} for ${labels.length} "${query}" products.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_nutrition failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_daylight': {
+      const p = decision.params || {};
+      const locStr = p.locations;
+      if (!locStr) return { ok: false, summary: 'locations is required (e.g. "40.71,-74.01,New York;51.51,-0.13,London").' };
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const locs = locStr.split(';').map(s => { const [lat, lng, ...rest] = s.split(','); return { lat: lat.trim(), lng: lng.trim(), name: rest.join(',').trim() || `${lat},${lng}` }; });
+        const results = await Promise.all(locs.map(async loc => {
+          const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${loc.lat}&lng=${loc.lng}&formatted=0`, { signal: AbortSignal.timeout(10000) });
+          const d = await res.json();
+          const dayLen = d.results?.day_length || 0;
+          const hours = typeof dayLen === 'number' ? +(dayLen / 3600).toFixed(2) : 0;
+          return { name: loc.name, hours };
+        }));
+
+        const labels = results.map(r => r.name);
+        const values = results.map(r => r.hours);
+        const title = p.title || `Day Length Comparison (hours)`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Day Length (hours)', tags: ['daylight', 'sunrise-sunset'], description: `Day length comparison for ${labels.join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_daylight failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_spacex': {
+      const p = decision.params || {};
+      const metric = p.metric || 'launches_per_year';
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch('https://api.spacexdata.com/v4/launches', { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`SpaceX API: ${res.status}`);
+        const launches = await res.json();
+
+        let labels, values, datasetLabel, title, desc;
+        if (metric === 'success_rate') {
+          const byYear = {};
+          for (const l of launches) {
+            const y = new Date(l.date_utc).getFullYear();
+            if (!byYear[y]) byYear[y] = { success: 0, total: 0 };
+            byYear[y].total++;
+            if (l.success) byYear[y].success++;
+          }
+          const years = Object.keys(byYear).sort();
+          labels = years;
+          values = years.map(y => +((byYear[y].success / byYear[y].total) * 100).toFixed(1));
+          datasetLabel = 'Success Rate (%)';
+          title = p.title || 'SpaceX Launch Success Rate by Year';
+          desc = `Success rate from ${years[0]} to ${years[years.length - 1]}.`;
+        } else if (metric === 'by_rocket') {
+          const byRocket = {};
+          for (const l of launches) byRocket[l.rocket] = (byRocket[l.rocket] || 0) + 1;
+          const sorted = Object.entries(byRocket).sort((a, b) => b[1] - a[1]);
+          labels = sorted.map(e => e[0].slice(0, 20));
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Launches';
+          title = p.title || 'SpaceX Launches by Rocket';
+          desc = `Launch count per rocket type.`;
+        } else {
+          const byYear = {};
+          for (const l of launches) {
+            const y = new Date(l.date_utc).getFullYear();
+            byYear[y] = (byYear[y] || 0) + 1;
+          }
+          const years = Object.keys(byYear).sort();
+          labels = years;
+          values = years.map(y => byYear[y]);
+          datasetLabel = 'Launches';
+          title = p.title || 'SpaceX Launches per Year';
+          desc = `Total launches per year from ${years[0]} to ${years[years.length - 1]}.`;
+        }
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags: ['space', 'spacex', 'launches'], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_spacex failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_asteroids': {
+      const p = decision.params || {};
+      const days = Math.min(Math.max(1, p.days || 7), 7);
+      const chartType = p.chartType || 'bar';
+      const metric = p.metric || 'count_per_day';
+
+      try {
+        const start = new Date(); const end = new Date(start.getTime() + days * 86400000);
+        const startStr = start.toISOString().split('T')[0];
+        const endStr = end.toISOString().split('T')[0];
+        const url = `https://api.nasa.gov/neo/rest/v1/feed?start_date=${startStr}&end_date=${endStr}&api_key=DEMO_KEY`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`NASA NEO API: ${res.status}`);
+        const data = await res.json();
+        const neoByDate = data.near_earth_objects || {};
+
+        let labels, values, datasetLabel, title, desc;
+        if (metric === 'diameter') {
+          const allNeos = Object.values(neoByDate).flat().slice(0, 20);
+          labels = allNeos.map(n => (n.name || '').slice(0, 20));
+          values = allNeos.map(n => +(n.estimated_diameter?.kilometers?.estimated_diameter_max || 0).toFixed(3));
+          datasetLabel = 'Max Diameter (km)';
+          title = p.title || `Near-Earth Asteroids — Estimated Diameter`;
+          desc = `Estimated max diameter of ${allNeos.length} near-Earth asteroids.`;
+        } else if (metric === 'velocity') {
+          const allNeos = Object.values(neoByDate).flat().slice(0, 20);
+          labels = allNeos.map(n => (n.name || '').slice(0, 20));
+          values = allNeos.map(n => +(parseFloat(n.close_approach_data?.[0]?.relative_velocity?.kilometers_per_hour) || 0).toFixed(0));
+          datasetLabel = 'Velocity (km/h)';
+          title = p.title || `Near-Earth Asteroids — Velocity`;
+          desc = `Approach velocity of ${allNeos.length} near-Earth asteroids.`;
+        } else {
+          const dates = Object.keys(neoByDate).sort();
+          labels = dates;
+          values = dates.map(d => neoByDate[d].length);
+          datasetLabel = 'Asteroid Count';
+          title = p.title || `Near-Earth Asteroids per Day (${days}d)`;
+          desc = `Count of near-Earth asteroids per day over ${days} days. Total: ${values.reduce((s, v) => s + v, 0)}.`;
+        }
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags: ['space', 'nasa', 'asteroids'], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_asteroids failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_planets': {
+      const p = decision.params || {};
+      const metric = p.metric || 'gravity';
+      const bodyType = p.bodyType || 'Planet';
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch('https://api.le-systeme-solaire.net/rest/bodies/', { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Solar System API: ${res.status}`);
+        const data = await res.json();
+        let bodies = (data.bodies || []).filter(b => b.bodyType === bodyType && b[metric] != null && b[metric] > 0);
+        bodies.sort((a, b) => b[metric] - a[metric]);
+        bodies = bodies.slice(0, 20);
+
+        const labels = bodies.map(b => b.englishName || b.name);
+        const values = bodies.map(b => b[metric]);
+        const metricLabels = { gravity: 'Gravity (m/s²)', density: 'Density (g/cm³)', meanRadius: 'Mean Radius (km)', sideralOrbit: 'Orbital Period (days)', sideralRotation: 'Rotation Period (hours)' };
+        const title = p.title || `${bodyType}s — ${metricLabels[metric] || metric}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['space', 'planets', 'solar-system'], description: `${chartType} chart comparing ${labels.length} ${bodyType.toLowerCase()}s by ${metric}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_planets failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_astronauts': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'pie';
+
+      try {
+        const res = await fetch('http://api.open-notify.org/astros.json', { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`Open Notify API: ${res.status}`);
+        const data = await res.json();
+        const people = data.people || [];
+
+        const byCraft = {};
+        for (const person of people) byCraft[person.craft] = (byCraft[person.craft] || 0) + 1;
+        const labels = Object.keys(byCraft);
+        const values = labels.map(c => byCraft[c]);
+        const title = p.title || `People in Space Right Now (${data.number || people.length} total)`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Astronauts', tags: ['space', 'astronauts', 'ISS'], description: `${people.length} people currently in space across ${labels.length} spacecraft: ${labels.join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_astronauts failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_us_population': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'line';
+      const drilldown = p.drilldown || 'Nation';
+
+      try {
+        const url = `https://datausa.io/api/data?drilldowns=${encodeURIComponent(drilldown)}&measures=Population`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`DataUSA API: ${res.status}`);
+        const json = await res.json();
+        let records = json.data || [];
+
+        if (drilldown === 'Nation') {
+          records.sort((a, b) => a.Year - b.Year);
+          const labels = records.map(r => String(r.Year));
+          const values = records.map(r => r.Population);
+          const title = p.title || 'US Population Over Time';
+          return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: 'Population', tags: ['population', 'usa', 'demographics'], description: `US population trend from ${labels[0]} to ${labels[labels.length - 1]}.`, fillArea: chartType === 'area' });
+        } else {
+          records.sort((a, b) => b.Population - a.Population);
+          records = records.slice(0, 20);
+          const labels = records.map(r => r.State || r[drilldown]);
+          const values = records.map(r => r.Population);
+          const title = p.title || `US Population by ${drilldown}`;
+          return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Population', tags: ['population', 'usa', drilldown.toLowerCase()], description: `Top ${labels.length} by population.` });
+        }
+      } catch (err) {
+        return { ok: false, summary: `chart_us_population failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_genderize': {
+      const p = decision.params || {};
+      if (!p.names) return { ok: false, summary: 'names is required (comma-separated).' };
+      const names = p.names.split(',').map(s => s.trim()).filter(Boolean).slice(0, 10);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const params = names.map((n, i) => `name[${i}]=${encodeURIComponent(n)}`).join('&');
+        const res = await fetch(`https://api.genderize.io?${params}`, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`Genderize API: ${res.status}`);
+        const data = await res.json();
+        const results = Array.isArray(data) ? data : [data];
+
+        const labels = results.map(r => r.name);
+        const values = results.map(r => +(r.probability * 100).toFixed(1));
+        const title = p.title || `Gender Prediction Probability`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Probability (%)', tags: ['demographics', 'gender', 'names'], description: `Gender prediction for ${labels.join(', ')}. Predicted genders: ${results.map(r => `${r.name}=${r.gender}`).join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_genderize failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_nationalize': {
+      const p = decision.params || {};
+      if (!p.name) return { ok: false, summary: 'name is required.' };
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch(`https://api.nationalize.io?name=${encodeURIComponent(p.name)}`, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`Nationalize API: ${res.status}`);
+        const data = await res.json();
+        const countries = data.country || [];
+        if (countries.length === 0) return { ok: false, summary: `No nationality data for "${p.name}".` };
+
+        const labels = countries.map(c => c.country_id);
+        const values = countries.map(c => +(c.probability * 100).toFixed(1));
+        const title = p.title || `Nationality Prediction for "${p.name}"`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Probability (%)', tags: ['demographics', 'nationality', 'names'], description: `Nationality prediction for "${p.name}": ${labels.map((l, i) => `${l}: ${values[i]}%`).join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_nationalize failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_agify': {
+      const p = decision.params || {};
+      if (!p.names) return { ok: false, summary: 'names is required (comma-separated).' };
+      const names = p.names.split(',').map(s => s.trim()).filter(Boolean).slice(0, 10);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const params = names.map((n, i) => `name[${i}]=${encodeURIComponent(n)}`).join('&');
+        const res = await fetch(`https://api.agify.io?${params}`, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`Agify API: ${res.status}`);
+        const data = await res.json();
+        const results = Array.isArray(data) ? data : [data];
+
+        const labels = results.map(r => r.name);
+        const values = results.map(r => r.age || 0);
+        const title = p.title || `Predicted Age by Name`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Predicted Age', tags: ['demographics', 'age', 'names'], description: `Age predictions: ${results.map(r => `${r.name}=${r.age}`).join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_agify failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_covid': {
+      const p = decision.params || {};
+      const metric = p.metric || 'cases';
+      const limit = Math.min(Math.max(1, p.limit || 15), 50);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://disease.sh/v3/covid-19/countries?sort=${metric}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`disease.sh API: ${res.status}`);
+        const countries = (await res.json()).slice(0, limit);
+
+        const labels = countries.map(c => c.country);
+        const values = countries.map(c => c[metric] || 0);
+        const metricLabels = { cases: 'Total Cases', deaths: 'Total Deaths', recovered: 'Recovered', active: 'Active Cases', casesPerOneMillion: 'Cases/Million', deathsPerOneMillion: 'Deaths/Million', tests: 'Total Tests' };
+        const title = p.title || `COVID-19 — Top ${limit} Countries by ${metricLabels[metric] || metric}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['covid', 'health', metric], description: `${chartType} chart of ${metric} for top ${limit} countries.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_covid failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_covid_history': {
+      const p = decision.params || {};
+      const metric = p.metric || 'cases';
+      const days = Math.min(Math.max(7, p.days || 30), 365);
+      const chartType = p.chartType || 'line';
+
+      try {
+        const res = await fetch(`https://disease.sh/v3/covid-19/historical/all?lastdays=${days}`, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`disease.sh API: ${res.status}`);
+        const data = await res.json();
+        const series = data[metric] || {};
+
+        const labels = Object.keys(series);
+        const values = Object.values(series);
+        const title = p.title || `Global COVID-19 ${metric} (${days} days)`;
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: metric, tags: ['covid', 'health', 'time-series'], description: `${days}-day global COVID-19 ${metric} trend.`, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_covid_history failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_carbon_intensity': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'line';
+      const date = p.date || new Date().toISOString().split('T')[0];
+
+      try {
+        const res = await fetch(`https://api.carbonintensity.org.uk/intensity/date/${date}`, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Carbon Intensity API: ${res.status}`);
+        const json = await res.json();
+        const entries = json.data || [];
+
+        const labels = entries.map(e => e.from?.slice(11, 16) || '');
+        const values = entries.map(e => e.intensity?.actual ?? e.intensity?.forecast ?? 0);
+        const title = p.title || `UK Carbon Intensity — ${date} (gCO₂/kWh)`;
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: 'gCO₂/kWh', tags: ['energy', 'carbon', 'uk'], description: `Carbon intensity of UK electricity on ${date}. Range: ${Math.min(...values)}–${Math.max(...values)} gCO₂/kWh.`, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_carbon_intensity failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_energy_mix': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'pie';
+
+      try {
+        const res = await fetch('https://api.carbonintensity.org.uk/generation', { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Carbon Intensity API: ${res.status}`);
+        const json = await res.json();
+        const mix = json.data?.generationmix || [];
+
+        const labels = mix.map(m => m.fuel);
+        const values = mix.map(m => m.perc);
+        const title = p.title || 'UK Electricity Generation Mix (%)';
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Share (%)', tags: ['energy', 'renewables', 'uk', 'electricity'], description: `UK electricity generation breakdown: ${mix.filter(m => m.perc > 0).map(m => `${m.fuel}: ${m.perc}%`).join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_energy_mix failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_air_forecast': {
+      const p = decision.params || {};
+      if (p.latitude == null || p.longitude == null) return { ok: false, summary: 'latitude and longitude are required.' };
+      const pollutant = p.pollutant || 'pm2_5';
+      const chartType = p.chartType || 'line';
+      const locName = p.location_name || `${p.latitude},${p.longitude}`;
+
+      try {
+        const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${p.latitude}&longitude=${p.longitude}&hourly=${pollutant}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Open-Meteo Air Quality API: ${res.status}`);
+        const data = await res.json();
+
+        const times = data.hourly?.time || [];
+        const vals = data.hourly?.[pollutant] || [];
+        // Downsample to daily averages
+        const dailyMap = {};
+        for (let i = 0; i < times.length; i++) {
+          const day = times[i].split('T')[0];
+          (dailyMap[day] ||= []).push(vals[i] ?? 0);
+        }
+        const labels = Object.keys(dailyMap).sort();
+        const values = labels.map(d => +(dailyMap[d].reduce((s, v) => s + v, 0) / dailyMap[d].length).toFixed(1));
+
+        const pollutantLabels = { pm2_5: 'PM2.5 (μg/m³)', pm10: 'PM10 (μg/m³)', ozone: 'Ozone (μg/m³)', nitrogen_dioxide: 'NO₂ (μg/m³)' };
+        const title = p.title || `${pollutantLabels[pollutant] || pollutant} Forecast — ${locName}`;
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: pollutantLabels[pollutant] || pollutant, tags: ['air-quality', 'forecast', locName.toLowerCase()], description: `${pollutant} air quality forecast for ${locName}.`, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_air_forecast failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_ocean_waves': {
+      const p = decision.params || {};
+      if (p.latitude == null || p.longitude == null) return { ok: false, summary: 'latitude and longitude are required.' };
+      const variable = p.variable || 'wave_height';
+      const chartType = p.chartType || 'line';
+      const locName = p.location_name || `${p.latitude},${p.longitude}`;
+
+      try {
+        const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${p.latitude}&longitude=${p.longitude}&hourly=${variable}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Open-Meteo Marine API: ${res.status}`);
+        const data = await res.json();
+
+        const times = data.hourly?.time || [];
+        const vals = data.hourly?.[variable] || [];
+        const dailyMap = {};
+        for (let i = 0; i < times.length; i++) {
+          const day = times[i].split('T')[0];
+          (dailyMap[day] ||= []).push(vals[i] ?? 0);
+        }
+        const labels = Object.keys(dailyMap).sort();
+        const values = labels.map(d => +(dailyMap[d].reduce((s, v) => s + v, 0) / dailyMap[d].length).toFixed(2));
+
+        const varLabels = { wave_height: 'Wave Height (m)', wave_period: 'Wave Period (s)', wave_direction: 'Wave Direction (°)' };
+        const title = p.title || `${varLabels[variable] || variable} — ${locName}`;
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: varLabels[variable] || variable, tags: ['marine', 'ocean', 'waves', locName.toLowerCase()], description: `${variable} forecast for ${locName}.`, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_ocean_waves failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_water_flow': {
+      const p = decision.params || {};
+      if (!p.site) return { ok: false, summary: 'site (USGS site number) is required.' };
+      const chartType = p.chartType || 'line';
+      const siteName = p.site_name || `Site ${p.site}`;
+
+      try {
+        const url = `https://waterservices.usgs.gov/nwis/iv/?format=json&sites=${p.site}&parameterCd=00060&period=P7D`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`USGS Water API: ${res.status}`);
+        const data = await res.json();
+        const ts = data.value?.timeSeries?.[0]?.values?.[0]?.value || [];
+
+        // Downsample to ~one per 6 hours
+        const step = Math.max(1, Math.floor(ts.length / 28));
+        const sampled = ts.filter((_, i) => i % step === 0);
+        const labels = sampled.map(v => v.dateTime?.slice(5, 16).replace('T', ' ') || '');
+        const values = sampled.map(v => parseFloat(v.value) || 0);
+
+        const title = p.title || `Streamflow — ${siteName} (7 days, ft³/s)`;
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: 'Discharge (ft³/s)', tags: ['water', 'usgs', 'hydrology'], description: `7-day streamflow for ${siteName}. Range: ${Math.min(...values)}–${Math.max(...values)} ft³/s.`, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_water_flow failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_coincap': {
+      const p = decision.params || {};
+      const metric = p.metric || 'marketCapUsd';
+      const limit = Math.min(Math.max(1, p.limit || 10), 50);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch(`https://api.coincap.io/v2/assets?limit=${limit}`, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`CoinCap API: ${res.status}`);
+        const data = await res.json();
+        const assets = data.data || [];
+
+        const labels = assets.map(a => a.symbol);
+        const values = assets.map(a => parseFloat(a[metric]) || 0);
+        const metricLabels = { priceUsd: 'Price (USD)', marketCapUsd: 'Market Cap (USD)', volumeUsd24Hr: '24h Volume (USD)', changePercent24Hr: '24h Change (%)' };
+        const title = p.title || `Top ${limit} Crypto — ${metricLabels[metric] || metric}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['crypto', 'coincap', metric], description: `${chartType} chart of top ${limit} cryptocurrencies by ${metric}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_coincap failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_crypto_history': {
+      const p = decision.params || {};
+      const coin = p.coin || 'bitcoin';
+      const interval = p.interval || 'd1';
+      const days = Math.min(Math.max(1, p.days || 30), 365);
+      const chartType = p.chartType || 'line';
+
+      try {
+        const start = Date.now() - days * 86400000;
+        const end = Date.now();
+        const url = `https://api.coincap.io/v2/assets/${coin}/history?interval=${interval}&start=${start}&end=${end}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`CoinCap API: ${res.status}`);
+        const data = await res.json();
+        const points = data.data || [];
+
+        const labels = points.map(p => p.date?.slice(0, 10) || '');
+        const values = points.map(p => +(parseFloat(p.priceUsd) || 0).toFixed(2));
+        const title = p.title || `${coin.charAt(0).toUpperCase() + coin.slice(1)} Price History (${days}d)`;
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: 'Price (USD)', tags: ['crypto', 'coincap', coin, 'time-series'], description: `${days}-day price history for ${coin}.`, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_crypto_history failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_frankfurter': {
+      const p = decision.params || {};
+      const base = p.base || 'USD';
+      const targets = (p.targets || 'EUR,GBP,JPY,CNY,CAD,AUD,CHF,KRW').split(',').map(s => s.trim()).filter(Boolean);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://api.frankfurter.app/latest?from=${base}&to=${targets.join(',')}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Frankfurter API: ${res.status}`);
+        const data = await res.json();
+        const rates = data.rates || {};
+
+        const labels = Object.keys(rates);
+        const values = labels.map(k => rates[k]);
+        const title = p.title || `ECB Exchange Rates — 1 ${base}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: `1 ${base} =`, tags: ['forex', 'ecb', base.toLowerCase()], description: `ECB exchange rates from ${base} to ${labels.join(', ')} as of ${data.date}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_frankfurter failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_forex_history': {
+      const p = decision.params || {};
+      const base = p.base || 'USD';
+      const targets = (p.targets || 'EUR,GBP,JPY').split(',').map(s => s.trim()).filter(Boolean);
+      const days = Math.min(Math.max(7, p.days || 90), 365);
+      const chartType = p.chartType || 'line';
+
+      try {
+        const end = new Date().toISOString().split('T')[0];
+        const start = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+        const url = `https://api.frankfurter.app/${start}..${end}?from=${base}&to=${targets.join(',')}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Frankfurter API: ${res.status}`);
+        const data = await res.json();
+        const ratesByDate = data.rates || {};
+
+        const dates = Object.keys(ratesByDate).sort();
+        const datasets = targets.map(t => ({
+          label: t,
+          data: dates.map(d => ratesByDate[d]?.[t] ?? null)
+        }));
+        const title = p.title || `${base} Exchange Rate Trends (${days}d)`;
+        return await saveDataApiChartRaw({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, data: { labels: dates, datasets }, tags: ['forex', 'ecb', 'time-series'], description: `${days}-day ${base} exchange rate trends for ${targets.join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_forex_history failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_bike_sharing': {
+      const p = decision.params || {};
+      const metric = p.metric || 'networks_per_country';
+      const limit = Math.min(Math.max(1, p.limit || 15), 30);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch('https://api.citybik.es/v2/networks', { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`CityBikes API: ${res.status}`);
+        const data = await res.json();
+        const networks = data.networks || [];
+
+        let labels, values, datasetLabel, title, desc;
+        if (metric === 'top_networks') {
+          const top = networks.filter(n => n.stations_count).sort((a, b) => (b.stations_count || 0) - (a.stations_count || 0)).slice(0, limit);
+          labels = top.map(n => `${n.name} (${n.location?.city || ''})`).map(s => s.slice(0, 30));
+          values = top.map(n => n.stations_count || 0);
+          datasetLabel = 'Stations';
+          title = p.title || `Top ${limit} Bike-Sharing Networks by Stations`;
+          desc = `Largest bike-sharing networks worldwide.`;
+        } else {
+          const byCountry = {};
+          for (const n of networks) {
+            const c = n.location?.country || 'Unknown';
+            byCountry[c] = (byCountry[c] || 0) + 1;
+          }
+          const sorted = Object.entries(byCountry).sort((a, b) => b[1] - a[1]).slice(0, limit);
+          labels = sorted.map(e => e[0]);
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Networks';
+          title = p.title || `Bike-Sharing Networks by Country`;
+          desc = `${networks.length} total networks across ${Object.keys(byCountry).length} countries.`;
+        }
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags: ['transport', 'bikes', 'urban'], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_bike_sharing failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_f1': {
+      const p = decision.params || {};
+      const season = p.season || 'current';
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://api.jolpi.ca/ergast/f1/${season}/driverStandings.json`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Ergast F1 API: ${res.status}`);
+        const data = await res.json();
+        const standings = data.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
+
+        const labels = standings.map(s => `${s.Driver?.givenName?.[0] || ''}. ${s.Driver?.familyName || ''}`);
+        const values = standings.map(s => parseFloat(s.points) || 0);
+        const seasonLabel = data.MRData?.StandingsTable?.StandingsLists?.[0]?.season || season;
+        const title = p.title || `F1 ${seasonLabel} Driver Standings (Points)`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Points', tags: ['sports', 'f1', 'motorsport'], description: `F1 ${seasonLabel} driver standings. Leader: ${labels[0]} (${values[0]} pts).` });
+      } catch (err) {
+        return { ok: false, summary: `chart_f1 failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_github_events': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'pie';
+
+      try {
+        const res = await fetch('https://api.github.com/events', { headers: { 'User-Agent': 'SoupPlatform/1.0', Accept: 'application/vnd.github.v3+json' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
+        const events = await res.json();
+
+        const byType = {};
+        for (const e of events) byType[e.type] = (byType[e.type] || 0) + 1;
+        const sorted = Object.entries(byType).sort((a, b) => b[1] - a[1]);
+        const labels = sorted.map(e => e[0].replace('Event', ''));
+        const values = sorted.map(e => e[1]);
+        const title = p.title || `GitHub Public Events by Type (last ${events.length})`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Count', tags: ['technology', 'github', 'open-source'], description: `Distribution of ${events.length} recent GitHub events.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_github_events failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_stackoverflow': {
+      const p = decision.params || {};
+      const limit = Math.min(Math.max(1, p.limit || 20), 50);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://api.stackexchange.com/2.3/tags?order=desc&sort=popular&site=stackoverflow&pagesize=${limit}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0', 'Accept-Encoding': 'gzip' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`StackExchange API: ${res.status}`);
+        const data = await res.json();
+        const tags = data.items || [];
+
+        const labels = tags.map(t => t.name);
+        const values = tags.map(t => t.count);
+        const title = p.title || `Top ${limit} StackOverflow Tags (Questions)`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Questions', tags: ['technology', 'stackoverflow', 'programming'], description: `Top ${labels.length} StackOverflow tags by question count.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_stackoverflow failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_wikipedia': {
+      const p = decision.params || {};
+      if (!p.article) return { ok: false, summary: 'article is required (e.g. "Artificial_intelligence").' };
+      const days = Math.min(Math.max(1, p.days || 30), 90);
+      const chartType = p.chartType || 'line';
+
+      try {
+        const end = new Date();
+        const start = new Date(end.getTime() - days * 86400000);
+        const fmt = d => d.toISOString().slice(0, 10).replace(/-/g, '');
+        const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/${encodeURIComponent(p.article)}/daily/${fmt(start)}/${fmt(end)}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Wikipedia API: ${res.status}`);
+        const data = await res.json();
+        const items = data.items || [];
+
+        const labels = items.map(i => i.timestamp?.slice(0, 8).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'));
+        const values = items.map(i => i.views);
+        const title = p.title || `Wikipedia Pageviews — ${p.article.replace(/_/g, ' ')} (${days}d)`;
+        return await saveDataApiChart({ agent, chartType: chartType === 'area' ? 'line' : chartType, title, labels, values, datasetLabel: 'Daily Views', tags: ['wikipedia', 'pageviews', p.article.toLowerCase()], description: `${days}-day pageview trend for "${p.article}". Total: ${values.reduce((s, v) => s + v, 0)}.`, fillArea: chartType === 'area' });
+      } catch (err) {
+        return { ok: false, summary: `chart_wikipedia failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_itunes': {
+      const p = decision.params || {};
+      if (!p.term) return { ok: false, summary: 'term is required.' };
+      const entity = p.entity || 'album';
+      const metric = p.metric || 'trackCount';
+      const limit = Math.min(Math.max(1, p.limit || 10), 25);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(p.term)}&entity=${entity}&limit=${limit}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`iTunes API: ${res.status}`);
+        const data = await res.json();
+        const results = data.results || [];
+
+        const labels = results.map(r => (r.collectionName || r.trackName || '').slice(0, 30));
+        const values = results.map(r => r[metric] || 0);
+        const metricLabels = { trackCount: 'Track Count', collectionPrice: 'Price (USD)' };
+        const title = p.title || `iTunes Search: "${p.term}" — ${metricLabels[metric] || metric}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['itunes', 'media', entity], description: `${chartType} chart of ${results.length} ${entity}s matching "${p.term}".` });
+      } catch (err) {
+        return { ok: false, summary: `chart_itunes failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_fruits': {
+      const p = decision.params || {};
+      const metric = p.metric || 'calories';
+      const limit = Math.min(Math.max(1, p.limit || 15), 30);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch('https://www.fruityvice.com/api/fruit/all', { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Fruityvice API: ${res.status}`);
+        let fruits = await res.json();
+        fruits.sort((a, b) => (b.nutritions?.[metric] || 0) - (a.nutritions?.[metric] || 0));
+        fruits = fruits.slice(0, limit);
+
+        const labels = fruits.map(f => f.name);
+        const values = fruits.map(f => f.nutritions?.[metric] || 0);
+        const metricLabels = { calories: 'Calories', fat: 'Fat (g)', sugar: 'Sugar (g)', carbohydrates: 'Carbs (g)', protein: 'Protein (g)' };
+        const title = p.title || `Fruit Comparison — ${metricLabels[metric] || metric}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['fruits', 'nutrition', 'food'], description: `${chartType} chart of ${labels.length} fruits by ${metric}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_fruits failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_meals': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'pie';
+
+      try {
+        const catRes = await fetch('https://www.themealdb.com/api/json/v1/1/categories.php', { signal: AbortSignal.timeout(10000) });
+        if (!catRes.ok) throw new Error(`MealDB API: ${catRes.status}`);
+        const catData = await catRes.json();
+        const categories = catData.categories || [];
+
+        // Get meal count per category
+        const counts = await Promise.all(categories.map(async c => {
+          try {
+            const r = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${encodeURIComponent(c.strCategory)}`, { signal: AbortSignal.timeout(8000) });
+            const d = await r.json();
+            return { name: c.strCategory, count: d.meals?.length || 0 };
+          } catch { return { name: c.strCategory, count: 0 }; }
+        }));
+
+        counts.sort((a, b) => b.count - a.count);
+        const labels = counts.map(c => c.name);
+        const values = counts.map(c => c.count);
+        const title = p.title || 'Meals by Category (TheMealDB)';
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Recipes', tags: ['food', 'meals', 'recipes'], description: `${labels.length} meal categories with ${values.reduce((s, v) => s + v, 0)} total recipes.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_meals failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_cocktails': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const catRes = await fetch('https://www.thecocktaildb.com/api/json/v1/1/list.php?c=list', { signal: AbortSignal.timeout(10000) });
+        if (!catRes.ok) throw new Error(`CocktailDB API: ${catRes.status}`);
+        const catData = await catRes.json();
+        const categories = catData.drinks || [];
+
+        const counts = await Promise.all(categories.map(async c => {
+          try {
+            const r = await fetch(`https://www.thecocktaildb.com/api/json/v1/1/filter.php?c=${encodeURIComponent(c.strCategory)}`, { signal: AbortSignal.timeout(8000) });
+            const d = await r.json();
+            return { name: c.strCategory, count: d.drinks?.length || 0 };
+          } catch { return { name: c.strCategory, count: 0 }; }
+        }));
+
+        counts.sort((a, b) => b.count - a.count);
+        const labels = counts.map(c => c.name);
+        const values = counts.map(c => c.count);
+        const title = p.title || 'Cocktails by Category';
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Cocktails', tags: ['drinks', 'cocktails', 'food'], description: `${labels.length} cocktail categories with ${values.reduce((s, v) => s + v, 0)} total drinks.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_cocktails failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_universities': {
+      const p = decision.params || {};
+      const country = p.country;
+      const limit = Math.min(Math.max(1, p.limit || 15), 30);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = country
+          ? `http://universities.hipolabs.com/search?country=${encodeURIComponent(country)}`
+          : 'http://universities.hipolabs.com/search';
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Universities API: ${res.status}`);
+        const unis = await res.json();
+
+        if (country) {
+          // Show first N universities from that country
+          const subset = unis.slice(0, limit);
+          const labels = subset.map(u => (u.name || '').slice(0, 30));
+          const values = subset.map(() => 1);
+          const title = p.title || `Universities in ${country} (showing ${subset.length} of ${unis.length})`;
+          return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Count', tags: ['education', 'universities', country.toLowerCase()], description: `${unis.length} universities found in ${country}.` });
+        } else {
+          const byCountry = {};
+          for (const u of unis) byCountry[u.country] = (byCountry[u.country] || 0) + 1;
+          const sorted = Object.entries(byCountry).sort((a, b) => b[1] - a[1]).slice(0, limit);
+          const labels = sorted.map(e => e[0]);
+          const values = sorted.map(e => e[1]);
+          const title = p.title || `Top ${limit} Countries by University Count`;
+          return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Universities', tags: ['education', 'universities', 'global'], description: `Top ${labels.length} countries by number of universities.` });
+        }
+      } catch (err) {
+        return { ok: false, summary: `chart_universities failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_breweries': {
+      const p = decision.params || {};
+      const metric = p.metric || 'brewery_type';
+      const limit = Math.min(Math.max(1, p.limit || 15), 50);
+      const chartType = p.chartType || 'bar';
+      const state = p.state;
+
+      try {
+        const url = state
+          ? `https://api.openbrewerydb.org/v1/breweries?by_state=${encodeURIComponent(state)}&per_page=200`
+          : `https://api.openbrewerydb.org/v1/breweries?per_page=200`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Open Brewery API: ${res.status}`);
+        const breweries = await res.json();
+
+        const grouped = {};
+        for (const b of breweries) {
+          const key = b[metric] || 'unknown';
+          grouped[key] = (grouped[key] || 0) + 1;
+        }
+        const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, limit);
+        const labels = sorted.map(e => e[0]);
+        const values = sorted.map(e => e[1]);
+        const title = p.title || `Breweries by ${metric}${state ? ` (${state})` : ''}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: 'Breweries', tags: ['breweries', 'drinks', metric], description: `${breweries.length} breweries grouped by ${metric}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_breweries failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_nobel': {
+      const p = decision.params || {};
+      const metric = p.metric || 'category';
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch('https://api.nobelprize.org/2.1/laureates?limit=1000', { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Nobel API: ${res.status}`);
+        const data = await res.json();
+        const laureates = data.laureates || [];
+
+        let labels, values, datasetLabel, title, desc;
+        if (metric === 'decade') {
+          const byDecade = {};
+          for (const l of laureates) {
+            for (const p of (l.nobelPrizes || [])) {
+              const year = parseInt(p.awardYear);
+              if (!year) continue;
+              const decade = `${Math.floor(year / 10) * 10}s`;
+              byDecade[decade] = (byDecade[decade] || 0) + 1;
+            }
+          }
+          const sorted = Object.entries(byDecade).sort((a, b) => a[0].localeCompare(b[0]));
+          labels = sorted.map(e => e[0]);
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Laureates';
+          title = p.title || 'Nobel Laureates by Decade';
+          desc = `Nobel prize laureates per decade.`;
+        } else if (metric === 'country') {
+          const byCountry = {};
+          for (const l of laureates) {
+            const country = l.birth?.place?.country?.en || 'Unknown';
+            byCountry[country] = (byCountry[country] || 0) + 1;
+          }
+          const sorted = Object.entries(byCountry).sort((a, b) => b[1] - a[1]).slice(0, 20);
+          labels = sorted.map(e => e[0]);
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Laureates';
+          title = p.title || 'Nobel Laureates by Birth Country';
+          desc = `Top ${labels.length} countries by Nobel laureates.`;
+        } else {
+          const byCat = {};
+          for (const l of laureates) {
+            for (const pr of (l.nobelPrizes || [])) {
+              const cat = pr.category?.en || 'Unknown';
+              byCat[cat] = (byCat[cat] || 0) + 1;
+            }
+          }
+          const sorted = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+          labels = sorted.map(e => e[0]);
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Prizes';
+          title = p.title || 'Nobel Prizes by Category';
+          desc = `Nobel prizes distributed across ${labels.length} categories.`;
+        }
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags: ['nobel', 'science', 'history'], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_nobel failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_pokemon': {
+      const p = decision.params || {};
+      const pokemonNames = (p.pokemon || 'pikachu,charizard,mewtwo,gengar,snorlax').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const chartType = p.chartType || 'radar';
+
+      try {
+        const pokemonData = await Promise.all(pokemonNames.map(async name => {
+          const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`, { signal: AbortSignal.timeout(10000) });
+          if (!res.ok) return null;
+          return res.json();
+        }));
+        const valid = pokemonData.filter(Boolean);
+        if (valid.length === 0) return { ok: false, summary: 'No valid Pokemon found.' };
+
+        const statNames = valid[0].stats.map(s => s.stat.name);
+        const datasets = valid.map(pk => ({
+          label: pk.name.charAt(0).toUpperCase() + pk.name.slice(1),
+          data: pk.stats.map(s => s.base_stat)
+        }));
+        const title = p.title || `Pokemon Stats Comparison`;
+        return await saveDataApiChartRaw({ agent, chartType, title, data: { labels: statNames, datasets }, tags: ['pokemon', 'gaming', 'stats'], description: `Stat comparison for ${valid.map(v => v.name).join(', ')}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_pokemon failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_trivia': {
+      const p = decision.params || {};
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch('https://opentdb.com/api_count_global.php', { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`Open Trivia API: ${res.status}`);
+        const data = await res.json();
+        const cats = data.categories || {};
+
+        const labels = [];
+        const values = [];
+        for (const [id, info] of Object.entries(cats)) {
+          labels.push(`Cat ${id}`);
+          values.push(info.total_num_of_questions || 0);
+        }
+        // Sort descending
+        const pairs = labels.map((l, i) => [l, values[i]]).sort((a, b) => b[1] - a[1]).slice(0, 20);
+        const title = p.title || 'Trivia Question Count by Category';
+        return await saveDataApiChart({ agent, chartType, title, labels: pairs.map(e => e[0]), values: pairs.map(e => e[1]), datasetLabel: 'Questions', tags: ['trivia', 'education', 'entertainment'], description: `Question counts across ${pairs.length} trivia categories.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_trivia failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_books': {
+      const p = decision.params || {};
+      if (!p.query) return { ok: false, summary: 'query is required.' };
+      const metric = p.metric || 'edition_count';
+      const limit = Math.min(Math.max(1, p.limit || 10), 25);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(p.query)}&limit=${limit}`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Open Library API: ${res.status}`);
+        const data = await res.json();
+        const docs = (data.docs || []).filter(d => d.title && d[metric]);
+
+        docs.sort((a, b) => (b[metric] || 0) - (a[metric] || 0));
+        const books = docs.slice(0, limit);
+        const labels = books.map(b => (b.title || '').slice(0, 30));
+        const values = books.map(b => b[metric] || 0);
+        const metricLabels = { edition_count: 'Editions', first_publish_year: 'First Published', number_of_pages_median: 'Pages (median)' };
+        const title = p.title || `Books: "${p.query}" — ${metricLabels[metric] || metric}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['books', 'literature', p.query.toLowerCase()], description: `${chartType} chart of ${books.length} books matching "${p.query}" by ${metric}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_books failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_anime': {
+      const p = decision.params || {};
+      const metric = p.metric || 'score';
+      const limit = Math.min(Math.max(1, p.limit || 15), 25);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch(`https://api.jikan.moe/v4/top/anime?limit=${limit}`, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Jikan API: ${res.status}`);
+        const data = await res.json();
+        const anime = data.data || [];
+
+        const labels = anime.map(a => (a.title || '').slice(0, 25));
+        const values = anime.map(a => a[metric] || 0);
+        const metricLabels = { score: 'Score', members: 'Members', episodes: 'Episodes', favorites: 'Favorites' };
+        const title = p.title || `Top Anime — ${metricLabels[metric] || metric}`;
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel: metricLabels[metric] || metric, tags: ['anime', 'entertainment', 'media'], description: `Top ${labels.length} anime by ${metric}.` });
+      } catch (err) {
+        return { ok: false, summary: `chart_anime failed: ${err.message}` };
+      }
+    }
+
+    case 'chart_tvshows': {
+      const p = decision.params || {};
+      const metric = p.metric || 'rating';
+      const limit = Math.min(Math.max(1, p.limit || 20), 50);
+      const chartType = p.chartType || 'bar';
+
+      try {
+        const res = await fetch('https://api.tvmaze.com/shows', { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`TVMaze API: ${res.status}`);
+        const shows = await res.json();
+
+        let labels, values, datasetLabel, title, desc;
+        if (metric === 'by_genre') {
+          const byGenre = {};
+          for (const s of shows) for (const g of (s.genres || [])) byGenre[g] = (byGenre[g] || 0) + 1;
+          const sorted = Object.entries(byGenre).sort((a, b) => b[1] - a[1]).slice(0, limit);
+          labels = sorted.map(e => e[0]);
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Shows';
+          title = p.title || 'TV Shows by Genre';
+          desc = `Distribution of ${shows.length} shows across genres.`;
+        } else if (metric === 'by_status') {
+          const byStatus = {};
+          for (const s of shows) byStatus[s.status || 'Unknown'] = (byStatus[s.status || 'Unknown'] || 0) + 1;
+          const sorted = Object.entries(byStatus).sort((a, b) => b[1] - a[1]);
+          labels = sorted.map(e => e[0]);
+          values = sorted.map(e => e[1]);
+          datasetLabel = 'Shows';
+          title = p.title || 'TV Shows by Status';
+          desc = `Status distribution of ${shows.length} shows.`;
+        } else if (metric === 'runtime') {
+          const withRuntime = shows.filter(s => s.runtime && s.name).sort((a, b) => b.runtime - a.runtime).slice(0, limit);
+          labels = withRuntime.map(s => (s.name || '').slice(0, 25));
+          values = withRuntime.map(s => s.runtime);
+          datasetLabel = 'Runtime (min)';
+          title = p.title || `TV Shows — Runtime`;
+          desc = `Top ${labels.length} shows by runtime.`;
+        } else {
+          const withRating = shows.filter(s => s.rating?.average && s.name).sort((a, b) => (b.rating?.average || 0) - (a.rating?.average || 0)).slice(0, limit);
+          labels = withRating.map(s => (s.name || '').slice(0, 25));
+          values = withRating.map(s => s.rating?.average || 0);
+          datasetLabel = 'Rating';
+          title = p.title || `Top TV Shows by Rating`;
+          desc = `Top ${labels.length} rated TV shows.`;
+        }
+        return await saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags: ['tv', 'entertainment', 'media'], description: desc });
+      } catch (err) {
+        return { ok: false, summary: `chart_tvshows failed: ${err.message}` };
       }
     }
 
@@ -1667,7 +3646,6 @@ export async function executeAgentRun(agent) {
   const phaseMaxSteps = {
     browse:          clamp(Number(phaseMaxStepsCfg.browse          ?? DEFAULT_PHASE_MAX_STEPS.browse),          1, 50),
     external_search: clamp(Number(phaseMaxStepsCfg.external_search ?? DEFAULT_PHASE_MAX_STEPS.external_search), 1, 50),
-    self_research:   clamp(Number(phaseMaxStepsCfg.self_research   ?? DEFAULT_PHASE_MAX_STEPS.self_research),   1, 50),
     create:          clamp(Number(phaseMaxStepsCfg.create          ?? DEFAULT_PHASE_MAX_STEPS.create),          1, 50)
   };
 
@@ -1679,6 +3657,7 @@ export async function executeAgentRun(agent) {
     runId: `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     startedAt: new Date().toISOString(),
     _agentId: agent.id,
+    _agent: agent,
     steps: [],
     workingSet: {
       viewedContentIds: new Set(),
@@ -1701,14 +3680,14 @@ export async function executeAgentRun(agent) {
   let totalSteps = 0;
   const runTokens = { input: 0, output: 0 };
 
-  console.log(`[${agent.name}] Starting run ${runState.runId} with model ${getModelForAgent(agent)} (intelligence: ${agent.intelligenceLevel || 'mediocre'})`);
+  console.log(`[${agent.name}] Starting run ${runState.runId} with model ${getModelForAgent(agent)} (intelligence: ${agent.intelligenceLevel || 'dumb'})`);
 
   for (const phase of PHASES) {
     runState.workingSet.phase = phase;
     const maxPhaseSteps = phaseMaxSteps[phase];
     console.log(`[${agent.name}] Entering phase: ${phase} (max ${maxPhaseSteps} steps)`);
 
-    // Discover MCP tools before external_search phase
+    // Discover MCP tools and data API chart tools before external_search phase
     if (phase === 'external_search') {
       const mcpServers = agentStorage.readMcpServers(agent.id);
       const mcpTools = [];
@@ -1726,6 +3705,7 @@ export async function executeAgentRun(agent) {
       if (mcpTools.length > 0) {
         console.log(`[${agent.name}] Discovered ${mcpTools.length} MCP tools from ${mcpServers.length} server(s)`);
       }
+
     }
 
     let retries = 0;
@@ -1741,7 +3721,7 @@ export async function executeAgentRun(agent) {
         retries += 1;
         if (retries >= MAX_RETRIES) break;
         // Record the error so LLM sees it in context
-        runState.steps.push({
+        const errorStep = {
           stepIndex: totalSteps + 1,
           phase,
           action: 'error',
@@ -1750,7 +3730,8 @@ export async function executeAgentRun(agent) {
           decisionSource: 'system',
           result: { summary: `Error: ${err.message}. Please try again with a valid action for this phase.`, ok: false },
           at: new Date().toISOString()
-        });
+        };
+        runState.steps.push(errorStep);
         totalSteps += 1;
         continue;
       }
@@ -1783,7 +3764,7 @@ export async function executeAgentRun(agent) {
         const invalidAction = rawLlm.action || 'unknown';
         const validTools = [...getToolNamesForPhase(phase), ...mcpToolsForValidation.map(t => t.name)].join(', ');
         const errorDetail = validation.errors.join('; ');
-        runState.steps.push({
+        const validationStep = {
           stepIndex: totalSteps + 1,
           phase,
           action: invalidAction,
@@ -1792,7 +3773,8 @@ export async function executeAgentRun(agent) {
           decisionSource: 'system',
           result: { summary: `Validation error: ${errorDetail}. Valid actions for ${phase} phase: ${validTools}`, ok: false },
           at: new Date().toISOString()
-        });
+        };
+        runState.steps.push(validationStep);
         totalSteps += 1;
         continue;
       }
@@ -1808,7 +3790,7 @@ export async function executeAgentRun(agent) {
       runState.workingSet.lastActionResult = actionResult;
 
       totalSteps += 1;
-      runState.steps.push({
+      const llmStep = {
         stepIndex: totalSteps,
         phase,
         action: decision.action,
@@ -1818,15 +3800,19 @@ export async function executeAgentRun(agent) {
         tokenUsage: stepTokens,
         result: actionResult,
         at: new Date().toISOString()
-      });
+      };
+      runState.steps.push(llmStep);
 
       if (actionResult.stop) {
         break; // end current phase, move to next
       }
 
-      // Enforce one publish per run — stop create phase after first publish
+      // Stop create phase when agent has published enough posts for this run
       if (phase === 'create' && decision.action === 'publish_post' && actionResult.ok) {
-        break;
+        const maxPosts = Math.max(1, Number(agent.runConfig?.postsPerRun) || 1);
+        if (runState.workingSet.createdContentIds.length >= maxPosts) {
+          break;
+        }
       }
     }
 
@@ -1838,7 +3824,7 @@ export async function executeAgentRun(agent) {
       const autoResult = await executeAction(agent, autoDecision, runState);
       runState.workingSet.lastActionResult = autoResult;
       totalSteps += 1;
-      runState.steps.push({
+      const autoStep = {
         stepIndex: totalSteps,
         phase,
         action: 'publish_post',
@@ -1847,7 +3833,8 @@ export async function executeAgentRun(agent) {
         decisionSource: 'auto',
         result: autoResult,
         at: new Date().toISOString()
-      });
+      };
+      runState.steps.push(autoStep);
     }
   }
 

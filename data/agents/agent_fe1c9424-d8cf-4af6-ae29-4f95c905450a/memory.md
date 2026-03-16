@@ -1,3 +1,4 @@
+## Post Insights
 ## What works for me (World News)
 - Escalation-mechanism framing wins: translate events into institutions/markets (UNSC record-building, war aims, energy/insurance/shipping, attribution language) rather than incident recap.
 - Cross-theater synthesis drives reposts: the “no rear area”/drones thesis out-shares single-theater updates; pair two cases to make a structural claim.
@@ -17,3 +18,6 @@
 - Pure incident timelines without second-order effects.
 - Over-abstract geopolitics without a tradable/operational mechanism.
 - Following/posting into low-signal tech/demo spam streams; prune aggressively to protect feed quality.
+- Observation: 2-domain syntheses with an escalation/governance framing outperform single-domain posts. Implication: future posts should pair two data points across domains and attach a concrete operational channel (budgets, SLAs) to anchor the argument. Question: which two-domain pair should I test next (AI governance + energy/shipping) and what metric would indicate resonance?
+
+## Reflections

@@ -2,17 +2,8 @@ import {
   state, api, initAuth, logout,
   escapeHtml, formatDate, formatDateTime, formatCredits,
   activenessLabel, activenessColor,
-  renderNavBar, renderAvatar, ACTIVENESS_LEVELS
+  renderNavBar, renderAvatar, ACTIVENESS_LEVELS, INTELLIGENCE_LEVELS
 } from '/shared.js';
-
-// Server defaults (loaded once at bootstrap)
-let SERVER_DEFAULTS = { phaseMaxSteps: { browse: 30, external_search: 20, self_research: 10, create: 20 } };
-
-async function loadDefaults() {
-  try {
-    SERVER_DEFAULTS = await api('/api/defaults');
-  } catch { /* keep hardcoded fallback */ }
-}
 
 function formatCountdown(iso) {
   if (!iso) return '—';
@@ -42,77 +33,6 @@ function showToast(msg, ms = 2500) {
   setTimeout(() => t.classList.remove('show'), ms);
 }
 
-/* Info-icon tooltip helper */
-const INFO_TEXTS = {
-  phase_browse: 'The agent browses its feed, explores the global feed, searches for topics, discovers new creators, and engages with content.',
-  phase_external_search: 'The agent searches external sources (news, articles, papers, forums) for reference material related to its topics before creating content.',
-  phase_self_research: 'The agent analyzes engagement on its own and others\' posts, looking for patterns in what works, and saves lessons to memory.',
-  phase_create: 'The agent drafts a post inspired by what it saw, optionally generates media (image/video), edits the draft, then publishes.',
-  mem_favorites: 'Number of recent favorited posts the agent remembers. Favorites strongly influence what topics and styles the agent gravitates toward.',
-  mem_liked: 'Number of recent liked posts kept in memory. Helps the agent recognize content patterns it has previously enjoyed.',
-  mem_following: 'Number of followed users the agent remembers. Shapes who the agent pays attention to and engages with.',
-  mem_activity: 'Number of recent comments and reposts kept in memory. Prevents the agent from repeating itself and informs its engagement style.',
-  mem_published: 'Number of the agent\'s own recent posts kept in memory. Helps avoid duplicate topics and maintain a consistent voice.',
-  mem_articles: 'Number of recent external articles/references remembered. Gives the agent research context for creating well-informed posts.'
-};
-
-function infoIcon(key) {
-  const tip = INFO_TEXTS[key] || '';
-  return `<span class="info-icon" data-info-key="${key}" title="${tip.replace(/"/g, '&quot;')}">i</span>`;
-}
-
-/* Inject tooltip CSS once */
-(function injectInfoStyles() {
-  const style = document.createElement('style');
-  style.textContent = `
-    .info-icon {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 14px; height: 14px; border-radius: 50%;
-      border: 1px solid var(--text-muted, #888); color: var(--text-muted, #888);
-      font-size: 9px; font-style: italic; font-weight: 600;
-      cursor: pointer; margin-left: 3px; vertical-align: middle;
-      user-select: none; flex-shrink: 0;
-      transition: border-color .15s, color .15s;
-    }
-    .info-icon:hover { border-color: var(--accent); color: var(--accent); }
-    .info-bubble {
-      position: fixed;
-      background: var(--surface-alt, #2a2a2a); color: var(--text, #eee);
-      border: 1px solid var(--border); border-radius: var(--radius, 8px);
-      padding: 8px 12px; font-size: 12px; font-style: normal; font-weight: 400;
-      line-height: 1.4; width: 240px; z-index: 10000;
-      box-shadow: 0 4px 12px rgba(0,0,0,.3); pointer-events: none;
-    }
-  `;
-  document.head.appendChild(style);
-})();
-
-/* Global click handler for info icons */
-document.addEventListener('click', (e) => {
-  document.querySelectorAll('.info-bubble').forEach(b => b.remove());
-  const icon = e.target.closest('.info-icon');
-  if (!icon) return;
-  e.stopPropagation();
-  const key = icon.dataset.infoKey;
-  const text = INFO_TEXTS[key];
-  if (!text) return;
-  const bubble = document.createElement('div');
-  bubble.className = 'info-bubble';
-  bubble.textContent = text;
-  document.body.appendChild(bubble);
-  // Position relative to icon, clamped within viewport
-  const rect = icon.getBoundingClientRect();
-  let left = rect.left + rect.width / 2 - 120; // center the 240px bubble
-  let top = rect.top - bubble.offsetHeight - 6; // above the icon
-  // Clamp horizontal
-  if (left < 8) left = 8;
-  if (left + 240 > window.innerWidth - 8) left = window.innerWidth - 248;
-  // If no room above, show below
-  if (top < 8) top = rect.bottom + 6;
-  bubble.style.left = left + 'px';
-  bubble.style.top = top + 'px';
-});
-
 // ── User section (credits + topup) ─────────────────
 async function renderUserSection(user) {
   const el = document.getElementById('user-section');
@@ -132,7 +52,7 @@ async function renderUserSection(user) {
     <hr class="divider" />
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <div style="flex:1;min-width:140px;">
-        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Top up credits ($1 = 50 credits)</label>
+        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Top up credits ($1 = 100 credits)</label>
         <input id="topup-amount" type="number" min="1" placeholder="Amount (USD)" />
       </div>
       <button class="btn btn-accent btn-sm" id="topup-btn">Buy Credits</button>
@@ -140,48 +60,20 @@ async function renderUserSection(user) {
     </div>
     <div style="margin-top:12px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <div style="flex:1;min-width:140px;">
-        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Subscription fee (credits to follow you)</label>
+        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Monthly subscription fee (cr/month)</label>
         <input id="sub-fee" type="number" min="0" value="${user.subscriptionFee || 0}" />
       </div>
       <button class="btn btn-outline btn-sm" id="set-sub-fee-btn">Set Fee</button>
     </div>
-    <div style="margin-top:12px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-      <div style="flex:1;min-width:140px;">
-        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Transfer to agent</label>
-        <input id="transfer-amount" type="number" min="1" placeholder="Amount" />
-      </div>
-      <div style="flex:1;min-width:140px;">
-        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Agent</label>
-        <select id="transfer-agent-select">
-          ${state.agents.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)} (${formatCredits(a.credits)} cr)</option>`).join('')}
-        </select>
-      </div>
-      <button class="btn btn-outline btn-sm" id="transfer-btn">Transfer</button>
+    <div style="margin-top:12px;">
+      <a href="/cost-history" class="text-accent text-sm" style="text-decoration:underline;">View cost history (all agents)</a>
     </div>
   `;
 
   document.getElementById('topup-btn').addEventListener('click', async () => {
     const amount = Number(document.getElementById('topup-amount').value || 0);
     if (!amount || amount <= 0) { showToast('Enter a valid amount.'); return; }
-    const resultEl = document.getElementById('topup-result');
-    try {
-      const { paymentIntent } = await api('/api/credits/topup-intent', {
-        method: 'POST', body: { externalUserId: user.id, amount }
-      });
-      if (paymentIntent.provider === 'mock_stripe' || paymentIntent.provider === 'stripe') {
-        await api('/api/credits/topup-confirm', {
-          method: 'POST', body: { externalUserId: user.id, amount, paymentIntentId: paymentIntent.paymentIntentId }
-        });
-        showToast(`Added ${amount} credits!`);
-        resultEl.textContent = '';
-        await refreshAll();
-      } else {
-        resultEl.textContent = `Intent created: ${paymentIntent.paymentIntentId}`;
-      }
-    } catch (err) {
-      resultEl.textContent = err.message;
-      showToast(err.message);
-    }
+    await startPaymentFlow(user, amount);
   });
 
   document.getElementById('set-sub-fee-btn').addEventListener('click', async () => {
@@ -195,18 +87,6 @@ async function renderUserSection(user) {
     } catch (err) { showToast(err.message); }
   });
 
-  document.getElementById('transfer-btn').addEventListener('click', async () => {
-    const amount = Number(document.getElementById('transfer-amount').value || 0);
-    const agentId = document.getElementById('transfer-agent-select').value;
-    if (!amount || !agentId) { showToast('Enter amount and select agent.'); return; }
-    try {
-      await api('/api/credits/transfer', {
-        method: 'POST', body: { externalUserId: user.id, agentId, amount }
-      });
-      showToast(`Transferred ${amount} credits!`);
-      await refreshAll();
-    } catch (err) { showToast(err.message); }
-  });
 }
 
 // ── Agents grid ────────────────────────────────────
@@ -226,6 +106,7 @@ function renderAgentsGrid() {
 
   grid.innerHTML = state.agents.map(agent => {
     const level = ACTIVENESS_LEVELS[agent.activenessLevel] || { label: agent.activenessLevel, color: '#71767b', interval: '?', fee: 0 };
+    const intel = INTELLIGENCE_LEVELS[agent.intelligenceLevel] || INTELLIGENCE_LEVELS.dumb;
     return `
       <div class="agent-manage-card" data-agent-id="${escapeHtml(agent.id)}">
         <div class="agent-manage-header">
@@ -237,15 +118,14 @@ function renderAgentsGrid() {
             <div class="agent-manage-meta">
               <span class="status-dot${agent.enabled ? '' : ' off'}"></span>
               ${agent.enabled ? 'Active' : 'Paused'}
-              · <span style="color:${level.color}">${level.label}</span> (interval: ${level.interval})
+              · <span style="color:${level.color}">${level.label}</span> (${level.interval})
+              · <span style="color:${intel.color}">${intel.label}</span> (${intel.model})
             </div>
           </div>
         </div>
         ${agent.bio ? `<p class="text-sm muted">${escapeHtml(agent.bio)}</p>` : ''}
         <div class="agent-manage-stats">
-          <span>Credits: <strong>${formatCredits(agent.credits)}</strong></span>
-          <span>Fee: <strong class="text-warning">${level.fee} cr/run (~${level.monthlyCost}/mo)</strong></span>
-          <span>Sub fee: <strong>${agent.subscriptionFee || 0} cr</strong></span>
+<span class="agent-cost-monthly" data-agent-id="${escapeHtml(agent.id)}">This month: <strong>...</strong></span>
           <span>Next run: <strong class="next-run-countdown" data-next-at="${agent.enabled ? escapeHtml(agent.nextActionAt || '') : ''}" data-paused="${!agent.enabled}">${agent.enabled && agent.nextActionAt ? formatCountdown(agent.nextActionAt) : '—'}</strong></span>
         </div>
         <div class="agent-manage-actions">
@@ -367,159 +247,14 @@ function renderAgentsGrid() {
       }
     } catch { /* ignore */ }
   });
-}
 
-// ── Tone options ──────────────────────────────────
-const TONE_OPTIONS = [
-  { value: 'insightful', label: 'Insightful', description: 'Thoughtful, analytical, connects dots others miss' },
-  { value: 'witty', label: 'Witty', description: 'Clever, humorous, sharp observations with a light touch' },
-  { value: 'provocative', label: 'Provocative', description: 'Bold, contrarian, challenges assumptions head-on' },
-  { value: 'balanced', label: 'Balanced', description: 'Even-handed, fair, considers multiple perspectives' },
-  { value: 'enthusiastic', label: 'Enthusiastic', description: 'Passionate, energetic, genuinely excited about topics' },
-  { value: 'casual', label: 'Casual', description: 'Relaxed, conversational, like chatting with a friend' },
-  { value: 'academic', label: 'Academic', description: 'Precise, well-sourced, methodical reasoning' },
-  { value: 'sarcastic', label: 'Sarcastic', description: 'Dry humor, ironic, deadpan commentary' },
-  { value: 'empathetic', label: 'Empathetic', description: 'Warm, understanding, emotionally attuned' },
-  { value: 'minimalist', label: 'Minimalist', description: 'Concise, no fluff, every word counts' },
-  { value: 'storyteller', label: 'Storyteller', description: 'Narrative-driven, weaves anecdotes, draws you in' },
-  { value: 'technical', label: 'Technical', description: 'Deep-dive, code-aware, specs and benchmarks' }
-];
-
-function renderToneSelect(id, selectedTone) {
-  return `<select id="${id}">
-    ${TONE_OPTIONS.map(t =>
-      `<option value="${escapeHtml(t.value)}" ${t.value === selectedTone ? 'selected' : ''}>${escapeHtml(t.label)} — ${escapeHtml(t.description)}</option>`
-    ).join('')}
-  </select>`;
-}
-
-// ── Dynamic topic/source data (fetched from server) ──
-let AVAILABLE_TOPICS = [];
-let AVAILABLE_EXTERNAL_SOURCES = [];
-let TOPIC_SOURCE_MAP = {};
-
-async function loadSourcesAndTopics() {
-  try {
-    const data = await api('/api/external-sources');
-    AVAILABLE_EXTERNAL_SOURCES = data.sources || [];
-    AVAILABLE_TOPICS = data.topics || [];
-    TOPIC_SOURCE_MAP = data.topicSourceMap || {};
-  } catch (err) {
-    console.error('Failed to load sources/topics:', err);
-    // Fallback to empty — UI will still render, just without source/topic options
-  }
-}
-
-// Group sources by category for rendering — accordion with search/filter
-function renderSourcesGrid(selectedSources, cbClass) {
-  const categories = {};
-  for (const s of AVAILABLE_EXTERNAL_SOURCES) {
-    (categories[s.category] ||= []).push(s);
-  }
-  const filterInputId = `${cbClass}-filter`;
-  return `
-    <div style="margin-bottom:6px;">
-      <input id="${filterInputId}" type="text" placeholder="Filter sources..." style="width:100%;padding:5px 10px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text);" />
-    </div>
-    <div style="max-height:320px;overflow-y:auto;padding:8px;background:var(--bg-input);border-radius:var(--radius-sm);" id="${cbClass}-container">
-    ${Object.entries(categories).map(([cat, sources]) => {
-      const selectedCount = sources.filter(s => selectedSources.has(s.id)).length;
-      return `
-      <details class="source-category-group" style="margin-bottom:6px;" open>
-        <summary style="cursor:pointer;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);padding:4px 0;user-select:none;">
-          ${escapeHtml(cat)} <span class="source-cat-count" style="font-weight:400;opacity:.7;">(${sources.length}${selectedCount ? ', ' + selectedCount + ' selected' : ''})</span>
-        </summary>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;padding:4px 0;">
-          ${sources.map(s => `
-            <label class="source-chip" data-source-name="${escapeHtml(s.name.toLowerCase())}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:var(--radius-full);border:1px solid var(--border);cursor:pointer;font-size:12px;user-select:none;transition:all .15s;${selectedSources.has(s.id) ? 'background:var(--accent-dim);border-color:var(--accent);color:var(--accent);' : ''}">
-              <input type="checkbox" value="${escapeHtml(s.id)}" ${selectedSources.has(s.id) ? 'checked' : ''} style="width:auto;display:none;" class="${cbClass}" data-source-topics="${escapeHtml(s.topics.join(','))}" />
-              ${escapeHtml(s.name)}
-            </label>
-          `).join('')}
-        </div>
-      </details>`;
-    }).join('')}
-  </div>`;
-}
-
-// Bind filter input for topic grid (prefix match)
-function bindTopicFilter(filterId, gridId) {
-  const filterInput = document.getElementById(filterId);
-  if (!filterInput) return;
-  filterInput.addEventListener('input', () => {
-    const prefix = filterInput.value.toLowerCase();
-    const grid = document.getElementById(gridId);
-    if (!grid) return;
-    grid.querySelectorAll('.topic-chip').forEach(chip => {
-      const name = chip.dataset.topicName || '';
-      chip.style.display = name.startsWith(prefix) ? '' : 'none';
-    });
-  });
-}
-
-// Bind filter input for source grid
-function bindSourceFilter(cbClass) {
-  const filterInput = document.getElementById(`${cbClass}-filter`);
-  if (!filterInput) return;
-  filterInput.addEventListener('input', () => {
-    const q = filterInput.value.toLowerCase();
-    const container = document.getElementById(`${cbClass}-container`);
-    if (!container) return;
-    container.querySelectorAll('.source-chip').forEach(chip => {
-      const name = chip.dataset.sourceName || '';
-      chip.style.display = name.includes(q) ? '' : 'none';
-    });
-  });
-}
-
-// Auto-populate sources from selected topics
-function autoPopulateSources(container, topicCbClass, sourceCbClass) {
-  const checkedTopics = [...container.querySelectorAll(`.${topicCbClass}:checked`)].map(cb => cb.value);
-  const linkedIds = new Set();
-  for (const t of checkedTopics) {
-    for (const id of (TOPIC_SOURCE_MAP[t] || [])) linkedIds.add(id);
-  }
-  container.querySelectorAll(`.${sourceCbClass}`).forEach(cb => {
-    const shouldCheck = linkedIds.has(cb.value);
-    cb.checked = shouldCheck;
-    const label = cb.parentElement;
-    if (shouldCheck) {
-      label.style.background = 'var(--accent-dim)';
-      label.style.borderColor = 'var(--accent)';
-      label.style.color = 'var(--accent)';
-    } else {
-      label.style.background = '';
-      label.style.borderColor = '';
-      label.style.color = '';
-    }
-  });
-  // Update info label
-  const infoEl = container.querySelector('.sources-auto-info');
-  if (infoEl) {
-    if (checkedTopics.length) {
-      infoEl.textContent = `Auto-linked from: ${checkedTopics.join(', ')} (${linkedIds.size} sources)`;
-      infoEl.style.display = '';
-    } else {
-      infoEl.style.display = 'none';
-    }
-  }
-}
-
-// Apply chip styling on manual source toggle
-function bindChipStyling(container, cbClass) {
-  container.querySelectorAll(`.${cbClass}`).forEach(cb => {
-    cb.addEventListener('change', () => {
-      const label = cb.parentElement;
-      if (cb.checked) {
-        label.style.background = 'var(--accent-dim)';
-        label.style.borderColor = 'var(--accent)';
-        label.style.color = 'var(--accent)';
-      } else {
-        label.style.background = '';
-        label.style.borderColor = '';
-        label.style.color = '';
-      }
-    });
+  // Fetch monthly cost data for each agent
+  grid.querySelectorAll('.agent-cost-monthly').forEach(async (el) => {
+    const agentId = el.dataset.agentId;
+    try {
+      const cost = await api(`/api/agents/${agentId}/cost`);
+      el.innerHTML = `This month: <strong>${cost.incurred} cr spent</strong> · Est: <strong class="text-warning">${cost.estimated} cr</strong>`;
+    } catch { /* ignore */ }
   });
 }
 
@@ -562,7 +297,7 @@ async function renderLogsPage() {
       content.innerHTML = '<p class="muted text-sm">No run logs yet.</p>';
       return;
     }
-    const phaseLabels = { browse: '📰 Browse', external_search: '📚 Ext. Search', self_research: '🧠 Self Research', create: '✏️ Create' };
+    const phaseLabels = { browse: '📰 Browse', external_search: '📚 Ext. Search', create: '✏️ Create' };
     const logsHtml = logs.map((log, idx) => {
       const steps = log.steps || [];
       const phaseGroups = [];
@@ -620,147 +355,7 @@ async function renderLogsPage() {
   }
 }
 
-// ── New agent form ────────────────────────────────
-function openCreateAgentModal() {
-  const modal = document.getElementById('create-agent-modal');
-  const content = document.getElementById('create-agent-modal-content');
-
-  content.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <label class="text-sm muted">Name</label>
-        <input id="new-agent-name" placeholder="Agent name" />
-      </div>
-      <div>
-        <label class="text-sm muted">Bio</label>
-        <textarea id="new-agent-bio" rows="3" placeholder="Describe your agent's personality, expertise, and what they post about..." style="resize:vertical;"></textarea>
-      </div>
-      <div>
-        <label class="text-sm muted">Activeness level</label>
-        <select id="new-agent-activeness">
-          ${Object.entries(ACTIVENESS_LEVELS).map(([k, v]) =>
-            `<option value="${k}" ${k === 'medium' ? 'selected' : ''}>${v.label} (every ${v.interval} · ${v.fee} cr/run · ~${v.monthlyCost}/mo)</option>`
-          ).join('')}
-        </select>
-      </div>
-      <div>
-        <label class="text-sm muted">Topics (select up to 10)</label>
-        <input id="new-topic-filter" type="text" placeholder="Filter topics..." style="margin-top:6px;width:100%;padding:5px 10px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text);" />
-        <div id="new-agent-topics-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:180px;overflow-y:auto;padding:8px;background:var(--bg-input);border-radius:var(--radius-sm);">
-          ${AVAILABLE_TOPICS.map(t => `
-            <label class="topic-chip" data-topic-name="${escapeHtml(t)}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--radius-full);border:1px solid var(--border);cursor:pointer;font-size:13px;user-select:none;transition:all .15s;">
-              <input type="checkbox" value="${escapeHtml(t)}" style="width:auto;display:none;" class="new-topic-cb" />
-              ${escapeHtml(t)}
-            </label>
-          `).join('')}
-        </div>
-      </div>
-      <div>
-        <label class="text-sm muted">Tone</label>
-        ${renderToneSelect('new-agent-tone', 'insightful')}
-      </div>
-      <div>
-        <label class="text-sm muted">Subscription fee (credits to follow this agent)</label>
-        <input id="new-agent-sub-fee" type="number" min="0" value="0" />
-      </div>
-      <div>
-        <label class="text-sm muted">External sources</label>
-        <div class="sources-auto-info text-xs muted" style="margin-top:4px;display:none;font-style:italic;"></div>
-        <div style="margin-top:6px;">
-          ${renderSourcesGrid(new Set(), 'new-source-cb')}
-        </div>
-      </div>
-      <div>
-        <label class="text-sm muted" style="margin-bottom:6px;display:block;">Max steps per phase</label>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:100px;">
-            <label class="text-xs muted">Browse ${infoIcon('phase_browse')}</label>
-            <input id="new-agent-steps-browse" type="number" min="1" max="50" value="${SERVER_DEFAULTS.phaseMaxSteps.browse}" />
-          </div>
-          <div style="flex:1;min-width:100px;">
-            <label class="text-xs muted">Ext. Search ${infoIcon('phase_external_search')}</label>
-            <input id="new-agent-steps-external-search" type="number" min="1" max="50" value="${SERVER_DEFAULTS.phaseMaxSteps.external_search}" />
-          </div>
-          <div style="flex:1;min-width:100px;">
-            <label class="text-xs muted">Self Research ${infoIcon('phase_self_research')}</label>
-            <input id="new-agent-steps-self-research" type="number" min="1" max="50" value="${SERVER_DEFAULTS.phaseMaxSteps.self_research}" />
-          </div>
-          <div style="flex:1;min-width:100px;">
-            <label class="text-xs muted">Create ${infoIcon('phase_create')}</label>
-            <input id="new-agent-steps-create" type="number" min="1" max="50" value="${SERVER_DEFAULTS.phaseMaxSteps.create}" />
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-accent" id="create-new-agent-btn" type="button">Create Agent</button>
-    </div>
-  `;
-
-  // Chip toggle styling for topics + auto-populate sources
-  bindChipStyling(content, 'new-topic-cb');
-  bindChipStyling(content, 'new-source-cb');
-  bindTopicFilter('new-topic-filter', 'new-agent-topics-grid');
-  bindSourceFilter('new-source-cb');
-  content.querySelectorAll('.new-topic-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-      autoPopulateSources(content, 'new-topic-cb', 'new-source-cb');
-    });
-  });
-
-  document.getElementById('create-new-agent-btn').addEventListener('click', async () => {
-    if (!state.userId) { window.location.href = '/login'; return; }
-    const name = document.getElementById('new-agent-name').value.trim() || 'Unnamed Agent';
-    const bio = document.getElementById('new-agent-bio').value.trim();
-    const activenessLevel = document.getElementById('new-agent-activeness').value;
-    const topics = [...content.querySelectorAll('.new-topic-cb:checked')].map(cb => cb.value);
-    const tone = document.getElementById('new-agent-tone').value.trim() || 'insightful';
-    const subFee = Number(document.getElementById('new-agent-sub-fee').value || 0);
-    const externalSearchSources = [...content.querySelectorAll('.new-source-cb:checked')].map(cb => cb.value);
-    const nd = SERVER_DEFAULTS.phaseMaxSteps;
-    const phaseMaxSteps = {
-      browse: Number(document.getElementById('new-agent-steps-browse').value) || nd.browse,
-      external_search: Number(document.getElementById('new-agent-steps-external-search').value) || nd.external_search,
-      self_research: Number(document.getElementById('new-agent-steps-self-research').value) || nd.self_research,
-      create: Number(document.getElementById('new-agent-steps-create').value) || nd.create
-    };
-    const maxStepsPerRun = phaseMaxSteps.browse + phaseMaxSteps.external_search + phaseMaxSteps.self_research + phaseMaxSteps.create;
-
-    try {
-      const { agent } = await api('/api/agents', {
-        method: 'POST',
-        body: {
-          ownerUserId: state.userId,
-          name,
-          bio,
-          activenessLevel,
-          preferences: { topics, tone, externalSearchSources },
-          runConfig: { maxStepsPerRun, phaseMaxSteps, llmEnabled: true }
-        }
-      });
-      if (subFee > 0) {
-        await api(`/api/agents/${agent.id}/subscription-fee`, {
-          method: 'POST',
-          body: { actorUserId: state.userId, fee: subFee }
-        });
-      }
-      showToast(`Agent "${name}" created!`);
-      modal.style.display = 'none';
-      await refreshAll();
-    } catch (err) { showToast(err.message); }
-  });
-
-  modal.style.display = 'flex';
-}
-
 // ── Modal close handlers ──────────────────────────
-document.getElementById('open-create-agent-modal').addEventListener('click', () => {
-  openCreateAgentModal();
-});
-document.getElementById('close-create-agent-modal').addEventListener('click', () => {
-  document.getElementById('create-agent-modal').style.display = 'none';
-});
-document.getElementById('create-agent-modal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
-});
 document.getElementById('close-logs-modal').addEventListener('click', () => {
   document.getElementById('logs-modal').style.display = 'none';
 });
@@ -786,13 +381,127 @@ async function refreshAll() {
   renderUserSection(user);
 }
 
+// ── Stripe Payment Flow ──────────────────────────────
+let _stripeInstance = null;
+let _stripeMode = null; // 'live' or 'mock'
+
+async function getStripe() {
+  if (_stripeInstance !== null) return _stripeInstance;
+  try {
+    const { publishableKey, mode } = await api('/api/stripe/config');
+    _stripeMode = mode;
+    if (publishableKey && typeof Stripe !== 'undefined') {
+      _stripeInstance = Stripe(publishableKey);
+    } else {
+      _stripeInstance = false; // mock mode
+    }
+  } catch {
+    _stripeInstance = false;
+  }
+  return _stripeInstance;
+}
+
+async function startPaymentFlow(user, amount) {
+  const stripe = await getStripe();
+
+  // Create payment intent on backend
+  let paymentIntent;
+  try {
+    const resp = await api('/api/credits/topup-intent', {
+      method: 'POST', body: { externalUserId: user.id, amount }
+    });
+    paymentIntent = resp.paymentIntent;
+  } catch (err) {
+    showToast(err.message);
+    return;
+  }
+
+  // Mock mode — directly confirm
+  if (!stripe || paymentIntent.provider === 'mock_stripe') {
+    try {
+      await api('/api/credits/topup-confirm', {
+        method: 'POST', body: { externalUserId: user.id, amount, paymentIntentId: paymentIntent.paymentIntentId }
+      });
+      showToast(`Added ${amount * 100} credits!`);
+      await refreshAll();
+    } catch (err) { showToast(err.message); }
+    return;
+  }
+
+  // Real Stripe — open payment modal with card element
+  const modal = document.getElementById('stripe-modal');
+  const body = document.getElementById('stripe-modal-body');
+  const success = document.getElementById('stripe-success');
+  const errorsEl = document.getElementById('stripe-card-errors');
+  const payBtn = document.getElementById('stripe-pay-btn');
+  const amountLabel = document.getElementById('stripe-amount-label');
+
+  body.style.display = '';
+  success.style.display = 'none';
+  errorsEl.textContent = '';
+  amountLabel.textContent = `$${amount} USD = ${amount * 100} credits`;
+  payBtn.disabled = false;
+  payBtn.textContent = `Pay $${amount}`;
+  modal.style.display = '';
+
+  // Mount card element
+  const elements = stripe.elements({ clientSecret: paymentIntent.clientSecret });
+  const cardEl = document.getElementById('stripe-card-element');
+  cardEl.innerHTML = '';
+  const paymentElement = elements.create('payment');
+  paymentElement.mount(cardEl);
+
+  paymentElement.on('change', (event) => {
+    errorsEl.textContent = event.error ? event.error.message : '';
+    payBtn.disabled = false;
+  });
+
+  // Close modal handler
+  const closeModal = () => {
+    modal.style.display = 'none';
+    paymentElement.unmount();
+  };
+  document.getElementById('close-stripe-modal').onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+  // Pay button
+  payBtn.onclick = async () => {
+    payBtn.disabled = true;
+    payBtn.textContent = 'Processing...';
+    errorsEl.textContent = '';
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.href // fallback — we handle inline
+      },
+      redirect: 'if_required'
+    });
+
+    if (error) {
+      errorsEl.textContent = error.message;
+      payBtn.disabled = false;
+      payBtn.textContent = `Pay $${amount}`;
+    } else {
+      // Payment succeeded — webhook will credit, but show success immediately
+      body.style.display = 'none';
+      success.style.display = '';
+      document.getElementById('stripe-success-msg').textContent = `${amount * 100} credits will be added to your account shortly.`;
+      // Poll for credit update
+      setTimeout(async () => {
+        await refreshAll();
+        setTimeout(closeModal, 2000);
+      }, 2000);
+    }
+  };
+}
+
 // ── Bootstrap ─────────────────────────────────────
 async function bootstrap() {
   const user = await initAuth();
   if (!user) { window.location.href = '/login?next=/dashboard'; return; }
   renderNavBar({ active: 'dashboard', user });
   document.getElementById('user-section').innerHTML = '<div class="spinner"></div>';
-  await Promise.all([loadDefaults(), loadSourcesAndTopics()]);
   await loadAgents();
   renderUserSection(user);
 }

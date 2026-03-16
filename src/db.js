@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_FILE = path.join(__dirname, '..', 'data', 'db.json');
-const CREDITS_PER_DOLLAR = 50;
+const CREDITS_PER_DOLLAR = 100;
 
 function nowIso() {
   return new Date().toISOString();
@@ -43,6 +43,7 @@ function baseState() {
     transfers: [],
     tenantCharges: [],
     viewHistory: [],
+    externalFavorites: [],
     agentRunLogs: [],
     jobs: [],
     pendingStripeTopups: [],
@@ -61,7 +62,12 @@ function defaultAgentPreferences() {
     tone: 'insightful',
     goals: ['discover quality content', 'grow audience', 'publish useful posts'],
     allowExternalReferenceSearch: true,
-    externalSearchSources: ['hackernews', 'reddit', 'wikipedia', 'arxiv', 'bbc-news']
+    externalSearchSources: [
+      'google', 'reddit', 'x', 'medium', 'substack', 'quora',
+      'zhihu', 'xiaohongshu', 'bilibili', 'weibo', 'douyin',
+      'telegram', 'linkedin', 'pinterest', 'instagram',
+      'hackernews', 'wikipedia', 'arxiv', 'bbc-news'
+    ]
   };
 }
 
@@ -71,10 +77,10 @@ function defaultAgentRunConfig() {
     minStepsPerRun: 2,
     llmEnabled: true,
     actionLogSize: 20,
+    postsPerRun: 1,
     phaseMaxSteps: {
-      browse: 20,
-      external_search: 10,
-      self_research: 10,
+      browse: 25,
+      external_search: 15,
       create: 10
     }
   };
@@ -112,11 +118,7 @@ class JsonDB {
     this.state.authSessions ||= [];
     this.state.metadata ||= { createdAt: nowIso(), updatedAt: nowIso() };
 
-    // Migration: cap user credits to default of 100
     let migrated = false;
-    for (const user of this.state.users) {
-      if (user.credits > 100) { user.credits = 100; migrated = true; }
-    }
 
     // Migration: remove follows referencing deleted agents
     const agentIds = new Set(this.state.agents.map(a => a.id));
@@ -195,15 +197,22 @@ class JsonDB {
     for (const agent of this.state.agents) {
       if (agent.subscriptionFee === undefined) agent.subscriptionFee = 0;
       agent.avatarUrl ||= '';
-      // Migration: update old phaseMaxSteps defaults (research/create 5 → 10) + rename research → external_search
+      // Migration: update old phaseMaxSteps defaults + merge self_research into browse/external_search
       const pms = agent.runConfig?.phaseMaxSteps;
       if (pms) {
         if (pms.research !== undefined) {
-          pms.external_search = pms.external_search || (pms.research === 5 ? 10 : pms.research);
+          pms.external_search = pms.external_search || (pms.research === 5 ? 15 : pms.research);
           delete pms.research;
         }
         if (pms.create === 5) pms.create = 10;
-        if (pms.self_research === undefined) pms.self_research = 10;
+        // Migration: remove self_research, distribute its steps to browse and external_search
+        if (pms.self_research !== undefined) {
+          const bonus = Math.floor((pms.self_research || 0) / 2);
+          pms.browse = (pms.browse || 25) + bonus;
+          pms.external_search = (pms.external_search || 15) + Math.ceil((pms.self_research || 0) / 2);
+          delete pms.self_research;
+          migrated = true;
+        }
       }
       // Migration: remap old external source IDs to current source IDs
       const OLD_TO_NEW = {
@@ -337,7 +346,7 @@ class JsonDB {
     if (this.state.authSessions.length !== before) this.save();
   }
 
-  createAgent({ ownerUserId, name, bio = '', activenessLevel = 'medium', intelligenceLevel = 'mediocre', initialCredits = 100, preferences, runConfig }) {
+  createAgent({ ownerUserId, name, bio = '', activenessLevel = 'medium', intelligenceLevel = 'dumb', preferences, runConfig }) {
     const intervalMinutes = this.getActivenessConfig(activenessLevel).intervalMinutes;
     const now = Date.now();
     const agent = {
@@ -349,7 +358,6 @@ class JsonDB {
       activenessLevel,
       intelligenceLevel,
       intervalMinutes,
-      credits: Number(initialCredits),
       subscriptionFee: 0,
       enabled: true,
       preferences: { ...defaultAgentPreferences(), ...preferences },
@@ -446,6 +454,50 @@ class JsonDB {
 
   getAgentLiked(agentId) {
     return this.getActorReactions('agent', agentId, 'like');
+  }
+
+  // ── External Favorites ──
+
+  addExternalFavorite(agentId, { title, summary, url, source, tags }) {
+    if (!url) throw new Error('url is required.');
+    // Deduplicate by URL
+    const existing = this.state.externalFavorites.find(f => f.agentId === agentId && f.url === url);
+    if (existing) return existing;
+    const item = {
+      id: newId('extfav'),
+      agentId,
+      title: (title || '').slice(0, 300),
+      summary: (summary || '').slice(0, 1000),
+      url,
+      source: source || '',
+      tags: tags || [],
+      createdAt: nowIso()
+    };
+    this.state.externalFavorites.push(item);
+    this.save();
+    return item;
+  }
+
+  removeExternalFavorite(agentId, itemId) {
+    const before = this.state.externalFavorites.length;
+    this.state.externalFavorites = this.state.externalFavorites.filter(
+      f => !(f.agentId === agentId && f.id === itemId)
+    );
+    if (this.state.externalFavorites.length < before) {
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  getExternalFavorites(agentId, { page = 1, perPage = 20 } = {}) {
+    const all = this.state.externalFavorites
+      .filter(f => f.agentId === agentId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const total = all.length;
+    const totalPages = Math.ceil(total / perPage) || 1;
+    const paged = all.slice((page - 1) * perPage, page * perPage);
+    return { items: paged, page, perPage, total, totalPages };
   }
 
   getAgentPublished(agentId) {
@@ -569,7 +621,8 @@ class JsonDB {
         id: newId('follow'),
         followerKind, followerId,
         followeeKind, followeeId,
-        createdAt: nowIso()
+        createdAt: nowIso(),
+        lastChargedAt: null
       });
     }
   }
@@ -593,34 +646,132 @@ class JsonDB {
       throw new Error('Cannot follow yourself.');
     }
 
-    // Charge subscription fee if followee has one
+    // Charge first month's subscription fee if followee has one
     const followee = followeeKind === 'user' ? this.getUser(followeeId) : this.getAgent(followeeId);
     if (followee && followee.subscriptionFee > 0) {
-      // Check if already following (no double charge)
       const alreadyFollowing = this.isFollowing({ followerKind, followerId, followeeKind, followeeId });
       if (!alreadyFollowing) {
-        const follower = followerKind === 'user' ? this.getUser(followerId) : this.getAgent(followerId);
-        if (!follower) throw new Error('Follower not found.');
-        if (follower.credits < followee.subscriptionFee) {
-          throw new Error(`Insufficient credits. Following ${followee.name || 'this user'} costs ${followee.subscriptionFee} credits.`);
+        // Resolve payer: for agents, charge the owner user
+        let payer;
+        if (followerKind === 'agent') {
+          const agent = this.getAgent(followerId);
+          payer = agent ? this.getUser(agent.ownerUserId) : null;
+        } else {
+          payer = this.getUser(followerId);
         }
-        follower.credits -= followee.subscriptionFee;
-        followee.credits += followee.subscriptionFee;
-        this.state.transfers.push({
-          id: newId('tx'),
-          type: 'subscription',
-          fromKind: followerKind,
-          fromId: followerId,
-          toKind: followeeKind,
-          toId: followeeId,
-          amount: followee.subscriptionFee,
-          createdAt: nowIso()
-        });
+        if (!payer) throw new Error('Follower (or owner) not found.');
+        // Resolve payee: for agents, credit the owner user
+        let payee;
+        if (followeeKind === 'agent') {
+          const agent = this.getAgent(followeeId);
+          payee = agent ? this.getUser(agent.ownerUserId) : null;
+        } else {
+          payee = this.getUser(followeeId);
+        }
+        // Skip fee if owner follows their own agent (payer is payee)
+        const skipFee = payee && payer.id === payee.id;
+        if (!skipFee) {
+          if (payer.credits < followee.subscriptionFee) {
+            throw new Error(`Insufficient credits. Following ${followee.name || 'this user'} costs ${followee.subscriptionFee} cr/month.`);
+          }
+          payer.credits -= followee.subscriptionFee;
+          if (payee) payee.credits += followee.subscriptionFee;
+          this.state.transfers.push({
+            id: newId('tx'),
+            type: 'subscription',
+            fromKind: followerKind,
+            fromId: followerId,
+            toKind: followeeKind,
+            toId: followeeId,
+            amount: followee.subscriptionFee,
+            createdAt: nowIso()
+          });
+        }
       }
     }
 
     this._followDirect({ followerKind, followerId, followeeKind, followeeId });
+    // Mark first charge date
+    const follow = this.state.follows.find(
+      (f) => f.followerKind === followerKind && f.followerId === followerId &&
+             f.followeeKind === followeeKind && f.followeeId === followeeId
+    );
+    if (follow && !follow.lastChargedAt && followee?.subscriptionFee > 0) {
+      follow.lastChargedAt = nowIso();
+    }
     this.save();
+  }
+
+  /**
+   * Process monthly subscription charges for all active follows.
+   * Charges followers whose lastChargedAt is more than 30 days ago.
+   * Auto-unfollows if the payer has insufficient credits.
+   */
+  chargeMonthlySubscriptions() {
+    const now = Date.now();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const toRemove = [];
+
+    for (const f of this.state.follows) {
+      if (!f.lastChargedAt) continue;
+      const elapsed = now - new Date(f.lastChargedAt).getTime();
+      if (elapsed < THIRTY_DAYS) continue;
+
+      const followee = f.followeeKind === 'user' ? this.getUser(f.followeeId) : this.getAgent(f.followeeId);
+      if (!followee || !followee.subscriptionFee || followee.subscriptionFee <= 0) continue;
+
+      // Resolve payer
+      let payer;
+      if (f.followerKind === 'agent') {
+        const agent = this.getAgent(f.followerId);
+        payer = agent ? this.getUser(agent.ownerUserId) : null;
+      } else {
+        payer = this.getUser(f.followerId);
+      }
+      if (!payer) { toRemove.push(f.id); continue; }
+
+      if (payer.credits < followee.subscriptionFee) {
+        // Auto-unfollow on insufficient credits
+        toRemove.push(f.id);
+        continue;
+      }
+
+      // Resolve payee
+      let payee;
+      if (f.followeeKind === 'agent') {
+        const agent = this.getAgent(f.followeeId);
+        payee = agent ? this.getUser(agent.ownerUserId) : null;
+      } else {
+        payee = this.getUser(f.followeeId);
+      }
+
+      // Skip fee if owner follows their own agent
+      if (payee && payer.id === payee.id) {
+        f.lastChargedAt = nowIso();
+        continue;
+      }
+
+      payer.credits -= followee.subscriptionFee;
+      if (payee) payee.credits += followee.subscriptionFee;
+      f.lastChargedAt = nowIso();
+      this.state.transfers.push({
+        id: newId('tx'),
+        type: 'subscription_renewal',
+        fromKind: f.followerKind,
+        fromId: f.followerId,
+        toKind: f.followeeKind,
+        toId: f.followeeId,
+        amount: followee.subscriptionFee,
+        createdAt: nowIso()
+      });
+    }
+
+    if (toRemove.length > 0) {
+      const removeSet = new Set(toRemove);
+      this.state.follows = this.state.follows.filter(f => !removeSet.has(f.id));
+    }
+    this.save();
+    return { charged: this.state.follows.length, removed: toRemove.length };
   }
 
   unfollow({ followerKind = 'agent', followerId, followeeKind = 'agent', followeeId }) {
@@ -793,41 +944,15 @@ class JsonDB {
     return user;
   }
 
-  transferUserToAgent({ userId, agentId, amount }) {
-    const user = this.getUser(userId);
-    const agent = this.getAgent(agentId);
-    const n = Number(amount);
-
-    if (!user || !agent) throw new Error('User or agent not found.');
-    if (agent.ownerUserId !== userId) throw new Error('Cannot transfer to an agent you do not own.');
-    if (n <= 0) throw new Error('Amount must be positive.');
-    if (user.credits < n) throw new Error('Insufficient user credits.');
-
-    user.credits -= n;
-    agent.credits += n;
-
-    this.state.transfers.push({
-      id: newId('tx'),
-      type: 'user_to_agent',
-      fromKind: 'user',
-      fromId: userId,
-      toKind: 'agent',
-      toId: agentId,
-      amount: n,
-      createdAt: nowIso()
-    });
-    this.save();
-    return { user, agent };
-  }
 
   getActivenessConfig(level) {
     const table = {
-      very_lazy: { intervalMinutes: 48 * 60, tenantFeePerAction: 10 },
-      lazy: { intervalMinutes: 24 * 60, tenantFeePerAction: 10 },
-      medium: { intervalMinutes: 12 * 60, tenantFeePerAction: 10 },
-      diligent: { intervalMinutes: 6 * 60, tenantFeePerAction: 10 },
-      very_diligent: { intervalMinutes: 3 * 60, tenantFeePerAction: 10 },
-      workaholic: { intervalMinutes: 60, tenantFeePerAction: 10 }
+      very_lazy: { intervalMinutes: 48 * 60 },
+      lazy: { intervalMinutes: 24 * 60 },
+      medium: { intervalMinutes: 12 * 60 },
+      diligent: { intervalMinutes: 6 * 60 },
+      very_diligent: { intervalMinutes: 3 * 60 },
+      workaholic: { intervalMinutes: 60 }
     };
 
     return table[level] || table.medium;
@@ -837,14 +962,17 @@ class JsonDB {
     const agent = this.getAgent(agentId);
     if (!agent) throw new Error('Agent not found.');
 
-    const fee = this.getActivenessConfig(agent.activenessLevel).tenantFeePerAction;
-    if (agent.credits < fee) {
+    const owner = this.getUser(agent.ownerUserId);
+    if (!owner) throw new Error('Agent owner not found.');
+
+    const fee = this.calculateRunCost(agent);
+    if (owner.credits < fee) {
       agent.enabled = false;
       this.save();
-      return { charged: 0, disabled: true, reason: 'insufficient_agent_credits' };
+      return { charged: 0, disabled: true, reason: 'insufficient_owner_credits' };
     }
 
-    agent.credits -= fee;
+    owner.credits -= fee;
     this.state.tenantCharges.push({
       id: newId('tenant'),
       agentId,
@@ -855,6 +983,175 @@ class JsonDB {
     this.save();
 
     return { charged: fee, disabled: false };
+  }
+
+  /**
+   * Calculate the cost of a single run based on intelligence level and total max steps.
+   * At 50 total steps: dumb=5cr, not_so_smart=25cr, mediocre=100cr, smart=200cr.
+   */
+  calculateRunCost(agent) {
+    const costPerStepTable = { dumb: 0.1, not_so_smart: 0.5, mediocre: 2.0, smart: 4.0 };
+    const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.dumb;
+    const phaseSteps = agent.runConfig?.phaseMaxSteps || {};
+    const totalSteps = (phaseSteps.browse || 20) + (phaseSteps.external_search || 20) + (phaseSteps.create || 10);
+    return Math.round(costPerStep * totalSteps);
+  }
+
+  /**
+   * Get total credits charged for an agent in the current calendar month.
+   */
+  getMonthlyIncurredCost(agentId) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    let total = 0;
+    for (const charge of this.state.tenantCharges) {
+      if (charge.agentId === agentId && charge.createdAt >= monthStart) {
+        total += charge.amount;
+      }
+    }
+    return total;
+  }
+
+  /**
+   * Get paginated cost/run history for a single agent.
+   * Joins agentRunLogs with tenantCharges by matching timestamps.
+   */
+  getAgentCostRuns(agentId, { page = 1, perPage = 20 } = {}) {
+    // Build a map of charges keyed by approximate time for correlation
+    const charges = this.state.tenantCharges
+      .filter(c => c.agentId === agentId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    const runs = this.state.agentRunLogs
+      .filter(l => l.agentId === agentId)
+      .sort((a, b) => (b.startedAt || b.createdAt).localeCompare(a.startedAt || a.createdAt));
+
+    // Match each run to the closest charge (charge happens right before run starts)
+    const usedCharges = new Set();
+    const entries = runs.map(run => {
+      const runStart = new Date(run.startedAt || run.createdAt).getTime();
+      // Find the charge closest to (and just before) run start, within 5 min
+      let bestCharge = null;
+      let bestDiff = Infinity;
+      for (const c of charges) {
+        if (usedCharges.has(c.id)) continue;
+        const ct = new Date(c.createdAt).getTime();
+        const diff = runStart - ct;
+        if (diff >= 0 && diff < 300_000 && diff < bestDiff) {
+          bestDiff = diff;
+          bestCharge = c;
+        }
+      }
+      if (bestCharge) usedCharges.add(bestCharge.id);
+
+      const durationMs = run.finishedAt && run.startedAt
+        ? new Date(run.finishedAt) - new Date(run.startedAt) : null;
+
+      return {
+        id: run.id,
+        agentId: run.agentId,
+        startedAt: run.startedAt || run.createdAt,
+        finishedAt: run.finishedAt || null,
+        durationMs,
+        stepsExecuted: run.stepsExecuted || 0,
+        cost: bestCharge ? bestCharge.amount : 0,
+        reason: bestCharge ? bestCharge.reason : 'unknown'
+      };
+    });
+
+    const total = entries.length;
+    const totalPages = Math.ceil(total / perPage);
+    const paged = entries.slice((page - 1) * perPage, page * perPage);
+    const totalCost = charges.reduce((s, c) => s + c.amount, 0);
+
+    return { runs: paged, page, perPage, total, totalPages, totalCost };
+  }
+
+  /**
+   * Get paginated cost/run history across all agents owned by a user.
+   * Includes both agent run costs and subscription charges.
+   */
+  getUserCostRuns(userId, { page = 1, perPage = 20 } = {}) {
+    const ownedAgents = this.getOwnedAgents(userId);
+    const ownedAgentIds = new Set(ownedAgents.map(a => a.id));
+    const agentNames = {};
+    for (const a of ownedAgents) agentNames[a.id] = a.name;
+
+    const charges = this.state.tenantCharges
+      .filter(c => ownedAgentIds.has(c.agentId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    const runs = this.state.agentRunLogs
+      .filter(l => ownedAgentIds.has(l.agentId))
+      .sort((a, b) => (b.startedAt || b.createdAt).localeCompare(a.startedAt || a.createdAt));
+
+    const usedCharges = new Set();
+    const entries = runs.map(run => {
+      const runStart = new Date(run.startedAt || run.createdAt).getTime();
+      let bestCharge = null;
+      let bestDiff = Infinity;
+      for (const c of charges) {
+        if (usedCharges.has(c.id)) continue;
+        if (c.agentId !== run.agentId) continue;
+        const ct = new Date(c.createdAt).getTime();
+        const diff = runStart - ct;
+        if (diff >= 0 && diff < 300_000 && diff < bestDiff) {
+          bestDiff = diff;
+          bestCharge = c;
+        }
+      }
+      if (bestCharge) usedCharges.add(bestCharge.id);
+
+      const durationMs = run.finishedAt && run.startedAt
+        ? new Date(run.finishedAt) - new Date(run.startedAt) : null;
+
+      return {
+        id: run.id,
+        type: 'run',
+        agentId: run.agentId,
+        agentName: agentNames[run.agentId] || run.agentId,
+        startedAt: run.startedAt || run.createdAt,
+        finishedAt: run.finishedAt || null,
+        durationMs,
+        stepsExecuted: run.stepsExecuted || 0,
+        cost: bestCharge ? bestCharge.amount : 0,
+        reason: bestCharge ? bestCharge.reason : 'unknown'
+      };
+    });
+
+    // Include subscription charges (paid by this user or their agents)
+    const subTransfers = this.state.transfers.filter(t =>
+      (t.type === 'subscription' || t.type === 'subscription_renewal') &&
+      (t.fromId === userId || (t.fromKind === 'agent' && ownedAgentIds.has(t.fromId)))
+    );
+    for (const t of subTransfers) {
+      const followee = t.toKind === 'user' ? this.getUser(t.toId) : this.getAgent(t.toId);
+      const followerName = t.fromKind === 'agent' ? (agentNames[t.fromId] || t.fromId) : 'You';
+      entries.push({
+        id: t.id,
+        type: 'subscription',
+        agentId: t.fromId,
+        agentName: followerName,
+        startedAt: t.createdAt,
+        finishedAt: null,
+        durationMs: null,
+        stepsExecuted: 0,
+        cost: t.amount,
+        reason: t.type === 'subscription_renewal' ? 'subscription_renewal' : 'subscription',
+        detail: `→ ${followee?.name || t.toId}`
+      });
+    }
+
+    // Sort all entries by date desc
+    entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+
+    const total = entries.length;
+    const totalPages = Math.ceil(total / perPage);
+    const paged = entries.slice((page - 1) * perPage, page * perPage);
+    const runCost = charges.reduce((s, c) => s + c.amount, 0);
+    const subCost = subTransfers.reduce((s, t) => s + t.amount, 0);
+
+    return { runs: paged, page, perPage, total, totalPages, totalCost: runCost + subCost };
   }
 
   recordAgentRunLog(runLog) {

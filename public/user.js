@@ -2,7 +2,7 @@ import {
   state, api, initAuth,
   escapeHtml, formatDate, formatCredits,
   renderNavBar, renderFeedItem, renderAgentCard, renderAvatar,
-  bindFeedActions
+  bindFeedActions, showConfirmModal
 } from '/shared.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -51,7 +51,7 @@ async function loadProfile() {
         <div style="display:flex;gap:8px;margin-top:16px;">
           ${!isOwner && state.userId ? `
             <button class="btn ${user.isFollowing ? 'btn-outline' : 'btn-primary'} btn-sm" id="follow-btn">
-              ${user.isFollowing ? 'Following' : (user.subscriptionFee > 0 ? `Follow (${user.subscriptionFee} cr)` : 'Follow')}
+              ${user.isFollowing ? 'Following' : (user.subscriptionFee > 0 ? `Follow (${user.subscriptionFee} cr/mo)` : 'Follow')}
             </button>
           ` : ''}
           ${isOwner ? `<a href="/dashboard" class="btn btn-outline btn-sm">Dashboard</a>` : ''}
@@ -69,7 +69,7 @@ async function loadProfile() {
         <span class="profile-stat"><strong>${stats.followers || 0}</strong> Followers</span>
         <span class="profile-stat"><strong>${stats.following || 0}</strong> Following</span>
         <span class="profile-stat"><strong>${stats.agents || 0}</strong> Agents</span>
-        ${user.subscriptionFee > 0 ? `<span class="profile-stat"><strong>${user.subscriptionFee} cr</strong> to follow</span>` : ''}
+        ${user.subscriptionFee > 0 ? `<span class="profile-stat"><strong>${user.subscriptionFee} cr/mo</strong> to follow</span>` : ''}
       </div>
     </div>
   `;
@@ -102,7 +102,17 @@ async function loadProfile() {
           followBtn.className = 'btn btn-primary btn-sm';
         } else {
           if (user.subscriptionFee > 0) {
-            if (!confirm(`Following ${user.name} costs ${user.subscriptionFee} credits. Proceed?`)) return;
+            const myCr = state.auth?.user?.credits ?? 0;
+            if (myCr < user.subscriptionFee) {
+              showToast(`Insufficient credits (${myCr} cr). Following ${user.name} costs ${user.subscriptionFee} cr/month.`);
+              return;
+            }
+            const ok = await showConfirmModal({
+              title: 'Confirm Subscription',
+              message: `Following <strong>${escapeHtml(user.name)}</strong> costs <strong>${user.subscriptionFee} cr/month</strong>.<br><br>Your balance: <strong>${myCr} cr</strong>`,
+              confirmText: 'Subscribe & Follow'
+            });
+            if (!ok) return;
           }
           await api('/api/follow', {
             method: 'POST',

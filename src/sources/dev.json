@@ -3,8 +3,14 @@
     "id": "rust-blog",
     "name": "Rust Blog",
     "category": "Dev & Code",
-    "topics": ["technology", "web development"],
-    "rss": { "feedUrl": "https://blog.rust-lang.org/feed.xml" },
+    "topics": [
+      "technology",
+      "web development"
+    ],
+    "siteUrl": "https://blog.rust-lang.org",
+    "rss": {
+      "feedUrl": "https://blog.rust-lang.org/feed.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -14,8 +20,15 @@
     "id": "go-blog",
     "name": "Go Blog",
     "category": "Dev & Code",
-    "topics": ["technology", "web development", "cloud computing"],
-    "rss": { "feedUrl": "https://go.dev/blog/feed.atom" },
+    "topics": [
+      "technology",
+      "web development",
+      "cloud computing"
+    ],
+    "siteUrl": "https://go.dev/blog",
+    "rss": {
+      "feedUrl": "https://go.dev/blog/feed.atom"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -25,8 +38,15 @@
     "id": "python-insider",
     "name": "Python Insider",
     "category": "Dev & Code",
-    "topics": ["technology", "data science", "machine learning"],
-    "rss": { "feedUrl": "https://blog.python.org/feeds/posts/default" },
+    "topics": [
+      "technology",
+      "data science",
+      "machine learning"
+    ],
+    "siteUrl": "https://blog.python.org",
+    "rss": {
+      "feedUrl": "https://blog.python.org/feeds/posts/default"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -36,8 +56,15 @@
     "id": "nodejs-blog",
     "name": "Node.js Blog",
     "category": "Dev & Code",
-    "topics": ["web development", "technology", "devops"],
-    "rss": { "feedUrl": "https://nodejs.org/en/feed/blog.xml" },
+    "topics": [
+      "web development",
+      "technology",
+      "devops"
+    ],
+    "siteUrl": "https://nodejs.org",
+    "rss": {
+      "feedUrl": "https://nodejs.org/en/feed/blog.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -47,8 +74,15 @@
     "id": "chromium-blog",
     "name": "Chromium Blog",
     "category": "Dev & Code",
-    "topics": ["web development", "technology", "cybersecurity"],
-    "rss": { "feedUrl": "https://blog.chromium.org/feeds/posts/default" },
+    "topics": [
+      "web development",
+      "technology",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://blog.chromium.org",
+    "rss": {
+      "feedUrl": "https://blog.chromium.org/feeds/posts/default"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -58,8 +92,15 @@
     "id": "mozilla-hacks",
     "name": "Mozilla Hacks",
     "category": "Dev & Code",
-    "topics": ["web development", "technology", "cybersecurity"],
-    "rss": { "feedUrl": "https://hacks.mozilla.org/feed/" },
+    "topics": [
+      "web development",
+      "technology",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://hacks.mozilla.org",
+    "rss": {
+      "feedUrl": "https://hacks.mozilla.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -69,8 +110,15 @@
     "id": "github-blog",
     "name": "GitHub Blog",
     "category": "Dev & Code",
-    "topics": ["technology", "devops", "web development"],
-    "rss": { "feedUrl": "https://github.blog/feed/" },
+    "topics": [
+      "technology",
+      "devops",
+      "web development"
+    ],
+    "siteUrl": "https://github.blog",
+    "rss": {
+      "feedUrl": "https://github.blog/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -80,8 +128,15 @@
     "id": "gitlab-blog",
     "name": "GitLab Blog",
     "category": "Dev & Code",
-    "topics": ["devops", "technology", "cybersecurity"],
-    "rss": { "feedUrl": "https://about.gitlab.com/atom.xml" },
+    "topics": [
+      "devops",
+      "technology",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://about.gitlab.com/blog",
+    "rss": {
+      "feedUrl": "https://about.gitlab.com/atom.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -91,8 +146,15 @@
     "id": "hashicorp-blog",
     "name": "HashiCorp Blog",
     "category": "Dev & Code",
-    "topics": ["devops", "cloud computing", "cybersecurity"],
-    "rss": { "feedUrl": "https://www.hashicorp.com/blog/feed.xml" },
+    "topics": [
+      "devops",
+      "cloud computing",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://www.hashicorp.com/blog",
+    "rss": {
+      "feedUrl": "https://www.hashicorp.com/blog/feed.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -102,8 +164,14 @@
     "id": "npm-blog",
     "name": "npm Blog",
     "category": "Dev & Code",
-    "topics": ["web development", "technology"],
-    "rss": { "feedUrl": "https://blog.npmjs.org/rss" },
+    "topics": [
+      "web development",
+      "technology"
+    ],
+    "siteUrl": "https://blog.npmjs.org",
+    "rss": {
+      "feedUrl": "https://blog.npmjs.org/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -113,8 +181,15 @@
     "id": "aws-blog",
     "name": "AWS Blog",
     "category": "Dev & Code",
-    "topics": ["cloud computing", "devops", "technology"],
-    "rss": { "feedUrl": "https://aws.amazon.com/blogs/aws/feed/" },
+    "topics": [
+      "cloud computing",
+      "devops",
+      "technology"
+    ],
+    "siteUrl": "https://aws.amazon.com/blogs",
+    "rss": {
+      "feedUrl": "https://aws.amazon.com/blogs/aws/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -124,8 +199,16 @@
     "id": "google-ai-blog",
     "name": "Google AI Blog",
     "category": "Dev & Code",
-    "topics": ["artificial intelligence", "machine learning", "deep learning", "data science"],
-    "rss": { "feedUrl": "https://blog.research.google/feeds/posts/default" },
+    "topics": [
+      "artificial intelligence",
+      "machine learning",
+      "deep learning",
+      "data science"
+    ],
+    "siteUrl": "https://blog.google/technology/ai",
+    "rss": {
+      "feedUrl": "https://blog.research.google/feeds/posts/default"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -135,8 +218,15 @@
     "id": "openai-blog",
     "name": "OpenAI Blog",
     "category": "Dev & Code",
-    "topics": ["artificial intelligence", "machine learning", "deep learning"],
-    "rss": { "feedUrl": "https://openai.com/blog/rss/" },
+    "topics": [
+      "artificial intelligence",
+      "machine learning",
+      "deep learning"
+    ],
+    "siteUrl": "https://openai.com/blog",
+    "rss": {
+      "feedUrl": "https://openai.com/blog/rss/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -146,8 +236,532 @@
     "id": "huggingface-blog",
     "name": "Hugging Face Blog",
     "category": "Dev & Code",
-    "topics": ["machine learning", "artificial intelligence", "deep learning", "data science"],
-    "rss": { "feedUrl": "https://huggingface.co/blog/feed.xml" },
+    "topics": [
+      "machine learning",
+      "artificial intelligence",
+      "deep learning",
+      "data science"
+    ],
+    "siteUrl": "https://huggingface.co/blog",
+    "rss": {
+      "feedUrl": "https://huggingface.co/blog/feed.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "baeldung",
+    "name": "Baeldung",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "cloud computing"
+    ],
+    "siteUrl": "https://www.baeldung.com",
+    "rss": {
+      "feedUrl": "https://www.baeldung.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "real-python",
+    "name": "Real Python",
+    "category": "Dev & Code",
+    "topics": [
+      "technology",
+      "data science",
+      "web development",
+      "machine learning"
+    ],
+    "siteUrl": "https://realpython.com",
+    "rss": {
+      "feedUrl": "https://realpython.com/atom.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "logrocket-blog",
+    "name": "LogRocket Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "mobile apps"
+    ],
+    "siteUrl": "https://blog.logrocket.com",
+    "rss": {
+      "feedUrl": "https://blog.logrocket.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "scotch-io",
+    "name": "Scotch.io",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "design"
+    ],
+    "siteUrl": "https://scotch.io",
+    "rss": {
+      "feedUrl": "https://scotch.io/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sitepoint",
+    "name": "SitePoint",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "design",
+      "mobile apps"
+    ],
+    "siteUrl": "https://www.sitepoint.com",
+    "rss": {
+      "feedUrl": "https://www.sitepoint.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "toptal-blog",
+    "name": "Toptal Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "design",
+      "startups"
+    ],
+    "siteUrl": "https://www.toptal.com/blog",
+    "rss": {
+      "feedUrl": "https://www.toptal.com/blog/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "circleci-blog",
+    "name": "CircleCI Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "devops",
+      "technology",
+      "cloud computing"
+    ],
+    "siteUrl": "https://circleci.com/blog",
+    "rss": {
+      "feedUrl": "https://circleci.com/blog/feed.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "datadog-blog",
+    "name": "Datadog Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "devops",
+      "cloud computing",
+      "technology"
+    ],
+    "siteUrl": "https://www.datadoghq.com/blog",
+    "rss": {
+      "feedUrl": "https://www.datadoghq.com/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "new-relic-blog",
+    "name": "New Relic Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "devops",
+      "cloud computing",
+      "technology"
+    ],
+    "siteUrl": "https://newrelic.com/blog",
+    "rss": {
+      "feedUrl": "https://newrelic.com/blog/feed.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "planetscale-blog",
+    "name": "PlanetScale Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "technology",
+      "web development",
+      "cloud computing"
+    ],
+    "siteUrl": "https://planetscale.com/blog",
+    "rss": {
+      "feedUrl": "https://planetscale.com/blog/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "supabase-blog",
+    "name": "Supabase Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "cloud computing"
+    ],
+    "siteUrl": "https://supabase.com/blog",
+    "rss": {
+      "feedUrl": "https://supabase.com/blog/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "prisma-blog",
+    "name": "Prisma Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "data science"
+    ],
+    "siteUrl": "https://www.prisma.io/blog",
+    "rss": {
+      "feedUrl": "https://www.prisma.io/blog/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cloudflare-blog",
+    "name": "Cloudflare Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "cybersecurity",
+      "cloud computing",
+      "technology",
+      "web development"
+    ],
+    "siteUrl": "https://blog.cloudflare.com",
+    "rss": {
+      "feedUrl": "https://blog.cloudflare.com/rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "digitalocean-blog",
+    "name": "DigitalOcean Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "cloud computing",
+      "devops",
+      "technology",
+      "web development"
+    ],
+    "siteUrl": "https://www.digitalocean.com/blog",
+    "rss": {
+      "feedUrl": "https://www.digitalocean.com/blog/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "linode-blog",
+    "name": "Linode Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "cloud computing",
+      "devops",
+      "technology"
+    ],
+    "siteUrl": "https://www.linode.com/blog",
+    "rss": {
+      "feedUrl": "https://www.linode.com/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "google-cloud-blog",
+    "name": "Google Cloud Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "cloud computing",
+      "devops",
+      "technology",
+      "artificial intelligence"
+    ],
+    "siteUrl": "https://cloud.google.com/blog",
+    "rss": {
+      "feedUrl": "https://cloud.google.com/blog/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "azure-blog",
+    "name": "Azure Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "cloud computing",
+      "devops",
+      "technology"
+    ],
+    "siteUrl": "https://azure.microsoft.com/en-us/blog",
+    "rss": {
+      "feedUrl": "https://azure.microsoft.com/en-us/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "stripe-blog",
+    "name": "Stripe Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "finance",
+      "ecommerce"
+    ],
+    "siteUrl": "https://stripe.com/blog",
+    "rss": {
+      "feedUrl": "https://stripe.com/blog/feed.rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "twilio-blog",
+    "name": "Twilio Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "cloud computing",
+      "mobile apps"
+    ],
+    "siteUrl": "https://www.twilio.com/blog",
+    "rss": {
+      "feedUrl": "https://www.twilio.com/blog/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "auth0-blog",
+    "name": "Auth0 Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "cybersecurity",
+      "web development",
+      "technology"
+    ],
+    "siteUrl": "https://auth0.com/blog",
+    "rss": {
+      "feedUrl": "https://auth0.com/blog/rss.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "sentry-blog",
+    "name": "Sentry Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "devops"
+    ],
+    "siteUrl": "https://blog.sentry.io",
+    "rss": {
+      "feedUrl": "https://blog.sentry.io/feed.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "postman-blog",
+    "name": "Postman Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "technology",
+      "devops"
+    ],
+    "siteUrl": "https://blog.postman.com",
+    "rss": {
+      "feedUrl": "https://blog.postman.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mongodb-blog",
+    "name": "MongoDB Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "technology",
+      "data science",
+      "cloud computing",
+      "web development"
+    ],
+    "siteUrl": "https://www.mongodb.com/blog",
+    "rss": {
+      "feedUrl": "https://www.mongodb.com/blog/rss"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "redis-blog",
+    "name": "Redis Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "technology",
+      "data science",
+      "cloud computing"
+    ],
+    "siteUrl": "https://redis.io/blog",
+    "rss": {
+      "feedUrl": "https://redis.io/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "elastic-blog",
+    "name": "Elastic Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "technology",
+      "data science",
+      "cloud computing",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://www.elastic.co/blog",
+    "rss": {
+      "feedUrl": "https://www.elastic.co/blog/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "confluent-blog",
+    "name": "Confluent Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "technology",
+      "data science",
+      "cloud computing",
+      "devops"
+    ],
+    "siteUrl": "https://www.confluent.io/blog",
+    "rss": {
+      "feedUrl": "https://www.confluent.io/blog/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "grafana-blog",
+    "name": "Grafana Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "devops",
+      "technology",
+      "cloud computing",
+      "data science"
+    ],
+    "siteUrl": "https://grafana.com/blog",
+    "rss": {
+      "feedUrl": "https://grafana.com/blog/index.xml"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "vercel-blog",
+    "name": "Vercel Blog",
+    "category": "Dev & Code",
+    "topics": [
+      "web development",
+      "cloud computing",
+      "technology"
+    ],
+    "siteUrl": "https://vercel.com/blog",
+    "rss": {
+      "feedUrl": "https://vercel.com/atom"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
