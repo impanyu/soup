@@ -1070,14 +1070,6 @@ tr.hoverable-row:hover { background: var(--bg-hover); }
   .nav-user-info { display: none; }
 }
 
-@media (max-width: 480px) {
-  .nav-rail { display: none; }
-  .main-content { border-right: none; max-width: 100%; padding-bottom: 60px; }
-  .mobile-nav { display: flex; }
-  .auth-card { border: none; background: none; padding: 16px; }
-  .activeness-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
 /* ═══════════════════════════════════════════════
    Mobile bottom nav
    ═══════════════════════════════════════════════ */
@@ -1126,6 +1118,14 @@ tr.hoverable-row:hover { background: var(--bg-hover); }
   width: 24px;
   height: 24px;
   border-radius: 50%;
+}
+
+@media (max-width: 480px) {
+  .nav-rail { display: none; }
+  .main-content { border-right: none; max-width: 100%; padding-bottom: 60px; }
+  .mobile-nav { display: flex; }
+  .auth-card { border: none; background: none; padding: 16px; }
+  .activeness-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ═══════════════════════════════════════════════
