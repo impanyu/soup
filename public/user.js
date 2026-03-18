@@ -31,6 +31,25 @@ async function loadProfile() {
   const stats = user.stats || {};
   const isOwner = state.userId && state.userId === userId;
 
+  const fi = user.followInfo;
+  const isCancelled = fi && fi.cancelledAt;
+  const followBtnLabel = !user.isFollowing
+    ? (user.subscriptionFee > 0 ? `Follow (${user.subscriptionFee} cr/mo)` : 'Follow')
+    : isCancelled ? 'Resubscribe' : 'Following';
+  const followBtnClass = !user.isFollowing
+    ? 'btn btn-primary btn-sm'
+    : isCancelled ? 'btn btn-accent btn-sm' : 'btn btn-outline btn-sm';
+
+  let subStatusHtml = '';
+  if (fi && fi.isFollowing && fi.expiresAt) {
+    const expDate = new Date(fi.expiresAt).toLocaleDateString();
+    if (isCancelled) {
+      subStatusHtml = `<div class="text-xs" style="color:var(--warning,#ea0);margin-top:4px;">Cancelled — access until ${expDate}</div>`;
+    } else {
+      subStatusHtml = `<div class="text-xs muted" style="margin-top:4px;">Next charge: ${expDate}</div>`;
+    }
+  }
+
   document.getElementById('profile-wrap').innerHTML = `
     <div class="profile-cover"></div>
     <div class="profile-header">
@@ -48,13 +67,12 @@ async function loadProfile() {
             ? `<img src="${escapeHtml(user.avatarUrl)}" alt="${escapeHtml(user.name)}" class="profile-avatar-img" />`
             : `<div class="profile-avatar">${escapeHtml(user.name[0].toUpperCase())}</div>`}
         `}
-        <div style="display:flex;gap:8px;margin-top:16px;">
-          ${!isOwner && state.userId ? `
-            <button class="btn ${user.isFollowing ? 'btn-outline' : 'btn-primary'} btn-sm" id="follow-btn">
-              ${user.isFollowing ? 'Following' : (user.subscriptionFee > 0 ? `Follow (${user.subscriptionFee} cr/mo)` : 'Follow')}
-            </button>
-          ` : ''}
-          ${isOwner ? `<a href="/dashboard" class="btn btn-outline btn-sm">Dashboard</a>` : ''}
+        <div style="display:flex;flex-direction:column;align-items:flex-start;margin-top:16px;">
+          <div style="display:flex;gap:8px;">
+            ${!isOwner && state.userId ? `<button class="${followBtnClass}" id="follow-btn">${followBtnLabel}</button>` : ''}
+            ${isOwner ? `<a href="/dashboard" class="btn btn-outline btn-sm">Dashboard</a>` : ''}
+          </div>
+          <div id="sub-status">${subStatusHtml}</div>
         </div>
       </div>
       <div class="profile-name">${escapeHtml(user.name)}</div>
@@ -69,7 +87,7 @@ async function loadProfile() {
         <span class="profile-stat"><strong>${stats.followers || 0}</strong> Followers</span>
         <span class="profile-stat"><strong>${stats.following || 0}</strong> Following</span>
         <span class="profile-stat"><strong>${stats.agents || 0}</strong> Agents</span>
-        ${user.subscriptionFee > 0 ? `<span class="profile-stat"><strong>${user.subscriptionFee} cr/mo</strong> to follow</span>` : ''}
+        ${user.subscriptionFee > 0 ? `<span class="profile-stat"><strong>${user.subscriptionFee} cr/mo</strong> to follow</span>` : '<span class="profile-stat" style="color:var(--text-success,#4ade80);">Free</span>'}
       </div>
     </div>
   `;
@@ -85,23 +103,36 @@ async function loadProfile() {
     <p class="text-sm muted">Agents owned: <strong>${stats.agents || 0}</strong></p>
   `;
 
-  // Follow / Unfollow
+  // Follow / Unfollow / Cancel / Resubscribe
   const followBtn = document.getElementById('follow-btn');
   if (followBtn) {
-    let following = user.isFollowing;
     followBtn.addEventListener('click', async () => {
       if (!state.userId) { showToast('Please log in first.'); return; }
       try {
-        if (following) {
-          await api('/api/unfollow', {
+        if (user.isFollowing && !isCancelled) {
+          // Active subscription — cancel (keeps access until expiry)
+          if (user.subscriptionFee > 0) {
+            const ok = await showConfirmModal({
+              title: 'Cancel Subscription',
+              message: `Cancel subscription to <strong>${escapeHtml(user.name)}</strong>?<br><br>You'll keep access until <strong>${fi?.expiresAt ? new Date(fi.expiresAt).toLocaleDateString() : 'end of billing cycle'}</strong>.`,
+              confirmText: 'Cancel Subscription',
+              danger: true
+            });
+            if (!ok) return;
+          }
+          const { followInfo: newFi } = await api('/api/unfollow', {
             method: 'POST',
             body: { actorUserId: state.userId, targetKind: 'user', targetId: userId }
           });
-          following = false;
-          followBtn.textContent = 'Follow';
-          followBtn.className = 'btn btn-primary btn-sm';
+          if (newFi) {
+            showToast(`Subscription cancelled. Access until ${new Date(newFi.expiresAt).toLocaleDateString()}.`);
+          } else {
+            showToast('Unfollowed.');
+          }
+          await loadProfile();
         } else {
-          if (user.subscriptionFee > 0) {
+          // New follow or resubscribe
+          if (user.subscriptionFee > 0 && !isCancelled) {
             const myCr = state.auth?.user?.credits ?? 0;
             if (myCr < user.subscriptionFee) {
               showToast(`Insufficient credits (${myCr} cr). Following ${user.name} costs ${user.subscriptionFee} cr/month.`);
@@ -118,11 +149,9 @@ async function loadProfile() {
             method: 'POST',
             body: { actorUserId: state.userId, targetKind: 'user', targetId: userId }
           });
-          following = true;
-          followBtn.textContent = 'Following';
-          followBtn.className = 'btn btn-outline btn-sm';
+          showToast(isCancelled ? 'Subscription resumed!' : 'Followed!');
+          await loadProfile();
         }
-        showToast(following ? 'Followed!' : 'Unfollowed.');
       } catch (err) { showToast(err.message); }
     });
   }
@@ -258,6 +287,19 @@ async function loadFavorites() {
   }
 }
 
+function renderSubBadge(f) {
+  if (!f.subscriptionFee || f.subscriptionFee <= 0) {
+    return '<span class="badge" style="color:var(--text-success,#4ade80);border-color:var(--text-success,#4ade80);">Free</span>';
+  }
+  let info = `<span class="badge" style="color:var(--accent);border-color:var(--accent);">${f.subscriptionFee} cr/mo</span>`;
+  if (f.followCancelledAt && f.followExpiresAt) {
+    info += `<span class="text-xs" style="color:var(--warning,#ea0);margin-left:6px;">Expires ${new Date(f.followExpiresAt).toLocaleDateString()}</span>`;
+  } else if (f.followExpiresAt) {
+    info += `<span class="text-xs muted" style="margin-left:6px;">Next charge: ${new Date(f.followExpiresAt).toLocaleDateString()}</span>`;
+  }
+  return info;
+}
+
 async function loadFollowing() {
   const container = document.getElementById('tab-content');
   container.innerHTML = '<div class="spinner"></div>';
@@ -267,11 +309,14 @@ async function loadFollowing() {
       container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👤</div><h2>Not following anyone</h2></div>';
       return;
     }
-    container.innerHTML = following.map(f => {
+    const active = following.filter(f => !f.followCancelledAt);
+    const cancelled = following.filter(f => !!f.followCancelledAt);
+
+    const renderCard = (f, dimmed) => {
       const href = f.kind === 'user' ? `/user?id=${escapeHtml(f.id)}` : `/agent?id=${escapeHtml(f.id)}`;
       const badge = f.kind === 'user' ? (f.userType || 'human') : 'agent';
       return `
-        <div class="agent-card">
+        <div class="agent-card" ${dimmed ? 'style="opacity:.7;"' : ''}>
           <div class="agent-card-avatar" onclick="window.location.href='${href}'">
             ${renderAvatar(f.name, f.avatarUrl, '', 48)}
           </div>
@@ -279,12 +324,24 @@ async function loadFollowing() {
             <div class="agent-card-head">
               <a href="${href}" class="agent-card-name">${escapeHtml(f.name || 'Unknown')}</a>
               <span class="badge">${escapeHtml(badge)}</span>
+              ${renderSubBadge(f)}
             </div>
             ${f.bio ? `<p class="agent-card-bio">${escapeHtml(f.bio)}</p>` : ''}
           </div>
         </div>
       `;
-    }).join('');
+    };
+
+    let html = '';
+    if (active.length) {
+      html += `<div class="section-title" style="padding:12px 0 4px;">Following</div>`;
+      html += active.map(f => renderCard(f, false)).join('');
+    }
+    if (cancelled.length) {
+      html += `<div class="section-title" style="padding:16px 0 4px;color:var(--warning,#ea0);">Cancelled — expiring soon</div>`;
+      html += cancelled.map(f => renderCard(f, true)).join('');
+    }
+    container.innerHTML = html;
   } catch (err) {
     container.innerHTML = `<div class="empty-state"><p>${escapeHtml(err.message)}</p></div>`;
   }

@@ -90,6 +90,9 @@ function shortProfile(agentOrUser) {
 // ─── Pagination helper ──────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20;
+
+// Models that only accept the default temperature (1) — never send temperature to these
+const TEMP_UNSUPPORTED_MODELS = ['gpt-5-nano', 'gpt-5-mini'];
 function paginate(items, page = 1, pageSize = PAGE_SIZE) {
   const p = Math.max(1, Math.floor(page));
   const size = Math.max(1, Math.floor(pageSize));
@@ -158,23 +161,32 @@ function ensureDataAgent() {
     lastActionAt: null,
     nextActionAt: null
   };
-  db.state.agents.push(agent);
+  db.insertAgentDirect(agent);
   agentStorage.ensureAgentDirs(DATA_AGENT_ID);
-  db.save();
   console.log('[DataAgent] Created system data agent:', DATA_AGENT_ID);
   return agent;
 }
 
-function getDataAgentTools(callerMcpTools = []) {
+function getDataAgentTools(callingAgent, callerMcpTools = []) {
   // Gather all data-related tools: chart_*, transform_data, generate_chart, fetch_data, inspect_data, stop
   const dataToolNames = [
     'fetch_data', 'inspect_data', 'transform_data', 'generate_chart', 'stop'
   ];
   const staticTools = dataToolNames.map(n => getTool(n)).filter(Boolean);
 
-  // All chart_* tools from the registry (they have dataApiTool: true)
+  // Determine which source IDs the calling agent has access to
+  const configuredIds = (callingAgent.preferences?.externalSearchSources || [])
+    .map(s => typeof s === 'string' ? s : (s.source || s.id));
+  const agentTopics = callingAgent.preferences?.topics || [];
+  const topicSourceIds = agentTopics.length ? getSourcesForTopics(agentTopics) : [];
+  const availableSourceIds = new Set([...DEFAULT_SOURCE_IDS, ...configuredIds, ...topicSourceIds]);
+
+  // Only include chart_* tools whose sourceId matches the agent's available sources
   const allTools = JSON.parse(readFileSync(join(__dirname, 'tools.json'), 'utf-8'));
-  const allChartTools = allTools.filter(t => t.dataApiTool).map(t => getTool(t.name)).filter(Boolean);
+  const allChartTools = allTools
+    .filter(t => t.dataApiTool && (!t.sourceId || availableSourceIds.has(t.sourceId)))
+    .map(t => getTool(t.name))
+    .filter(Boolean);
 
   return [...staticTools, ...allChartTools, ...callerMcpTools];
 }
@@ -187,7 +199,7 @@ async function executeDataAgentRequest(request, callingAgent, callerRunState) {
   agentStorage.ensureAgentDirs(DATA_AGENT_ID);
 
   const callerMcpTools = callerRunState.workingSet.mcpTools || [];
-  const availableTools = getDataAgentTools(callerMcpTools);
+  const availableTools = getDataAgentTools(callingAgent, callerMcpTools);
   const toolsBlock = formatToolListForPrompt(availableTools);
   const toolNames = availableTools.map(t => t.name);
 
@@ -230,7 +242,7 @@ Return exactly ONE JSON object per turn:
       response_format: { type: 'json_object' }
     };
     if (reasoningEffort === 'none') {
-      dataAgentBody.temperature = 0;
+      if (!TEMP_UNSUPPORTED_MODELS.includes(model)) dataAgentBody.temperature = 0;
     } else {
       dataAgentBody.reasoning_effort = reasoningEffort;
     }
@@ -611,15 +623,15 @@ function buildRecentSearchesSummary(agentId) {
 // ─── Post Engagement Helper ──────────────────────────────────────────────────────
 
 function getPostEngagement(postId) {
-  const reactions = db.state.reactions.filter(r => r.contentId === postId);
-  const content = db.state.contents.find(c => c.id === postId);
+  const reactions = db.getReactionsForContent(postId);
+  const content = db.getContent(postId);
   return {
     views: content?.viewCount || 0,
     likes: reactions.filter(r => r.type === 'like').length,
     dislikes: reactions.filter(r => r.type === 'dislike').length,
     favorites: reactions.filter(r => r.type === 'favorite').length,
     comments: db.getChildren(postId).filter(c => !c.repostOfId).length,
-    reposts: db.state.contents.filter(c => c.repostOfId === postId).length
+    reposts: db.getRepostCount(postId)
   };
 }
 
@@ -1195,17 +1207,16 @@ async function llmDecision(agent, phase, runState) {
     response_format: { type: 'json_object' }
   };
   // Only set temperature when reasoning is off and model supports it
-  const TEMPERATURE_UNSUPPORTED_MODELS = ['gpt-5-nano'];
   if (reasoningEffort === 'none') {
     const temperature = process.env.AGENT_LLM_TEMPERATURE;
-    if (temperature !== undefined && temperature !== '' && !TEMPERATURE_UNSUPPORTED_MODELS.includes(model)) {
+    if (temperature !== undefined && temperature !== '' && !TEMP_UNSUPPORTED_MODELS.includes(model)) {
       requestBody.temperature = Number(temperature);
     }
   } else {
     requestBody.reasoning_effort = reasoningEffort;
   }
 
-  const response = await fetch(endpoint, {
+  let response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -1213,6 +1224,26 @@ async function llmDecision(agent, phase, runState) {
     },
     body: JSON.stringify(requestBody)
   });
+
+  // Retry without temperature if the API rejects it (model may not support it)
+  if (!response.ok && response.status === 400 && requestBody.temperature != null) {
+    const errBody = await response.text().catch(() => '');
+    if (errBody.includes('temperature')) {
+      console.warn(`[${agent.name}] Retrying without temperature (unsupported by ${model})`);
+      delete requestBody.temperature;
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+    } else {
+      console.error(`[${agent.name}] LLM API error ${response.status}: ${errBody.slice(0, 500)}`);
+      return null;
+    }
+  }
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => '');
@@ -1266,8 +1297,7 @@ async function executeAction(agent, decision, runState) {
       const allPosts = db.listFeed()
         .filter((c) => c.authorAgentId !== agent.id);
       const pg = paginate(allPosts, decision.params?.page);
-      for (const c of pg.items) c.viewCount = (c.viewCount || 0) + 1;
-      db.save();
+      db.incrementViewCounts(pg.items.map(c => c.id));
       pg.items = pg.items.map(c => ({ ...shortContent(c), engagement: getPostEngagement(c.id) }));
       return { ok: true, summary: `Global feed page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
@@ -1282,8 +1312,7 @@ async function executeAction(agent, decision, runState) {
         feedType = 'global_fallback';
       }
       const pg = paginate(rawPosts, decision.params?.page);
-      for (const c of pg.items) c.viewCount = (c.viewCount || 0) + 1;
-      db.save();
+      db.incrementViewCounts(pg.items.map(c => c.id));
       pg.items = pg.items.map(c => ({ ...shortContent(c), engagement: getPostEngagement(c.id) }));
       return { ok: true, summary: `${feedType === 'following' ? 'Following' : 'Global'} feed page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore, feedType };
     }
@@ -1291,7 +1320,7 @@ async function executeAction(agent, decision, runState) {
     case 'browse_liked_posts': {
       const reactions = db.getActorReactions('agent', agent.id, 'like');
       const posts = reactions
-        .map(r => db.state.contents.find(c => c.id === r.contentId))
+        .map(r => db.getContent(r.contentId))
         .filter(Boolean)
         .map(shortContent);
       const pg = paginate(posts, decision.params?.page);
@@ -1301,7 +1330,7 @@ async function executeAction(agent, decision, runState) {
     case 'browse_favorite_posts': {
       const reactions = db.getActorReactions('agent', agent.id, 'favorite');
       const posts = reactions
-        .map(r => db.state.contents.find(c => c.id === r.contentId))
+        .map(r => db.getContent(r.contentId))
         .filter(Boolean)
         .map(shortContent);
       const pg = paginate(posts, decision.params?.page);
@@ -1357,8 +1386,15 @@ async function executeAction(agent, decision, runState) {
     }
 
     case 'browse_following': {
-      const following = db.getAgentFollowing(agent.id).map(shortProfile);
-      return { ok: true, summary: `You follow ${following.length} accounts`, users: following };
+      const following = db.getAgentFollowing(agent.id).map(f => ({
+        ...shortProfile(f),
+        subscriptionFee: f.subscriptionFee || 0,
+        cancelled: !!f.followCancelledAt,
+        expiresAt: f.followExpiresAt || null
+      }));
+      const paid = following.filter(f => f.subscriptionFee > 0);
+      const totalMonthlyCost = paid.reduce((s, f) => s + f.subscriptionFee, 0);
+      return { ok: true, summary: `You follow ${following.length} accounts (${paid.length} paid, ${totalMonthlyCost} cr/mo total)`, users: following };
     }
 
     case 'browse_my_stats': {
@@ -1366,9 +1402,14 @@ async function executeAction(agent, decision, runState) {
       return { ok: true, summary: `Your stats: ${stats.posts} posts, ${stats.followers} followers, ${stats.following} following, ${stats.totalLikes} likes received`, stats };
     }
 
+    case 'check_credits': {
+      const cs = db.getAgentCreditStats(agent.id);
+      return { ok: true, summary: `Credits: earned ${cs.totalEarned} cr, spent ${cs.totalSpent} cr, net ${cs.net >= 0 ? '+' : ''}${cs.net} cr. ${cs.activeSubscribers} active subscriber(s).`, stats: cs };
+    }
+
     case 'view_post': {
       const contentId = decision.params?.postId;
-      const content = contentId ? db.state.contents.find((c) => c.id === contentId) : null;
+      const content = contentId ? db.getContent(contentId) : null;
       if (!content) return { ok: false, summary: 'Post not found. Provide a valid postId.' };
 
       db.recordView({ actorKind: 'agent', actorId: agent.id, targetKind: 'content', targetId: content.id });
@@ -1377,8 +1418,7 @@ async function executeAction(agent, decision, runState) {
       runState.workingSet.viewedContents.push(sc);
 
       const comments = db.getChildren(content.id).slice(0, 10).map(c => ({ ...shortContent(c), childType: 'comment' }));
-      const reposts = db.state.contents
-        .filter(c => c.repostOfId === content.id)
+      const reposts = db.getRepostsOf(content.id)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
         .slice(0, 10)
         .map(c => ({ ...shortContent(c), childType: 'repost' }));
@@ -1391,7 +1431,7 @@ async function executeAction(agent, decision, runState) {
     case 'list_comments': {
       const postId = decision.params?.postId;
       if (!postId) return { ok: false, summary: 'postId is required.' };
-      const post = db.state.contents.find(c => c.id === postId);
+      const post = db.getContent(postId);
       if (!post) return { ok: false, summary: 'Post not found.' };
       const allComments = db.getChildren(postId).map(shortContent);
       const pg = paginate(allComments, decision.params?.page, 10);
@@ -1401,10 +1441,9 @@ async function executeAction(agent, decision, runState) {
     case 'list_reposts': {
       const postId = decision.params?.postId;
       if (!postId) return { ok: false, summary: 'postId is required.' };
-      const post = db.state.contents.find(c => c.id === postId);
+      const post = db.getContent(postId);
       if (!post) return { ok: false, summary: 'Post not found.' };
-      const allReposts = db.state.contents
-        .filter(c => c.repostOfId === postId)
+      const allReposts = db.getRepostsOf(postId)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .map(shortContent);
       const pg = paginate(allReposts, decision.params?.page, 10);
@@ -1461,7 +1500,7 @@ async function executeAction(agent, decision, runState) {
     case 'favorite': {
       const contentId = decision.params?.postId;
       if (!contentId) return { ok: false, summary: 'postId is required for reaction.' };
-      const content = db.state.contents.find((c) => c.id === contentId);
+      const content = db.getContent(contentId);
       if (!content) return { ok: false, summary: 'Post not found.' };
 
       db.react({ actorKind: 'agent', actorId: agent.id, agentId: agent.id, contentId: content.id, type: decision.action });
@@ -1474,7 +1513,7 @@ async function executeAction(agent, decision, runState) {
     case 'unfavorite': {
       const contentId = decision.params?.postId;
       if (!contentId) return { ok: false, summary: 'postId required for unreact.' };
-      const content = db.state.contents.find((c) => c.id === contentId);
+      const content = db.getContent(contentId);
       if (!content) return { ok: false, summary: 'Post not found.' };
 
       const typeMap = { unlike: 'like', undislike: 'dislike', unfavorite: 'favorite' };
@@ -1521,7 +1560,7 @@ async function executeAction(agent, decision, runState) {
       const parentId = decision.params?.postId;
       if (!parentId) return { ok: false, summary: 'postId is required for comment.' };
 
-      const parentPost = db.state.contents.find((c) => c.id === parentId);
+      const parentPost = db.getContent(parentId);
       if (!parentPost) return { ok: false, summary: 'Parent post not found.' };
 
       const text = decision.params?.textHint || decision.params?.text || 'Interesting post.';
@@ -1543,7 +1582,7 @@ async function executeAction(agent, decision, runState) {
       const repostOfId = decision.params?.postId;
       if (!repostOfId) return { ok: false, summary: 'postId is required for repost.' };
 
-      const originalPost = db.state.contents.find((c) => c.id === repostOfId);
+      const originalPost = db.getContent(repostOfId);
       if (!originalPost) return { ok: false, summary: 'Original post not found.' };
 
       const text = decision.params?.textHint || 'Resharing this.';
@@ -1565,7 +1604,7 @@ async function executeAction(agent, decision, runState) {
       const postId = decision.params?.postId;
       if (!postId) return { ok: false, summary: 'postId required for delete.' };
 
-      const post = db.state.contents.find((c) => c.id === postId);
+      const post = db.getContent(postId);
       if (!post) return { ok: false, summary: 'Post not found.' };
       if (post.authorAgentId !== agent.id) return { ok: false, summary: 'Cannot delete posts by other authors.' };
 

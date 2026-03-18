@@ -289,12 +289,12 @@ function contentWithStats(content, viewerKind, viewerId) {
     authorName = a?.name || 'Unknown';
     authorAvatarUrl = a?.avatarUrl || '';
   }
-  const contentReactions = db.state.reactions.filter((r) => r.contentId === content.id);
+  const contentReactions = db.getReactionsForContent(content.id);
   const likes     = contentReactions.filter((r) => r.type === 'like').length;
   const dislikes  = contentReactions.filter((r) => r.type === 'dislike').length;
   const favorites = contentReactions.filter((r) => r.type === 'favorite').length;
-  const replies   = db.state.contents.filter((c) => c.parentId === content.id && !c.repostOfId).length;
-  const reposts   = db.state.contents.filter((c) => c.repostOfId === content.id).length;
+  const replies   = db.getReplyCount(content.id);
+  const reposts   = db.getRepostCount(content.id);
 
   let viewerReactions = [];
   if (viewerKind && viewerId) {
@@ -312,7 +312,7 @@ function contentWithStats(content, viewerKind, viewerId) {
   // If this is a repost, include the original post info
   let repostOf = null;
   if (content.repostOfId) {
-    const orig = db.state.contents.find((c) => c.id === content.repostOfId);
+    const orig = db.getContent(content.repostOfId);
     if (orig) {
       let origAuthorName = 'Unknown';
       let origAuthorAvatarUrl = '';
@@ -332,7 +332,7 @@ function contentWithStats(content, viewerKind, viewerId) {
   // If this is a reply, include parent context
   let replyTo = null;
   if (content.parentId && !content.repostOfId) {
-    const parent = db.state.contents.find((c) => c.id === content.parentId);
+    const parent = db.getContent(content.parentId);
     if (parent) {
       let parentAuthorName = 'Unknown';
       let parentAuthorAvatarUrl = '';
@@ -461,9 +461,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/health') {
       sendJson(res, 200, {
         ok: true,
-        users: db.state.users.length,
-        agents: db.state.agents.length,
-        contents: db.state.contents.length
+        users: db.getUserCount(),
+        agents: db.getAgentCount(),
+        contents: db.getContentCount()
       });
       return;
     }
@@ -600,7 +600,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/external-users') {
-      sendJson(res, 200, { users: db.state.users });
+      sendJson(res, 200, { users: db.getAllUsers() });
       return;
     }
 
@@ -658,13 +658,13 @@ const server = http.createServer(async (req, res) => {
         runConfig: body.runConfig
       });
 
-      // When resuming, recalculate nextActionAt to align with the original schedule pace
+      // When resuming, recalculate nextActionAt on the fixed grid from createdAt
       if (body.enabled === true && !prevEnabled) {
-        const last = new Date(agent.lastActionAt || agent.createdAt).getTime();
-        const interval = agent.intervalMinutes * 60_000;
+        const intervalMs = agent.intervalMinutes * 60_000;
+        const created = new Date(agent.createdAt).getTime();
         const now = Date.now();
-        const periods = Math.ceil((now - last) / interval);
-        const nextActionAt = new Date(last + periods * interval).toISOString();
+        const periods = Math.floor((now - created) / intervalMs) + 1;
+        const nextActionAt = new Date(created + periods * intervalMs).toISOString();
         db.updateAgent(agentId, { nextActionAt });
         agent.nextActionAt = nextActionAt;
       }
@@ -688,7 +688,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/agents') {
-      sendJson(res, 200, { agents: db.state.agents });
+      sendJson(res, 200, { agents: db.getAllAgents() });
       return;
     }
 
@@ -721,15 +721,25 @@ const server = http.createServer(async (req, res) => {
 
       const costPerRun = db.calculateRunCost(agent);
       const incurred = db.getMonthlyIncurredCost(agentId);
-      const intervalMin = db.getActivenessConfig(agent.activenessLevel).intervalMinutes;
 
-      // Calculate remaining runs this month
+      // Count remaining scheduled runs this month on the fixed grid from createdAt
       let estimated = incurred;
       if (agent.enabled) {
-        const now = new Date();
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        const remainingMs = monthEnd - now;
-        const remainingRuns = Math.floor(remainingMs / (intervalMin * 60000));
+        const intervalMs = agent.intervalMinutes * 60_000;
+        const created = new Date(agent.createdAt).getTime();
+        const now = Date.now();
+        const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).getTime();
+
+        // Find the next grid point after now
+        const elapsed = now - created;
+        let nextRun = created + (Math.floor(elapsed / intervalMs) + 1) * intervalMs;
+
+        // Count how many grid points fall between now and month end
+        let remainingRuns = 0;
+        while (nextRun < monthEnd) {
+          remainingRuns++;
+          nextRun += intervalMs;
+        }
         estimated = incurred + remainingRuns * costPerRun;
       }
 
@@ -746,6 +756,18 @@ const server = http.createServer(async (req, res) => {
       const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') || 20)));
       const result = db.getUserCostRuns(userId, { page, perPage });
       sendJson(res, 200, { userId, userName: user.name, ...result });
+      return;
+    }
+
+    const userBillingMatch = pathname.match(/^\/api\/users\/([^/]+)\/billing-history$/);
+    if (req.method === 'GET' && userBillingMatch) {
+      const userId = userBillingMatch[1];
+      const user = db.getUser(userId);
+      if (!user) { sendJson(res, 404, { error: 'User not found' }); return; }
+      const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+      const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') || 20)));
+      const result = db.getUserBillingHistory(userId, { page, perPage });
+      sendJson(res, 200, { userId, userName: user.name, credits: user.credits, ...result });
       return;
     }
 
@@ -776,6 +798,19 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    const singleRunLogMatch = pathname.match(/^\/api\/run-logs\/([^/]+)$/);
+    if (req.method === 'GET' && singleRunLogMatch) {
+      const runId = singleRunLogMatch[1];
+      const actorUserId = url.searchParams.get('actorUserId') || apiUser?.id;
+      if (!actorUserId) throw new Error('actorUserId or API key is required.');
+      const log = db.getRunLog(runId);
+      if (!log) { sendJson(res, 404, { error: 'Run log not found' }); return; }
+      requireOwner(actorUserId, log.agentId);
+      const agent = db.getAgent(log.agentId);
+      sendJson(res, 200, { log, agentName: agent?.name || log.agentId });
+      return;
+    }
+
     const agentRunsMatch = pathname.match(/^\/api\/agents\/([^/]+)\/run-logs$/);
     if (req.method === 'GET' && agentRunsMatch) {
       const agentId = agentRunsMatch[1];
@@ -784,11 +819,12 @@ const server = http.createServer(async (req, res) => {
       requireOwner(actorUserId, agentId);
       const page = Math.max(1, Number(url.searchParams.get('page') || 1));
       const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') || 10)));
+      const agent = db.getAgent(agentId);
       const allLogs = db.listAgentRunLogs(agentId, 1000);
       const total = allLogs.length;
       const totalPages = Math.ceil(total / perPage);
       const logs = allLogs.slice((page - 1) * perPage, page * perPage);
-      sendJson(res, 200, { logs, page, perPage, total, totalPages });
+      sendJson(res, 200, { logs, page, perPage, total, totalPages, agentName: agent?.name || agentId });
       return;
     }
 
@@ -902,10 +938,11 @@ const server = http.createServer(async (req, res) => {
       const stats = db.getAgentStats(agentId);
       const viewerKind = url.searchParams.get('viewerKind') || 'agent';
       const viewerId = url.searchParams.get('viewerId') || url.searchParams.get('viewerAgentId');
-      const isFollowing = viewerId
-        ? db.isFollowing({ followerKind: viewerKind, followerId: viewerId, followeeKind: 'agent', followeeId: agentId })
-        : false;
-      sendJson(res, 200, { agent: { ...agent, stats, isFollowing } });
+      const followInfo = viewerId
+        ? db.getFollowInfo({ followerKind: viewerKind, followerId: viewerId, followeeKind: 'agent', followeeId: agentId })
+        : null;
+      const isFollowing = !!followInfo?.isFollowing;
+      sendJson(res, 200, { agent: { ...agent, stats, isFollowing, followInfo } });
       return;
     }
 
@@ -918,11 +955,12 @@ const server = http.createServer(async (req, res) => {
       const stats = db.getActorStats('user', userId);
       const viewerKind = url.searchParams.get('viewerKind') || 'user';
       const viewerId = url.searchParams.get('viewerId');
-      const isFollowing = viewerId
-        ? db.isFollowing({ followerKind: viewerKind, followerId: viewerId, followeeKind: 'user', followeeId: userId })
-        : false;
+      const followInfo = viewerId
+        ? db.getFollowInfo({ followerKind: viewerKind, followerId: viewerId, followeeKind: 'user', followeeId: userId })
+        : null;
+      const isFollowing = !!followInfo?.isFollowing;
       const { passwordHash, apiKey, ...safeUser } = user;
-      sendJson(res, 200, { user: { ...safeUser, stats, isFollowing } });
+      sendJson(res, 200, { user: { ...safeUser, stats, isFollowing, followInfo } });
       return;
     }
 
@@ -1049,8 +1087,7 @@ const server = http.createServer(async (req, res) => {
       const start = (page - 1) * pageSize;
       const pageItems = rawFeed.slice(start, start + pageSize);
       // X-style: each impression counts as a view
-      for (const c of pageItems) c.viewCount = (c.viewCount || 0) + 1;
-      db.save();
+      db.incrementViewCounts(pageItems.map(c => c.id));
       sendJson(res, 200, {
         contents: pageItems.map(mapper),
         page,
@@ -1065,15 +1102,14 @@ const server = http.createServer(async (req, res) => {
     const getContentMatch = pathname.match(/^\/api\/contents\/([^/]+)$/);
     if (req.method === 'GET' && getContentMatch) {
       const id = getContentMatch[1];
-      const content = db.state.contents.find((c) => c.id === id);
+      const content = db.getContent(id);
       if (!content) throw new Error('Content not found.');
       const viewerKind = url.searchParams.get('viewerKind');
       const viewerId = url.searchParams.get('viewerId');
       if (viewerKind && viewerId) {
         db.recordView({ actorKind: viewerKind, actorId: viewerId, targetKind: 'content', targetId: id });
       } else {
-        content.viewCount += 1;
-        db.save();
+        db.incrementViewCount(id);
       }
       const mapper = contentWithStatsForViewer(viewerKind, viewerId);
       const children = db.getChildren(id).map(mapper);
@@ -1150,7 +1186,9 @@ const server = http.createServer(async (req, res) => {
       const followeeId = body.targetId || body.targetAgentId;
       if (!followeeId) throw new Error('targetId or targetAgentId is required.');
       db.unfollow({ followerKind: actor.kind, followerId: actor.id, followeeKind, followeeId });
-      sendJson(res, 200, { ok: true });
+      // Return updated follow info so frontend knows if it's a cancel or immediate removal
+      const followInfo = db.getFollowInfo({ followerKind: actor.kind, followerId: actor.id, followeeKind, followeeId });
+      sendJson(res, 200, { ok: true, followInfo });
       return;
     }
 
@@ -1426,7 +1464,7 @@ const server = http.createServer(async (req, res) => {
 
       const agents = db.getOwnedAgents(userId);
       const contentCount = agents.reduce((sum, a) => {
-        return sum + db.state.contents.filter((c) => c.authorAgentId === a.id).length;
+        return sum + db.getContentCountByAuthor(a.id);
       }, 0);
 
       sendJson(res, 200, {
@@ -1516,6 +1554,21 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/cost-history') {
       sendFile(res, path.join(publicDir, 'cost-history.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/billing-history') {
+      sendFile(res, path.join(publicDir, 'billing-history.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/run-log') {
+      sendFile(res, path.join(publicDir, 'run-log.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/run-logs') {
+      sendFile(res, path.join(publicDir, 'run-logs.html'));
       return;
     }
 

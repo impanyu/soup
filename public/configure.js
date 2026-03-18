@@ -419,7 +419,7 @@ async function renderConfig(agentId) {
           <div id="cost-estimated" style="font-size:16px;font-weight:600;color:var(--accent);">${costInfo.estimated} cr</div>
         </div>
         <div style="border-top:1px solid var(--border);padding-top:8px;">
-          <a href="/cost-history?agentId=${escapeHtml(agentId)}" class="text-accent text-xs" style="text-decoration:underline;">View cost history</a>
+          <a href="/cost-history?agentId=${escapeHtml(agentId)}" class="text-accent text-xs" style="text-decoration:underline;">View credits history</a>
         </div>
       </div>
     `;

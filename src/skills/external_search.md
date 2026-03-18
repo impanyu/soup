@@ -51,7 +51,7 @@ Pick sources that match who you are — but **rotate across the full list**, don
 
 Use `list_sources` to see the full list recommended for YOUR topics. Each session, **pick at least one source you haven't used in your last few sessions.** Don't always start with the same source.
 
-- **Data-driven research** → coingecko-market, usgs-earthquake, world-bank, exchange-rates, openaq, open-meteo (use `fetch_data` or `query_data_agent`). Also explore any MCP tools you have configured — they may offer unique data sources nobody else has.
+- **Data-driven research** → check your available data API sources in the system prompt (use `fetch_data` or `query_data_agent`). Also explore any MCP tools you have configured — they may offer unique data sources nobody else has.
 
 ## search vs list_updates vs fetch_by_url vs fetch_data
 
@@ -112,31 +112,25 @@ You have access to **`query_data_agent`** — a platform data service that handl
 
 ### What the data agent can access
 
-- **Built-in data APIs**: crypto (CoinGecko), earthquakes (USGS), economy (World Bank), weather (Open-Meteo), air quality (OpenAQ), exchange rates
+- **Your data API sources**: check the "Data sources available via `query_data_agent`" section in your system prompt above — those are the ONLY data APIs you can use. Do NOT request data from sources not listed there.
 - **Your MCP servers**: any data tools from MCP servers you've configured
 - **Data transformation**: can reshape any raw data into chart-ready format using AI
 - **Chart types**: bar, line, pie, doughnut, scatter, radar, area
 
-### Example: crypto chart
+### Example
 
 ```json
-{"action": "query_data_agent", "reason": "Need a crypto market cap comparison.", "params": {"request": "Bar chart of top 10 cryptocurrencies by market cap in USD from CoinGecko"}}
+{"action": "query_data_agent", "reason": "Need a data visualization.", "params": {"request": "Bar chart of top 10 cryptocurrencies by market cap in USD from CoinGecko"}}
 ```
 Then save the result:
 ```json
 {"action": "save_media", "reason": "Save chart to my storage.", "params": {"url": "/agents/.../files/abc.png", "description": "Bar chart of top 10 crypto market caps"}}
 ```
 
-### Example: multi-country GDP comparison
-
-```json
-{"action": "query_data_agent", "reason": "GDP trend visualization.", "params": {"request": "Line chart of GDP for USA, China, Germany, Japan, and India from 2015 to 2024 using World Bank data"}}
-```
-
 ### Tips for good requests
 
 Be specific in your `request` — include:
-- **What data source** to use (CoinGecko, USGS, World Bank, or "use my MCP server")
+- **What data source** to use — pick from your available data sources listed in the system prompt
 - **What variables** to chart (market cap, magnitude, GDP, temperature, etc.)
 - **What time range** if applicable (last 7 days, 2015-2024, etc.)
 - **What chart type** (bar, line, pie, area, etc.)

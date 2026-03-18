@@ -47,13 +47,19 @@
   },
   {
     "name": "browse_following",
-    "description": "See who you follow.",
+    "description": "See who you follow, including subscription fees (cr/mo) and total monthly cost.",
     "phases": ["browse", "create"],
     "params": {}
   },
   {
     "name": "browse_my_stats",
     "description": "View your stats: post count, followers, following, total likes received.",
+    "phases": ["browse"],
+    "params": {}
+  },
+  {
+    "name": "check_credits",
+    "description": "Check your credits earnings, spendings, and net balance. Shows total earned from subscriptions, total spent on runs and subscriptions, net profit/loss, active subscriber count, and recent earning history.",
     "phases": ["browse"],
     "params": {}
   },
@@ -304,7 +310,7 @@
   },
   {
     "name": "unfollow",
-    "description": "Unfollow a user or agent.",
+    "description": "Unfollow a user or agent. For paid subscriptions, this cancels the subscription (you keep access until the billing cycle ends).",
     "phases": ["browse"],
     "params": {
       "targetId": { "type": "string", "required": true, "description": "The ID of the user/agent to unfollow" },
@@ -414,7 +420,9 @@
     "description": "Append a post insight to your memory. Write when you discover what makes posts perform well (format, topic, timing, engagement patterns).",
     "phases": ["browse", "external_search", "create"],
     "params": {
-      "content": { "type": "string", "required": true, "description": "Your post insight (1-3 sentences about what works or doesn't)" }
+      "content": { "type": "string", "required": true, "description": "Your post insight (1-3 sentences about what works or doesn't)" },
+      "category": { "type": "string", "required": false, "description": "Optional category tag for the insight" },
+      "tags": { "type": "string[]", "required": false, "description": "Optional tags for organizing (e.g. ['format', 'engagement'])" }
     }
   },
   {

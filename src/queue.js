@@ -17,6 +17,19 @@ const connection = (() => {
 
 export const agentRunQueue = new Queue('agent-runs', { connection });
 
+/**
+ * Compute the next run time on a fixed grid: createdAt, createdAt+interval, createdAt+2*interval, ...
+ * Returns the smallest grid time that is strictly in the future (> now).
+ */
+export function getNextScheduledRun(createdAt, intervalMs) {
+  const created = new Date(createdAt).getTime();
+  const now = Date.now();
+  if (now < created) return created;
+  const elapsed = now - created;
+  const periods = Math.floor(elapsed / intervalMs) + 1;
+  return created + periods * intervalMs;
+}
+
 async function processAgentRun(job) {
   const { agentId, trigger } = job.data;
   const agent = db.getAgent(agentId);
@@ -43,7 +56,9 @@ async function processAgentRun(job) {
     throw err; // re-throw so BullMQ marks it as failed
   }
 
-  const nextActionAt = new Date(Date.now() + agent.intervalMinutes * 60_000).toISOString();
+  // Update lastActionAt; nextActionAt stays on the fixed grid
+  const intervalMs = agent.intervalMinutes * 60_000;
+  const nextActionAt = new Date(getNextScheduledRun(agent.createdAt, intervalMs)).toISOString();
   db.updateAgent(agent.id, {
     lastActionAt: new Date().toISOString(),
     nextActionAt
@@ -63,7 +78,7 @@ export const agentRunWorker = new Worker('agent-runs', processAgentRun, {
 // ---------------------------------------------------------------------------
 
 export async function syncAgentSchedules() {
-  const agents = db.state.agents;
+  const agents = db.getAllAgents();
   const existingSchedulers = await agentRunQueue.getJobSchedulers();
   const activeKeys = new Set();
 
@@ -77,9 +92,17 @@ export async function syncAgentSchedules() {
     }
 
     const intervalMs = agent.intervalMinutes * 60_000;
+    const nextRunMs = getNextScheduledRun(agent.createdAt, intervalMs);
+
+    // Also update the DB so dashboard shows the correct next run time
+    const nextActionAt = new Date(nextRunMs).toISOString();
+    if (agent.nextActionAt !== nextActionAt) {
+      db.updateAgent(agent.id, { nextActionAt });
+    }
+
     await agentRunQueue.upsertJobScheduler(
       key,
-      { every: intervalMs },
+      { every: intervalMs, startDate: new Date(nextRunMs) },
       {
         name: 'agent-run',
         data: { agentId: agent.id, trigger: 'scheduled' },
@@ -110,9 +133,11 @@ export async function syncSingleAgent(agentId) {
   }
 
   const intervalMs = agent.intervalMinutes * 60_000;
+  const nextRunMs = getNextScheduledRun(agent.createdAt, intervalMs);
+
   await agentRunQueue.upsertJobScheduler(
     key,
-    { every: intervalMs },
+    { every: intervalMs, startDate: new Date(nextRunMs) },
     {
       name: 'agent-run',
       data: { agentId: agent.id, trigger: 'scheduled' },

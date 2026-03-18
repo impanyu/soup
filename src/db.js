@@ -2,10 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import Database from 'better-sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, '..', 'data', 'db.json');
+const DB_DIR = path.join(__dirname, '..', 'data');
+const DB_PATH = path.join(DB_DIR, 'soup.db');
+const JSON_DB_FILE = path.join(DB_DIR, 'db.json');
 const CREDITS_PER_DOLLAR = 100;
 
 function nowIso() {
@@ -31,29 +34,28 @@ function verifyPassword(password, encoded) {
   return crypto.timingSafeEqual(aa, bb);
 }
 
-function baseState() {
-  return {
-    users: [],
-    agents: [],
-    contents: [],
-    follows: [],
-    reactions: [],
-    comments: [],
-    purchases: [],
-    transfers: [],
-    tenantCharges: [],
-    viewHistory: [],
-    externalFavorites: [],
-    agentRunLogs: [],
-    jobs: [],
-    pendingStripeTopups: [],
-    stripeWebhookEvents: [],
-    authSessions: [],
-    metadata: {
-      createdAt: nowIso(),
-      updatedAt: nowIso()
-    }
-  };
+/** Bucket entries into ISO-week (Mon–Sun) stats sorted newest-first. */
+function computeWeeklyStats(entries) {
+  const buckets = {};
+  for (const e of entries) {
+    const d = new Date(e.startedAt);
+    const day = d.getUTCDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    const mon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diff));
+    const key = mon.toISOString().slice(0, 10);
+    if (!buckets[key]) buckets[key] = { spent: 0, earned: 0 };
+    buckets[key].spent += (e.cost || 0);
+    buckets[key].earned += (e.amount || 0);
+  }
+  return Object.keys(buckets)
+    .sort((a, b) => b.localeCompare(a))
+    .map(weekStart => {
+      const sun = new Date(weekStart);
+      sun.setUTCDate(sun.getUTCDate() + 6);
+      const weekEnd = sun.toISOString().slice(0, 10);
+      const b = buckets[weekStart];
+      return { weekStart, weekEnd, spent: b.spent, earned: b.earned, net: b.earned - b.spent };
+    });
 }
 
 function defaultAgentPreferences() {
@@ -86,87 +88,388 @@ function defaultAgentRunConfig() {
   };
 }
 
-class JsonDB {
-  constructor(filePath) {
-    this.filePath = filePath;
-    this.state = baseState();
-    this.load();
+// ─── JSON helpers ─────────────────────────────────────────────────────────────
+
+function jp(val) { try { return val ? JSON.parse(val) : null; } catch { return null; } }
+function js(val) { return val == null ? null : JSON.stringify(val); }
+
+// ─── Row → Object hydrators ──────────────────────────────────────────────────
+
+function hydrateAgent(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    enabled: !!row.enabled,
+    isFree: !!row.isFree,
+    preferences: jp(row.preferences) || defaultAgentPreferences(),
+    runConfig: jp(row.runConfig) || defaultAgentRunConfig(),
+    mcpServers: jp(row.mcpServers) || [],
+    externalArticlesHistory: jp(row.externalArticlesHistory) || []
+  };
+}
+
+function hydrateContent(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    media: jp(row.media) || [],
+    tags: jp(row.tags) || [],
+    parentId: row.parentId || null,
+    repostOfId: row.repostOfId || null
+  };
+}
+
+function hydrateFollow(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    subscribedFee: row.subscribedFee || 0,
+    cancelledAt: row.cancelledAt || null,
+    expiresAt: row.expiresAt || null,
+    lastChargedAt: row.lastChargedAt || null
+  };
+}
+
+function hydrateTransfer(row) {
+  if (!row) return null;
+  return { ...row, meta: jp(row.meta) || {} };
+}
+
+function hydrateRunLog(row) {
+  if (!row) return null;
+  const data = jp(row.data) || {};
+  return { ...row, ...data, data: undefined };
+}
+
+function hydrateExternalFavorite(row) {
+  if (!row) return null;
+  return { ...row, tags: jp(row.tags) || [] };
+}
+
+// ─── Schema ──────────────────────────────────────────────────────────────────
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  bio TEXT DEFAULT '',
+  avatarUrl TEXT DEFAULT '',
+  userType TEXT DEFAULT 'human',
+  apiKey TEXT NOT NULL,
+  passwordHash TEXT NOT NULL,
+  credits REAL DEFAULT 100,
+  subscriptionFee REAL DEFAULT 0,
+  stripeCustomerId TEXT,
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_users_name ON users(name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_users_apiKey ON users(apiKey);
+
+CREATE TABLE IF NOT EXISTS agents (
+  id TEXT PRIMARY KEY,
+  ownerUserId TEXT NOT NULL,
+  name TEXT NOT NULL,
+  bio TEXT DEFAULT '',
+  avatarUrl TEXT DEFAULT '',
+  activenessLevel TEXT DEFAULT 'medium',
+  intelligenceLevel TEXT DEFAULT 'dumb',
+  intervalMinutes REAL,
+  credits REAL DEFAULT 0,
+  subscriptionFee REAL DEFAULT 0,
+  enabled INTEGER DEFAULT 1,
+  isFree INTEGER DEFAULT 0,
+  preferences TEXT DEFAULT '{}',
+  runConfig TEXT DEFAULT '{}',
+  mcpServers TEXT DEFAULT '[]',
+  externalArticlesHistory TEXT DEFAULT '[]',
+  createdAt TEXT NOT NULL,
+  lastActionAt TEXT,
+  nextActionAt TEXT,
+  FOREIGN KEY (ownerUserId) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_agents_owner ON agents(ownerUserId);
+
+CREATE TABLE IF NOT EXISTS contents (
+  id TEXT PRIMARY KEY,
+  authorKind TEXT DEFAULT 'agent',
+  authorId TEXT,
+  authorAgentId TEXT,
+  authorUserId TEXT,
+  parentId TEXT,
+  repostOfId TEXT,
+  title TEXT DEFAULT '',
+  text TEXT DEFAULT '',
+  summary TEXT DEFAULT '',
+  mediaType TEXT DEFAULT 'text',
+  mediaUrl TEXT DEFAULT '',
+  media TEXT DEFAULT '[]',
+  tags TEXT DEFAULT '[]',
+  viewCount INTEGER DEFAULT 0,
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_contents_authorAgent ON contents(authorAgentId);
+CREATE INDEX IF NOT EXISTS idx_contents_authorKindId ON contents(authorKind, authorId);
+CREATE INDEX IF NOT EXISTS idx_contents_parentId ON contents(parentId);
+CREATE INDEX IF NOT EXISTS idx_contents_repostOfId ON contents(repostOfId);
+CREATE INDEX IF NOT EXISTS idx_contents_createdAt ON contents(createdAt);
+
+CREATE TABLE IF NOT EXISTS reactions (
+  id TEXT PRIMARY KEY,
+  actorKind TEXT NOT NULL,
+  actorId TEXT NOT NULL,
+  agentId TEXT,
+  userId TEXT,
+  contentId TEXT NOT NULL,
+  type TEXT NOT NULL,
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reactions_content ON reactions(contentId);
+CREATE INDEX IF NOT EXISTS idx_reactions_actor ON reactions(actorKind, actorId, type);
+
+CREATE TABLE IF NOT EXISTS follows (
+  id TEXT PRIMARY KEY,
+  followerKind TEXT NOT NULL,
+  followerId TEXT NOT NULL,
+  followeeKind TEXT NOT NULL,
+  followeeId TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  lastChargedAt TEXT,
+  expiresAt TEXT,
+  cancelledAt TEXT,
+  subscribedFee REAL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(followerKind, followerId);
+CREATE INDEX IF NOT EXISTS idx_follows_followee ON follows(followeeKind, followeeId);
+
+CREATE TABLE IF NOT EXISTS transfers (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  fromKind TEXT,
+  fromId TEXT,
+  toKind TEXT,
+  toId TEXT,
+  amount REAL DEFAULT 0,
+  meta TEXT DEFAULT '{}',
+  description TEXT DEFAULT '',
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_transfers_type ON transfers(type);
+CREATE INDEX IF NOT EXISTS idx_transfers_from ON transfers(fromKind, fromId);
+CREATE INDEX IF NOT EXISTS idx_transfers_to ON transfers(toKind, toId);
+
+CREATE TABLE IF NOT EXISTS tenantCharges (
+  id TEXT PRIMARY KEY,
+  agentId TEXT NOT NULL,
+  amount REAL DEFAULT 0,
+  reason TEXT DEFAULT '',
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tenantCharges_agent ON tenantCharges(agentId);
+
+CREATE TABLE IF NOT EXISTS viewHistory (
+  id TEXT PRIMARY KEY,
+  actorKind TEXT NOT NULL,
+  actorId TEXT NOT NULL,
+  targetKind TEXT NOT NULL,
+  targetId TEXT NOT NULL,
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_viewHistory_actor ON viewHistory(actorKind, actorId, targetKind);
+
+CREATE TABLE IF NOT EXISTS externalFavorites (
+  id TEXT PRIMARY KEY,
+  agentId TEXT NOT NULL,
+  title TEXT DEFAULT '',
+  summary TEXT DEFAULT '',
+  url TEXT NOT NULL,
+  source TEXT DEFAULT '',
+  tags TEXT DEFAULT '[]',
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_extfav_agent ON externalFavorites(agentId);
+
+CREATE TABLE IF NOT EXISTS agentRunLogs (
+  id TEXT PRIMARY KEY,
+  agentId TEXT NOT NULL,
+  startedAt TEXT,
+  finishedAt TEXT,
+  stepsExecuted INTEGER DEFAULT 0,
+  data TEXT DEFAULT '{}',
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_runlogs_agent ON agentRunLogs(agentId);
+
+CREATE TABLE IF NOT EXISTS jobs (
+  id TEXT PRIMARY KEY,
+  key TEXT,
+  type TEXT,
+  agentId TEXT,
+  status TEXT DEFAULT 'queued',
+  dueAt TEXT,
+  attempts INTEGER DEFAULT 0,
+  maxAttempts INTEGER DEFAULT 5,
+  lockedUntil TEXT,
+  lockedBy TEXT,
+  lastRunAt TEXT,
+  lastError TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_jobs_agent ON jobs(agentId);
+CREATE INDEX IF NOT EXISTS idx_jobs_key ON jobs(key);
+
+CREATE TABLE IF NOT EXISTS pendingStripeTopups (
+  id TEXT PRIMARY KEY,
+  externalUserId TEXT NOT NULL,
+  amount REAL NOT NULL,
+  currency TEXT DEFAULT 'usd',
+  paymentIntentId TEXT,
+  provider TEXT DEFAULT 'stripe',
+  status TEXT DEFAULT 'pending',
+  createdAt TEXT NOT NULL,
+  creditedAt TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_topups_pi ON pendingStripeTopups(paymentIntentId);
+
+CREATE TABLE IF NOT EXISTS stripeWebhookEvents (
+  eventId TEXT PRIMARY KEY,
+  createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS authSessions (
+  id TEXT PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,
+  userId TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  expiresAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON authSessions(token);
+`;
+
+// ─── SqliteDB class ──────────────────────────────────────────────────────────
+
+class SqliteDB {
+  constructor(dbPath) {
+    if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+    this.db = new Database(dbPath);
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.db.pragma('busy_timeout = 5000');
+    this.db.pragma('foreign_keys = ON');
+
+    // Create tables
+    this.db.exec(SCHEMA);
+
+    // Migrate from JSON if SQLite is empty and JSON file exists
+    if (this._isEmpty() && fs.existsSync(JSON_DB_FILE)) {
+      this._migrateFromJson();
+    }
+
+    // Backward compat: expose a no-op save() and a minimal state proxy
+    // so any leftover `db.state.X` reads and `db.save()` calls don't crash during migration
+    this.state = new Proxy({}, {
+      get: (_, prop) => {
+        // These are the most accessed properties — return live data
+        if (prop === 'agents') return this.getAllAgents();
+        if (prop === 'users') return this.getAllUsers();
+        if (prop === 'contents') return this.getAllContents();
+        if (prop === 'reactions') return this.getAllReactions();
+        if (prop === 'follows') return this.getAllFollows();
+        if (prop === 'transfers') return this.getAllTransfers();
+        if (prop === 'tenantCharges') return this.getAllTenantCharges();
+        if (prop === 'viewHistory') return [];
+        if (prop === 'externalFavorites') return this.getAllExternalFavorites();
+        if (prop === 'agentRunLogs') return this.getAllRunLogs();
+        if (prop === 'jobs') return this.getAllJobs();
+        if (prop === 'pendingStripeTopups') return this.getAllPendingTopups();
+        if (prop === 'stripeWebhookEvents') return this.getAllWebhookEventIds();
+        if (prop === 'authSessions') return this.getAllAuthSessions();
+        if (prop === 'metadata') return { createdAt: nowIso(), updatedAt: nowIso() };
+        return undefined;
+      }
+    });
   }
 
-  load() {
-    if (!fs.existsSync(this.filePath)) {
-      this.save();
-      return;
-    }
+  _isEmpty() {
+    const row = this.db.prepare('SELECT COUNT(*) as cnt FROM users').get();
+    return row.cnt === 0;
+  }
 
-    const raw = fs.readFileSync(this.filePath, 'utf8');
-    this.state = raw.trim() ? JSON.parse(raw) : baseState();
-    this.state.agentRunLogs ||= [];
-    this.state.users ||= [];
-    this.state.agents ||= [];
-    this.state.contents ||= [];
-    this.state.follows ||= [];
-    this.state.reactions ||= [];
-    this.state.comments ||= [];
-    this.state.purchases ||= [];
-    this.state.transfers ||= [];
-    this.state.tenantCharges ||= [];
-    this.state.viewHistory ||= [];
-    this.state.jobs ||= [];
-    this.state.pendingStripeTopups ||= [];
-    this.state.stripeWebhookEvents ||= [];
-    this.state.authSessions ||= [];
-    this.state.metadata ||= { createdAt: nowIso(), updatedAt: nowIso() };
+  // ── JSON migration ──────────────────────────────────────────────────────────
 
-    let migrated = false;
+  _migrateFromJson() {
+    console.log('[db] Migrating from db.json to SQLite...');
+    let raw;
+    try { raw = fs.readFileSync(JSON_DB_FILE, 'utf8'); } catch { return; }
+    const state = raw.trim() ? JSON.parse(raw) : null;
+    if (!state) return;
 
-    // Migration: remove follows referencing deleted agents
-    const agentIds = new Set(this.state.agents.map(a => a.id));
-    const beforeFollows = this.state.follows.length;
-    this.state.follows = this.state.follows.filter(
-      (f) => !(f.followeeKind === 'agent' && !agentIds.has(f.followeeId)) &&
-             !(f.followerKind === 'agent' && !agentIds.has(f.followerId))
-    );
-    if (this.state.follows.length !== beforeFollows) migrated = true;
+    // Disable FK enforcement during migration — source data may have orphaned references
+    this.db.pragma('foreign_keys = OFF');
 
-    if (migrated) this.save();
-
-    for (const agent of this.state.agents) {
-      this.enrichAgentDefaults(agent);
-    }
-    for (const user of this.state.users) {
-      if (!user.passwordHash) {
-        user.passwordHash = hashPassword(user.apiKey);
+    const insert = this.db.transaction(() => {
+      // Users
+      for (const u of (state.users || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO users (id, name, bio, avatarUrl, userType, apiKey, passwordHash, credits, subscriptionFee, stripeCustomerId, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          u.id, u.name, u.bio || '', u.avatarUrl || '', u.userType || 'human',
+          u.apiKey || newId('key'), u.passwordHash || hashPassword(u.apiKey || newId('pw')),
+          u.credits ?? 100, u.subscriptionFee ?? 0, u.stripeCustomerId || null, u.createdAt || nowIso()
+        );
       }
-    }
-    // Migrate follows to unified actor model
-    for (const f of this.state.follows) {
-      if (!f.followerKind) {
-        f.followerKind = 'agent'; f.followerId = f.followerAgentId;
-        f.followeeKind = 'agent'; f.followeeId = f.followeeAgentId;
+
+      // Agents
+      for (const a of (state.agents || [])) {
+        // Apply enrichment
+        if (!a.name) a.name = 'Agent ' + a.id.slice(-6);
+        if (!a.activenessLevel) a.activenessLevel = 'medium';
+        const prefs = { ...defaultAgentPreferences(), ...(a.preferences || {}) };
+        const rc = { ...defaultAgentRunConfig(), ...(a.runConfig || {}) };
+        // Migrate phaseMaxSteps
+        const pms = rc.phaseMaxSteps || {};
+        if (pms.research !== undefined) {
+          pms.external_search = pms.external_search || (pms.research === 5 ? 15 : pms.research);
+          delete pms.research;
+        }
+        if (pms.create === 5) pms.create = 10;
+        if (pms.self_research !== undefined) {
+          const bonus = Math.floor((pms.self_research || 0) / 2);
+          pms.browse = (pms.browse || 25) + bonus;
+          pms.external_search = (pms.external_search || 15) + Math.ceil((pms.self_research || 0) / 2);
+          delete pms.self_research;
+        }
+        rc.phaseMaxSteps = pms;
+        // Migrate source IDs
+        const OLD_TO_NEW = {
+          google: 'bbc-news', youtube: 'techcrunch', x: 'mastodon',
+          reddit: 'reddit', wikipedia: 'wikipedia', 'hacker news': 'hackernews',
+          arxiv: 'arxiv', github: 'github-trending', 'stack overflow': 'stackoverflow', medium: 'dev-to'
+        };
+        if (Array.isArray(prefs.externalSearchSources)) {
+          prefs.externalSearchSources = [...new Set(prefs.externalSearchSources.map(s => {
+            const key = typeof s === 'string' ? s.toLowerCase() : '';
+            return OLD_TO_NEW[key] || key;
+          }).filter(Boolean))];
+        }
+
+        this.db.prepare(`INSERT OR IGNORE INTO agents (id, ownerUserId, name, bio, avatarUrl, activenessLevel, intelligenceLevel, intervalMinutes, credits, subscriptionFee, enabled, isFree, preferences, runConfig, mcpServers, externalArticlesHistory, createdAt, lastActionAt, nextActionAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          a.id, a.ownerUserId, a.name, a.bio || '', a.avatarUrl || '',
+          a.activenessLevel || 'medium', a.intelligenceLevel || 'dumb',
+          a.intervalMinutes ?? 720, a.credits ?? 0, a.subscriptionFee ?? 0,
+          a.enabled ? 1 : 0, a.isFree ? 1 : 0,
+          js(prefs), js(rc), js(a.mcpServers || []), js(a.externalArticlesHistory || []),
+          a.createdAt || nowIso(), a.lastActionAt || null, a.nextActionAt || null
+        );
       }
-    }
-    // Migrate content to unified author model
-    for (const c of this.state.contents) {
-      if (!c.authorKind) {
-        c.authorKind = 'agent';
-        c.authorId = c.authorAgentId;
-      }
-    }
-    // Migrate reactions to unified actor model
-    for (const r of this.state.reactions) {
-      if (!r.actorKind) { r.actorKind = 'agent'; r.actorId = r.agentId; }
-    }
-    // Migrate comments to unified actor model
-    for (const c of this.state.comments) {
-      if (!c.actorKind) { c.actorKind = 'agent'; c.actorId = c.agentId; }
-    }
-    // Migrate old comments into contents with parentId
-    if (this.state.comments.length > 0) {
-      for (const c of this.state.comments) {
-        const alreadyMigrated = this.state.contents.some((x) => x._migratedFromComment === c.id);
+
+      // Contents (with migration of old comments)
+      const contents = state.contents || [];
+      // Migrate old comments into contents
+      for (const c of (state.comments || [])) {
+        const alreadyMigrated = contents.some(x => x._migratedFromComment === c.id);
         if (alreadyMigrated) continue;
-        this.state.contents.push({
+        contents.push({
           id: newId('content'),
           _migratedFromComment: c.id,
           authorKind: c.actorKind || 'agent',
@@ -174,95 +477,245 @@ class JsonDB {
           authorAgentId: c.actorKind === 'agent' ? c.actorId : null,
           parentId: c.contentId,
           repostOfId: null,
-          title: '',
-          text: c.text || '',
-          mediaType: 'text',
-          mediaUrl: '',
-          price: 0,
-          isFree: true,
-          tags: [],
-          createdAt: c.createdAt || nowIso(),
-          viewCount: 0
+          title: '', text: c.text || '',
+          mediaType: 'text', mediaUrl: '', media: [], tags: [],
+          createdAt: c.createdAt || nowIso(), viewCount: 0
         });
       }
-      this.state.comments = [];
-      migrated = true;
-    }
-    // Ensure subscriptionFee, bio, and avatarUrl exist on all users
-    for (const user of this.state.users) {
-      if (user.subscriptionFee === undefined) user.subscriptionFee = 0;
-      if (user.bio === undefined) user.bio = '';
-      user.avatarUrl ||= '';
-    }
-    for (const agent of this.state.agents) {
-      if (agent.subscriptionFee === undefined) agent.subscriptionFee = 0;
-      agent.avatarUrl ||= '';
-      // Migration: update old phaseMaxSteps defaults + merge self_research into browse/external_search
-      const pms = agent.runConfig?.phaseMaxSteps;
-      if (pms) {
-        if (pms.research !== undefined) {
-          pms.external_search = pms.external_search || (pms.research === 5 ? 15 : pms.research);
-          delete pms.research;
+      for (const c of contents) {
+        if (!c.authorKind) { c.authorKind = 'agent'; c.authorId = c.authorAgentId; }
+        if (!Array.isArray(c.media)) {
+          c.media = (c.mediaUrl && c.mediaType && c.mediaType !== 'text')
+            ? [{ type: c.mediaType, url: c.mediaUrl, prompt: '', generationMode: 'text-to-image' }]
+            : [];
         }
-        if (pms.create === 5) pms.create = 10;
-        // Migration: remove self_research, distribute its steps to browse and external_search
-        if (pms.self_research !== undefined) {
-          const bonus = Math.floor((pms.self_research || 0) / 2);
-          pms.browse = (pms.browse || 25) + bonus;
-          pms.external_search = (pms.external_search || 15) + Math.ceil((pms.self_research || 0) / 2);
-          delete pms.self_research;
-          migrated = true;
+        if (!c.summary) c.summary = (c.title || '').slice(0, 80) || (c.text || '').slice(0, 80) || '(no text)';
+        this.db.prepare(`INSERT OR IGNORE INTO contents (id, authorKind, authorId, authorAgentId, authorUserId, parentId, repostOfId, title, text, summary, mediaType, mediaUrl, media, tags, viewCount, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          c.id, c.authorKind, c.authorId, c.authorAgentId || null, c.authorUserId || null,
+          c.parentId || null, c.repostOfId || null,
+          c.title || '', c.text || '', c.summary || '',
+          c.mediaType || 'text', c.mediaUrl || '',
+          js(c.media), js(c.tags || []),
+          c.viewCount || 0, c.createdAt || nowIso()
+        );
+      }
+
+      // Reactions
+      for (const r of (state.reactions || [])) {
+        if (!r.actorKind) { r.actorKind = 'agent'; r.actorId = r.agentId; }
+        this.db.prepare(`INSERT OR IGNORE INTO reactions (id, actorKind, actorId, agentId, userId, contentId, type, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          r.id, r.actorKind, r.actorId, r.agentId || null, r.userId || null,
+          r.contentId, r.type, r.createdAt || nowIso()
+        );
+      }
+
+      // Follows
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      const agentIdSet = new Set((state.agents || []).map(a => a.id));
+      for (const f of (state.follows || [])) {
+        // Skip follows referencing deleted agents
+        if (f.followeeKind === 'agent' && !agentIdSet.has(f.followeeId)) continue;
+        if (f.followerKind === 'agent' && !agentIdSet.has(f.followerId)) continue;
+        if (!f.followerKind) {
+          f.followerKind = 'agent'; f.followerId = f.followerAgentId;
+          f.followeeKind = 'agent'; f.followeeId = f.followeeAgentId;
+        }
+        if (f.cancelledAt === undefined) f.cancelledAt = null;
+        if (f.expiresAt === undefined && f.lastChargedAt) {
+          f.expiresAt = new Date(new Date(f.lastChargedAt).getTime() + THIRTY_DAYS).toISOString();
+        }
+        if (f.expiresAt === undefined) f.expiresAt = null;
+        if (f.subscribedFee === undefined) {
+          const fe = f.followeeKind === 'user'
+            ? (state.users || []).find(u => u.id === f.followeeId)
+            : (state.agents || []).find(a => a.id === f.followeeId);
+          f.subscribedFee = (fe && fe.subscriptionFee) ? fe.subscriptionFee : 0;
+        }
+        this.db.prepare(`INSERT OR IGNORE INTO follows (id, followerKind, followerId, followeeKind, followeeId, createdAt, lastChargedAt, expiresAt, cancelledAt, subscribedFee)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          f.id, f.followerKind, f.followerId, f.followeeKind, f.followeeId,
+          f.createdAt || nowIso(), f.lastChargedAt || null, f.expiresAt || null,
+          f.cancelledAt || null, f.subscribedFee || 0
+        );
+      }
+
+      // Transfers
+      for (const t of (state.transfers || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO transfers (id, type, fromKind, fromId, toKind, toId, amount, meta, description, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          t.id, t.type, t.fromKind || null, t.fromId || null,
+          t.toKind || null, t.toId || null, t.amount || 0,
+          js(t.meta || {}), t.description || '', t.createdAt || nowIso()
+        );
+      }
+
+      // TenantCharges
+      for (const c of (state.tenantCharges || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO tenantCharges (id, agentId, amount, reason, createdAt)
+          VALUES (?, ?, ?, ?, ?)`).run(
+          c.id, c.agentId, c.amount || 0, c.reason || '', c.createdAt || nowIso()
+        );
+      }
+
+      // ViewHistory
+      for (const v of (state.viewHistory || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO viewHistory (id, actorKind, actorId, targetKind, targetId, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?)`).run(
+          v.id, v.actorKind, v.actorId, v.targetKind, v.targetId, v.createdAt || nowIso()
+        );
+      }
+
+      // External Favorites
+      for (const f of (state.externalFavorites || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO externalFavorites (id, agentId, title, summary, url, source, tags, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          f.id, f.agentId, f.title || '', f.summary || '', f.url, f.source || '',
+          js(f.tags || []), f.createdAt || nowIso()
+        );
+      }
+
+      // Run logs
+      for (const l of (state.agentRunLogs || [])) {
+        const { id, agentId, startedAt, finishedAt, stepsExecuted, createdAt, ...rest } = l;
+        this.db.prepare(`INSERT OR IGNORE INTO agentRunLogs (id, agentId, startedAt, finishedAt, stepsExecuted, data, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+          id, agentId, startedAt || null, finishedAt || null, stepsExecuted || 0,
+          js(rest), createdAt || nowIso()
+        );
+      }
+
+      // Jobs
+      for (const j of (state.jobs || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO jobs (id, key, type, agentId, status, dueAt, attempts, maxAttempts, lockedUntil, lockedBy, lastRunAt, lastError, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          j.id, j.key || null, j.type || null, j.agentId || null,
+          j.status || 'queued', j.dueAt || null, j.attempts || 0, j.maxAttempts || 5,
+          j.lockedUntil || null, j.lockedBy || null, j.lastRunAt || null, j.lastError || null,
+          j.createdAt || nowIso(), j.updatedAt || nowIso()
+        );
+      }
+
+      // Pending topups
+      for (const t of (state.pendingStripeTopups || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO pendingStripeTopups (id, externalUserId, amount, currency, paymentIntentId, provider, status, createdAt, creditedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          t.id, t.externalUserId, t.amount, t.currency || 'usd',
+          t.paymentIntentId || null, t.provider || 'stripe',
+          t.status || 'pending', t.createdAt || nowIso(), t.creditedAt || null
+        );
+      }
+
+      // Stripe webhook events
+      const events = state.stripeWebhookEvents || [];
+      for (const e of events) {
+        const eventId = typeof e === 'string' ? e : e.eventId;
+        if (eventId) {
+          this.db.prepare(`INSERT OR IGNORE INTO stripeWebhookEvents (eventId, createdAt) VALUES (?, ?)`).run(eventId, nowIso());
         }
       }
-      // Migration: remap old external source IDs to current source IDs
-      const OLD_TO_NEW = {
-        google: 'bbc-news', youtube: 'techcrunch', x: 'mastodon',
-        reddit: 'reddit', wikipedia: 'wikipedia', 'hacker news': 'hackernews',
-        arxiv: 'arxiv', github: 'github-trending', 'stack overflow': 'stackoverflow', medium: 'dev-to'
-      };
-      const srcs = agent.preferences?.externalSearchSources;
-      if (Array.isArray(srcs)) {
-        const remapped = srcs.map(s => {
-          const key = typeof s === 'string' ? s.toLowerCase() : '';
-          return OLD_TO_NEW[key] || key;
-        }).filter(Boolean);
-        const unique = [...new Set(remapped)];
-        if (JSON.stringify(unique) !== JSON.stringify(srcs)) {
-          agent.preferences.externalSearchSources = unique;
-          migrated = true;
-        }
+
+      // Auth sessions
+      for (const s of (state.authSessions || [])) {
+        this.db.prepare(`INSERT OR IGNORE INTO authSessions (id, token, userId, createdAt, expiresAt)
+          VALUES (?, ?, ?, ?, ?)`).run(
+          s.id, s.token, s.userId, s.createdAt || nowIso(), s.expiresAt
+        );
       }
-    }
-    // Ensure parentId/repostOfId fields exist on all contents
-    for (const c of this.state.contents) {
-      if (c.parentId === undefined) c.parentId = null;
-      if (c.repostOfId === undefined) c.repostOfId = null;
-      // Migration: populate media[] from legacy mediaUrl/mediaType
-      if (!Array.isArray(c.media)) {
-        c.media = (c.mediaUrl && c.mediaType && c.mediaType !== 'text')
-          ? [{ type: c.mediaType, url: c.mediaUrl, prompt: '', generationMode: 'text-to-image' }]
-          : [];
-      }
-      // Migration: backfill summary
-      if (!c.summary) {
-        c.summary = (c.title || '').slice(0, 80) || (c.text || '').slice(0, 80) || '(no text)';
-      }
-    }
-    this.save();
+    });
+
+    insert();
+    // Re-enable FK enforcement
+    this.db.pragma('foreign_keys = ON');
+    // Rename old JSON file
+    try { fs.renameSync(JSON_DB_FILE, JSON_DB_FILE + '.migrated'); } catch {}
+    console.log('[db] Migration complete.');
   }
 
-  save() {
-    this.state.metadata.updatedAt = nowIso();
-    fs.writeFileSync(this.filePath, JSON.stringify(this.state, null, 2));
+  // ── Backward compat ────────────────────────────────────────────────────────
+
+  save() { /* no-op — SQLite auto-persists */ }
+
+  // ── Bulk accessors (for db.state.* proxy + queue.js compat) ────────────────
+
+  getAllAgents() { return this.db.prepare('SELECT * FROM agents').all().map(hydrateAgent); }
+  getAllUsers() { return this.db.prepare('SELECT * FROM users').all(); }
+  getAllContents() { return this.db.prepare('SELECT * FROM contents ORDER BY createdAt DESC').all().map(hydrateContent); }
+  getAllReactions() { return this.db.prepare('SELECT * FROM reactions').all(); }
+  getAllFollows() { return this.db.prepare('SELECT * FROM follows').all().map(hydrateFollow); }
+  getAllTransfers() { return this.db.prepare('SELECT * FROM transfers').all().map(hydrateTransfer); }
+  getAllTenantCharges() { return this.db.prepare('SELECT * FROM tenantCharges').all(); }
+  getAllExternalFavorites() { return this.db.prepare('SELECT * FROM externalFavorites').all().map(hydrateExternalFavorite); }
+  getAllRunLogs() { return this.db.prepare('SELECT * FROM agentRunLogs ORDER BY createdAt DESC').all().map(hydrateRunLog); }
+  getAllJobs() { return this.db.prepare('SELECT * FROM jobs').all(); }
+  getAllPendingTopups() { return this.db.prepare('SELECT * FROM pendingStripeTopups').all(); }
+  getAllWebhookEventIds() { return this.db.prepare('SELECT eventId FROM stripeWebhookEvents').all().map(r => r.eventId); }
+  getAllAuthSessions() { return this.db.prepare('SELECT * FROM authSessions').all(); }
+
+  // ── New accessor methods (replacing db.state.X direct access) ──────────────
+
+  getContent(id) {
+    return hydrateContent(this.db.prepare('SELECT * FROM contents WHERE id = ?').get(id));
   }
 
-  enrichAgentDefaults(agent) {
-    if (!agent.name) agent.name = 'Agent ' + agent.id.slice(-6);
-    if (!agent.bio && agent.bio !== '') agent.bio = '';
-    if (!agent.activenessLevel) agent.activenessLevel = 'medium';
-    agent.preferences ||= defaultAgentPreferences();
-    agent.runConfig ||= defaultAgentRunConfig();
+  getReactionsForContent(contentId) {
+    return this.db.prepare('SELECT * FROM reactions WHERE contentId = ?').all(contentId);
   }
+
+  getRepostsOf(contentId) {
+    return this.db.prepare('SELECT * FROM contents WHERE repostOfId = ? ORDER BY createdAt ASC').all(contentId).map(hydrateContent);
+  }
+
+  getRepostCount(contentId) {
+    return this.db.prepare('SELECT COUNT(*) as cnt FROM contents WHERE repostOfId = ?').get(contentId).cnt;
+  }
+
+  getReplyCount(contentId) {
+    return this.db.prepare('SELECT COUNT(*) as cnt FROM contents WHERE parentId = ? AND (repostOfId IS NULL OR repostOfId = \'\')').get(contentId).cnt;
+  }
+
+  getUserCount() {
+    return this.db.prepare('SELECT COUNT(*) as cnt FROM users').get().cnt;
+  }
+
+  getAgentCount() {
+    return this.db.prepare('SELECT COUNT(*) as cnt FROM agents').get().cnt;
+  }
+
+  getContentCount() {
+    return this.db.prepare('SELECT COUNT(*) as cnt FROM contents').get().cnt;
+  }
+
+  getContentCountByAuthor(agentId) {
+    return this.db.prepare('SELECT COUNT(*) as cnt FROM contents WHERE authorAgentId = ?').get(agentId).cnt;
+  }
+
+  incrementViewCount(contentId) {
+    this.db.prepare('UPDATE contents SET viewCount = viewCount + 1 WHERE id = ?').run(contentId);
+  }
+
+  incrementViewCounts(contentIds) {
+    if (!contentIds.length) return;
+    const stmt = this.db.prepare('UPDATE contents SET viewCount = viewCount + 1 WHERE id = ?');
+    const tx = this.db.transaction(() => { for (const id of contentIds) stmt.run(id); });
+    tx();
+  }
+
+  insertAgentDirect(agent) {
+    this.db.prepare(`INSERT OR IGNORE INTO agents (id, ownerUserId, name, bio, avatarUrl, activenessLevel, intelligenceLevel, intervalMinutes, credits, subscriptionFee, enabled, isFree, preferences, runConfig, mcpServers, externalArticlesHistory, createdAt, lastActionAt, nextActionAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      agent.id, agent.ownerUserId, agent.name, agent.bio || '', agent.avatarUrl || '',
+      agent.activenessLevel || 'medium', agent.intelligenceLevel || 'dumb',
+      agent.intervalMinutes ?? 99999, agent.credits ?? 0, agent.subscriptionFee ?? 0,
+      agent.enabled ? 1 : 0, agent.isFree ? 1 : 0,
+      js(agent.preferences || {}), js(agent.runConfig || {}),
+      js(agent.mcpServers || []), js(agent.externalArticlesHistory || []),
+      agent.createdAt || nowIso(), agent.lastActionAt || null, agent.nextActionAt || null
+    );
+  }
+
+  // ── User methods ───────────────────────────────────────────────────────────
 
   createUser({ name, userType = 'human', initialCredits = 100, password = '', subscriptionFee = 0, bio = '' }) {
     if (this.getUserByName(name)) {
@@ -278,34 +731,38 @@ class JsonDB {
       passwordHash: hashPassword(password || newId('pw')),
       credits: Number(initialCredits),
       subscriptionFee: Number(subscriptionFee),
+      stripeCustomerId: null,
       createdAt: nowIso()
     };
-    this.state.users.push(user);
-    this.save();
+    this.db.prepare(`INSERT INTO users (id, name, bio, avatarUrl, userType, apiKey, passwordHash, credits, subscriptionFee, stripeCustomerId, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      user.id, user.name, user.bio, user.avatarUrl, user.userType,
+      user.apiKey, user.passwordHash, user.credits, user.subscriptionFee,
+      user.stripeCustomerId, user.createdAt
+    );
     return user;
   }
 
   getUser(userId) {
-    return this.state.users.find((u) => u.id === userId);
+    return this.db.prepare('SELECT * FROM users WHERE id = ?').get(userId) || null;
   }
 
   updateUser(userId, patch) {
     const user = this.getUser(userId);
     if (!user) return null;
-    if (patch.bio !== undefined) user.bio = String(patch.bio || '');
-    if (patch.name !== undefined) user.name = String(patch.name);
-    if (patch.avatarUrl !== undefined) user.avatarUrl = String(patch.avatarUrl || '');
-    this.save();
-    return user;
+    if (patch.bio !== undefined) this.db.prepare('UPDATE users SET bio = ? WHERE id = ?').run(String(patch.bio || ''), userId);
+    if (patch.name !== undefined) this.db.prepare('UPDATE users SET name = ? WHERE id = ?').run(String(patch.name), userId);
+    if (patch.avatarUrl !== undefined) this.db.prepare('UPDATE users SET avatarUrl = ? WHERE id = ?').run(String(patch.avatarUrl || ''), userId);
+    return this.getUser(userId);
   }
 
   getUserByName(name) {
     const lower = String(name || '').toLowerCase();
-    return this.state.users.find((u) => u.name.toLowerCase() === lower);
+    return this.db.prepare('SELECT * FROM users WHERE name = ? COLLATE NOCASE').get(lower) || null;
   }
 
   getUserByApiKey(apiKey) {
-    return this.state.users.find((u) => u.apiKey === apiKey);
+    return this.db.prepare('SELECT * FROM users WHERE apiKey = ?').get(apiKey) || null;
   }
 
   verifyUserPassword(userId, password) {
@@ -314,77 +771,85 @@ class JsonDB {
     return verifyPassword(password, user.passwordHash);
   }
 
+  // ── Auth sessions ──────────────────────────────────────────────────────────
+
   createAuthSession(userId, ttlHours = 24 * 7) {
     const user = this.getUser(userId);
     if (!user) throw new Error('User not found.');
     const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
-    const session = {
-      id: newId('sess'),
-      token: newId('token'),
-      userId,
-      createdAt: nowIso(),
-      expiresAt
-    };
-    this.state.authSessions.push(session);
-    if (this.state.authSessions.length > 5000) {
-      this.state.authSessions = this.state.authSessions.slice(-5000);
+    const session = { id: newId('sess'), token: newId('token'), userId, createdAt: nowIso(), expiresAt };
+    this.db.prepare(`INSERT INTO authSessions (id, token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)`).run(
+      session.id, session.token, session.userId, session.createdAt, session.expiresAt
+    );
+    // Prune old sessions
+    const count = this.db.prepare('SELECT COUNT(*) as cnt FROM authSessions').get().cnt;
+    if (count > 5000) {
+      this.db.prepare('DELETE FROM authSessions WHERE id IN (SELECT id FROM authSessions ORDER BY createdAt ASC LIMIT ?)').run(count - 5000);
     }
-    this.save();
     return session;
   }
 
   getUserBySessionToken(token) {
-    const session = this.state.authSessions.find((s) => s.token === token);
+    const session = this.db.prepare('SELECT * FROM authSessions WHERE token = ?').get(token);
     if (!session) return null;
     if (new Date(session.expiresAt).getTime() <= Date.now()) return null;
     return this.getUser(session.userId) || null;
   }
 
   revokeSession(token) {
-    const before = this.state.authSessions.length;
-    this.state.authSessions = this.state.authSessions.filter((s) => s.token !== token);
-    if (this.state.authSessions.length !== before) this.save();
+    this.db.prepare('DELETE FROM authSessions WHERE token = ?').run(token);
   }
+
+  // ── Agent methods ──────────────────────────────────────────────────────────
 
   createAgent({ ownerUserId, name, bio = '', activenessLevel = 'medium', intelligenceLevel = 'dumb', preferences, runConfig }) {
     const intervalMinutes = this.getActivenessConfig(activenessLevel).intervalMinutes;
-    const now = Date.now();
+    const createdAt = nowIso();
+    const nextActionAt = new Date(new Date(createdAt).getTime() + intervalMinutes * 60_000).toISOString();
+    const prefs = { ...defaultAgentPreferences(), ...preferences };
+    const rc = { ...defaultAgentRunConfig(), ...runConfig };
     const agent = {
-      id: newId('agent'),
-      ownerUserId,
-      name,
-      bio,
-      avatarUrl: '',
-      activenessLevel,
-      intelligenceLevel,
-      intervalMinutes,
-      subscriptionFee: 0,
-      enabled: true,
-      preferences: { ...defaultAgentPreferences(), ...preferences },
-      runConfig: { ...defaultAgentRunConfig(), ...runConfig },
-      createdAt: nowIso(),
-      lastActionAt: null,
-      nextActionAt: new Date(now + intervalMinutes * 60 * 1000).toISOString()
+      id: newId('agent'), ownerUserId, name, bio, avatarUrl: '',
+      activenessLevel, intelligenceLevel, intervalMinutes,
+      credits: 0, subscriptionFee: 0, enabled: true, isFree: false,
+      preferences: prefs, runConfig: rc,
+      mcpServers: [], externalArticlesHistory: [],
+      createdAt, lastActionAt: null, nextActionAt
     };
-    this.state.agents.push(agent);
-    // Owner automatically follows their new agent
-    this._followDirect({ followerKind: 'user', followerId: ownerUserId, followeeKind: 'agent', followeeId: agent.id });
-    this.save();
+    this.db.prepare(`INSERT INTO agents (id, ownerUserId, name, bio, avatarUrl, activenessLevel, intelligenceLevel, intervalMinutes, credits, subscriptionFee, enabled, isFree, preferences, runConfig, mcpServers, externalArticlesHistory, createdAt, lastActionAt, nextActionAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      agent.id, agent.ownerUserId, agent.name, agent.bio, agent.avatarUrl,
+      agent.activenessLevel, agent.intelligenceLevel, agent.intervalMinutes,
+      agent.credits, agent.subscriptionFee, agent.enabled ? 1 : 0, 0,
+      js(agent.preferences), js(agent.runConfig), js([]), js([]),
+      agent.createdAt, null, agent.nextActionAt
+    );
+    // Owner auto-subscribes
+    this.follow({ followerKind: 'user', followerId: ownerUserId, followeeKind: 'agent', followeeId: agent.id });
     return agent;
   }
 
+  getAgent(agentId) {
+    return hydrateAgent(this.db.prepare('SELECT * FROM agents WHERE id = ?').get(agentId));
+  }
+
   updateAgent(agentId, patch) {
-    const agent = this.state.agents.find((a) => a.id === agentId);
+    const agent = this.getAgent(agentId);
     if (!agent) return null;
 
-    // Strip undefined values so partial patches don't overwrite existing fields
     const cleanPatch = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
     const next = { ...agent, ...cleanPatch };
+
     if (patch.activenessLevel) {
       const intervalMinutes = this.getActivenessConfig(patch.activenessLevel).intervalMinutes;
       next.intervalMinutes = intervalMinutes;
       if (!patch.nextActionAt) {
-        next.nextActionAt = new Date(Date.now() + intervalMinutes * 60 * 1000).toISOString();
+        const intervalMs = intervalMinutes * 60_000;
+        const created = new Date(agent.createdAt).getTime();
+        const now = Date.now();
+        const elapsed = now - created;
+        const periods = Math.floor(elapsed / intervalMs) + 1;
+        next.nextActionAt = new Date(created + periods * intervalMs).toISOString();
       }
     }
     if (patch.preferences) {
@@ -394,14 +859,53 @@ class JsonDB {
       next.runConfig = { ...agent.runConfig, ...patch.runConfig };
     }
 
-    Object.assign(agent, next);
-    this.enrichAgentDefaults(agent);
-    this.save();
+    // Enrich defaults
+    if (!next.name) next.name = 'Agent ' + next.id.slice(-6);
+    if (!next.activenessLevel) next.activenessLevel = 'medium';
+    if (!next.preferences) next.preferences = defaultAgentPreferences();
+    if (!next.runConfig) next.runConfig = defaultAgentRunConfig();
+
+    this.db.prepare(`UPDATE agents SET
+      ownerUserId=?, name=?, bio=?, avatarUrl=?, activenessLevel=?, intelligenceLevel=?,
+      intervalMinutes=?, credits=?, subscriptionFee=?, enabled=?, isFree=?,
+      preferences=?, runConfig=?, mcpServers=?, externalArticlesHistory=?,
+      lastActionAt=?, nextActionAt=?
+      WHERE id=?`).run(
+      next.ownerUserId, next.name, next.bio || '', next.avatarUrl || '',
+      next.activenessLevel, next.intelligenceLevel || 'dumb',
+      next.intervalMinutes, next.credits ?? 0, next.subscriptionFee ?? 0,
+      next.enabled ? 1 : 0, next.isFree ? 1 : 0,
+      js(next.preferences), js(next.runConfig),
+      js(next.mcpServers || []), js(next.externalArticlesHistory || []),
+      next.lastActionAt || null, next.nextActionAt || null,
+      agentId
+    );
+    return this.getAgent(agentId);
+  }
+
+  getOwnedAgents(userId) {
+    return this.db.prepare('SELECT * FROM agents WHERE ownerUserId = ?').all(userId).map(hydrateAgent);
+  }
+
+  deleteAgent(agentId, ownerUserId) {
+    const agent = this.getAgent(agentId);
+    if (!agent) throw new Error('Agent not found.');
+    if (agent.ownerUserId !== ownerUserId) throw new Error('Not the owner of this agent.');
+    const tx = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM agents WHERE id = ?').run(agentId);
+      this.db.prepare("DELETE FROM follows WHERE (followeeKind = 'agent' AND followeeId = ?) OR (followerKind = 'agent' AND followerId = ?)").run(agentId, agentId);
+    });
+    tx();
     return agent;
   }
 
+  enrichAgentDefaults(agent) {
+    // No-op for backward compat — enrichment happens in createAgent/updateAgent and migration
+  }
+
+  // ── Content methods ────────────────────────────────────────────────────────
+
   createContent({ authorKind = 'agent', authorId, authorAgentId, title = '', text = '', mediaType = 'text', mediaUrl = '', media = [], tags = [], parentId = null, repostOfId = null }) {
-    // Support legacy authorAgentId param
     const resolvedKind = authorKind;
     const resolvedId = authorId || authorAgentId;
     const summary = (title || '').slice(0, 80) || (text || '').slice(0, 80) || '(no text)';
@@ -409,113 +913,29 @@ class JsonDB {
       id: newId('content'),
       authorKind: resolvedKind,
       authorId: resolvedId,
-      authorAgentId: resolvedKind === 'agent' ? resolvedId : null, // backward compat
+      authorAgentId: resolvedKind === 'agent' ? resolvedId : null,
+      authorUserId: resolvedKind === 'user' ? resolvedId : null,
       parentId: parentId || null,
       repostOfId: repostOfId || null,
-      title,
-      text,
-      summary,
-      mediaType,
-      mediaUrl,
+      title, text, summary,
+      mediaType, mediaUrl,
       media: Array.isArray(media) ? media : [],
-      tags,
+      tags: tags || [],
       createdAt: nowIso(),
       viewCount: 0
     };
-    this.state.contents.push(content);
-    this.save();
+    this.db.prepare(`INSERT INTO contents (id, authorKind, authorId, authorAgentId, authorUserId, parentId, repostOfId, title, text, summary, mediaType, mediaUrl, media, tags, viewCount, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      content.id, content.authorKind, content.authorId, content.authorAgentId, content.authorUserId,
+      content.parentId, content.repostOfId, content.title, content.text, content.summary,
+      content.mediaType, content.mediaUrl, js(content.media), js(content.tags),
+      content.viewCount, content.createdAt
+    );
     return content;
   }
 
-  getOwnedAgents(userId) {
-    return this.state.agents.filter((a) => a.ownerUserId === userId);
-  }
-
-  getAgent(agentId) {
-    return this.state.agents.find((a) => a.id === agentId);
-  }
-
-  deleteAgent(agentId, ownerUserId) {
-    const agent = this.getAgent(agentId);
-    if (!agent) throw new Error('Agent not found.');
-    if (agent.ownerUserId !== ownerUserId) throw new Error('Not the owner of this agent.');
-    this.state.agents = this.state.agents.filter((a) => a.id !== agentId);
-    this.state.follows = this.state.follows.filter(
-      (f) => !(f.followeeKind === 'agent' && f.followeeId === agentId) &&
-             !(f.followerKind === 'agent' && f.followerId === agentId)
-    );
-    this.save();
-    return agent;
-  }
-
-  getAgentFavorites(agentId) {
-    return this.getActorReactions('agent', agentId, 'favorite');
-  }
-
-  getAgentLiked(agentId) {
-    return this.getActorReactions('agent', agentId, 'like');
-  }
-
-  // ── External Favorites ──
-
-  addExternalFavorite(agentId, { title, summary, url, source, tags }) {
-    if (!url) throw new Error('url is required.');
-    // Deduplicate by URL
-    const existing = this.state.externalFavorites.find(f => f.agentId === agentId && f.url === url);
-    if (existing) return existing;
-    const item = {
-      id: newId('extfav'),
-      agentId,
-      title: (title || '').slice(0, 300),
-      summary: (summary || '').slice(0, 1000),
-      url,
-      source: source || '',
-      tags: tags || [],
-      createdAt: nowIso()
-    };
-    this.state.externalFavorites.push(item);
-    this.save();
-    return item;
-  }
-
-  removeExternalFavorite(agentId, itemId) {
-    const before = this.state.externalFavorites.length;
-    this.state.externalFavorites = this.state.externalFavorites.filter(
-      f => !(f.agentId === agentId && f.id === itemId)
-    );
-    if (this.state.externalFavorites.length < before) {
-      this.save();
-      return true;
-    }
-    return false;
-  }
-
-  getExternalFavorites(agentId, { page = 1, perPage = 20 } = {}) {
-    const all = this.state.externalFavorites
-      .filter(f => f.agentId === agentId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const total = all.length;
-    const totalPages = Math.ceil(total / perPage) || 1;
-    const paged = all.slice((page - 1) * perPage, page * perPage);
-    return { items: paged, page, perPage, total, totalPages };
-  }
-
-  getAgentPublished(agentId) {
-    return this.state.contents.filter((c) => c.authorKind === 'agent' && c.authorId === agentId && !c.parentId && !c.repostOfId);
-  }
-
-  getUserPublished(userId) {
-    return this.state.contents.filter((c) => c.authorKind === 'user' && c.authorId === userId && !c.parentId && !c.repostOfId);
-  }
-
-  getUserAllContent(userId) {
-    return this.state.contents
-      .filter((c) => c.authorKind === 'user' && c.authorId === userId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-
   deleteContent(contentId, actorKind, actorId) {
-    const content = this.state.contents.find((c) => c.id === contentId);
+    const content = this.getContent(contentId);
     if (!content) throw new Error('Content not found.');
     if (content.authorKind !== actorKind || content.authorId !== actorId) {
       throw new Error('Not the author of this content.');
@@ -524,55 +944,64 @@ class JsonDB {
     const toDelete = new Set();
     const collect = (id) => {
       toDelete.add(id);
-      for (const child of this.state.contents.filter((c) => c.parentId === id)) {
-        collect(child.id);
-      }
+      const children = this.db.prepare('SELECT id FROM contents WHERE parentId = ?').all(id);
+      for (const child of children) collect(child.id);
     };
     collect(contentId);
-    this.state.contents = this.state.contents.filter((c) => !toDelete.has(c.id));
-    // Clean up reactions referencing deleted content
-    this.state.reactions = this.state.reactions.filter((r) => !toDelete.has(r.contentId));
-    // Clean up view history
-    this.state.viewHistory = this.state.viewHistory.filter(
-      (v) => !(v.targetKind === 'content' && toDelete.has(v.targetId))
-    );
-    this.save();
+
+    const tx = this.db.transaction(() => {
+      for (const id of toDelete) {
+        this.db.prepare('DELETE FROM contents WHERE id = ?').run(id);
+        this.db.prepare('DELETE FROM reactions WHERE contentId = ?').run(id);
+        this.db.prepare("DELETE FROM viewHistory WHERE targetKind = 'content' AND targetId = ?").run(id);
+      }
+    });
+    tx();
+  }
+
+  getAgentPublished(agentId) {
+    return this.db.prepare("SELECT * FROM contents WHERE authorKind = 'agent' AND authorId = ? AND (parentId IS NULL OR parentId = '') AND (repostOfId IS NULL OR repostOfId = '') ORDER BY createdAt ASC").all(agentId).map(hydrateContent);
+  }
+
+  getUserPublished(userId) {
+    return this.db.prepare("SELECT * FROM contents WHERE authorKind = 'user' AND authorId = ? AND (parentId IS NULL OR parentId = '') AND (repostOfId IS NULL OR repostOfId = '') ORDER BY createdAt ASC").all(userId).map(hydrateContent);
+  }
+
+  getUserAllContent(userId) {
+    return this.db.prepare("SELECT * FROM contents WHERE authorKind = 'user' AND authorId = ? ORDER BY createdAt DESC").all(userId).map(hydrateContent);
   }
 
   listFeed() {
-    return this.state.contents
-      .filter((c) => !c.parentId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return this.db.prepare("SELECT * FROM contents WHERE (parentId IS NULL OR parentId = '') ORDER BY createdAt DESC").all().map(hydrateContent);
   }
 
   getPersonalizedFeed({ followerKind, followerId }) {
-    const following = this.state.follows.filter(
-      (f) => f.followerKind === followerKind && f.followerId === followerId
-    );
-    const followedSet = new Set(following.map((f) => `${f.followeeKind}:${f.followeeId}`));
-    return this.state.contents
-      .filter((c) => !c.parentId && followedSet.has(`${c.authorKind}:${c.authorId}`))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const followedKeys = this.db.prepare('SELECT followeeKind, followeeId FROM follows WHERE followerKind = ? AND followerId = ?').all(followerKind, followerId);
+    if (!followedKeys.length) return [];
+    // Build a set of "kind:id" for quick filtering
+    const followedSet = new Set(followedKeys.map(f => `${f.followeeKind}:${f.followeeId}`));
+    // Fetch all top-level content and filter by followed authors
+    const all = this.db.prepare("SELECT * FROM contents WHERE (parentId IS NULL OR parentId = '') ORDER BY createdAt DESC").all().map(hydrateContent);
+    return all.filter(c => followedSet.has(`${c.authorKind}:${c.authorId}`));
   }
 
   getChildren(contentId) {
-    return this.state.contents
-      .filter((c) => c.parentId === contentId)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return this.db.prepare('SELECT * FROM contents WHERE parentId = ? ORDER BY createdAt ASC').all(contentId).map(hydrateContent);
   }
 
-  // Get the ancestor chain from a post up to the root
   getAncestors(contentId) {
     const ancestors = [];
-    let current = this.state.contents.find((c) => c.id === contentId);
+    let current = this.getContent(contentId);
     while (current?.parentId) {
-      const parent = this.state.contents.find((c) => c.id === current.parentId);
+      const parent = this.getContent(current.parentId);
       if (!parent) break;
       ancestors.unshift(parent);
       current = parent;
     }
     return ancestors;
   }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
 
   search({ query = '', type = 'all' }) {
     const raw = query.trim();
@@ -581,49 +1010,80 @@ class JsonDB {
     const q = raw.toLowerCase();
     const results = { agents: [], users: [], contents: [] };
 
-    // Tag searches only return content (not people)
     if (!isTagSearch && (type === 'all' || type === 'agents')) {
-      results.agents = this.state.agents.filter((a) => {
-        return !q || a.name.toLowerCase().includes(q) || (a.bio || '').toLowerCase().includes(q);
-      });
+      if (q) {
+        results.agents = this.db.prepare("SELECT * FROM agents WHERE name LIKE ? OR bio LIKE ?").all(`%${q}%`, `%${q}%`).map(hydrateAgent);
+      } else {
+        results.agents = this.getAllAgents();
+      }
     }
 
     if (!isTagSearch && (type === 'all' || type === 'users')) {
-      results.users = this.state.users.filter((u) => {
-        return !q || u.name.toLowerCase().includes(q);
-      }).map((u) => ({ id: u.id, name: u.name, userType: u.userType, credits: u.credits, avatarUrl: u.avatarUrl || '', createdAt: u.createdAt }));
+      const rows = q
+        ? this.db.prepare('SELECT * FROM users WHERE name LIKE ?').all(`%${q}%`)
+        : this.getAllUsers();
+      results.users = rows.map(u => ({ id: u.id, name: u.name, userType: u.userType, credits: u.credits, avatarUrl: u.avatarUrl || '', createdAt: u.createdAt }));
     }
 
     if (type === 'all' || type === 'contents') {
-      results.contents = this.state.contents.filter((c) => {
-        if (c.parentId) return false; // exclude replies from search
-        if (isTagSearch) {
-          return (c.tags || []).some(t => t.toLowerCase() === tagName);
-        }
-        const title = (c.title || '').toLowerCase();
-        const body = (c.text || '').toLowerCase();
-        const tags = (c.tags || []).join(' ').toLowerCase();
-        return !q || title.includes(q) || body.includes(q) || tags.includes(q);
-      }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      if (isTagSearch) {
+        // Search by exact tag — tags stored as JSON array
+        const all = this.db.prepare("SELECT * FROM contents WHERE (parentId IS NULL OR parentId = '') ORDER BY createdAt DESC").all().map(hydrateContent);
+        results.contents = all.filter(c => (c.tags || []).some(t => t.toLowerCase() === tagName));
+      } else if (q) {
+        results.contents = this.db.prepare("SELECT * FROM contents WHERE (parentId IS NULL OR parentId = '') AND (title LIKE ? OR text LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC").all(`%${q}%`, `%${q}%`, `%${q}%`).map(hydrateContent);
+      } else {
+        results.contents = this.db.prepare("SELECT * FROM contents WHERE (parentId IS NULL OR parentId = '') ORDER BY createdAt DESC").all().map(hydrateContent);
+      }
     }
 
     return results;
   }
 
-  // Internal: write a follow record without saving (caller must save)
+  searchByName(query) {
+    const q = String(query || '').toLowerCase().trim();
+    const results = [];
+    const users = q
+      ? this.db.prepare('SELECT id, name, avatarUrl FROM users WHERE name LIKE ? LIMIT 10').all(`%${q}%`)
+      : this.db.prepare('SELECT id, name, avatarUrl FROM users LIMIT 10').all();
+    for (const u of users) {
+      results.push({ kind: 'user', id: u.id, name: u.name, avatarUrl: u.avatarUrl || '' });
+      if (results.length >= 10) return results;
+    }
+    const agents = q
+      ? this.db.prepare('SELECT id, name, avatarUrl FROM agents WHERE name LIKE ? LIMIT ?').all(`%${q}%`, 10 - results.length)
+      : this.db.prepare('SELECT id, name, avatarUrl FROM agents LIMIT ?').all(10 - results.length);
+    for (const a of agents) {
+      results.push({ kind: 'agent', id: a.id, name: a.name, avatarUrl: a.avatarUrl || '' });
+      if (results.length >= 10) return results;
+    }
+    return results;
+  }
+
+  getAllNames() {
+    const results = [];
+    for (const u of this.db.prepare('SELECT id, name, avatarUrl FROM users').all()) {
+      results.push({ kind: 'user', id: u.id, name: u.name, avatarUrl: u.avatarUrl || '' });
+    }
+    for (const a of this.db.prepare('SELECT id, name, avatarUrl FROM agents').all()) {
+      results.push({ kind: 'agent', id: a.id, name: a.name, avatarUrl: a.avatarUrl || '' });
+    }
+    return results;
+  }
+
+  // ── Follow / Subscription methods ──────────────────────────────────────────
+
+  _findFollow({ followerKind, followerId, followeeKind, followeeId }) {
+    return hydrateFollow(this.db.prepare('SELECT * FROM follows WHERE followerKind = ? AND followerId = ? AND followeeKind = ? AND followeeId = ?').get(followerKind, followerId, followeeKind, followeeId));
+  }
+
   _followDirect({ followerKind, followerId, followeeKind, followeeId }) {
-    const exists = this.state.follows.find(
-      (f) => f.followerKind === followerKind && f.followerId === followerId &&
-             f.followeeKind === followeeKind && f.followeeId === followeeId
-    );
+    const exists = this._findFollow({ followerKind, followerId, followeeKind, followeeId });
     if (!exists) {
-      this.state.follows.push({
-        id: newId('follow'),
-        followerKind, followerId,
-        followeeKind, followeeId,
-        createdAt: nowIso(),
-        lastChargedAt: null
-      });
+      this.db.prepare(`INSERT INTO follows (id, followerKind, followerId, followeeKind, followeeId, createdAt, lastChargedAt, expiresAt, cancelledAt, subscribedFee)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId('follow'), followerKind, followerId, followeeKind, followeeId, nowIso(), null, null, null, 0
+      );
     }
   }
 
@@ -632,13 +1092,12 @@ class JsonDB {
     if (kind === 'user') {
       const user = this.getUser(id);
       if (!user) throw new Error('User not found.');
-      user.subscriptionFee = numFee;
+      this.db.prepare('UPDATE users SET subscriptionFee = ? WHERE id = ?').run(numFee, id);
     } else {
       const agent = this.getAgent(id);
       if (!agent) throw new Error('Agent not found.');
-      agent.subscriptionFee = numFee;
+      this.db.prepare('UPDATE agents SET subscriptionFee = ? WHERE id = ?').run(numFee, id);
     }
-    this.save();
   }
 
   follow({ followerKind = 'agent', followerId, followeeKind = 'agent', followeeId }) {
@@ -646,12 +1105,28 @@ class JsonDB {
       throw new Error('Cannot follow yourself.');
     }
 
-    // Charge first month's subscription fee if followee has one
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
     const followee = followeeKind === 'user' ? this.getUser(followeeId) : this.getAgent(followeeId);
-    if (followee && followee.subscriptionFee > 0) {
-      const alreadyFollowing = this.isFollowing({ followerKind, followerId, followeeKind, followeeId });
-      if (!alreadyFollowing) {
-        // Resolve payer: for agents, charge the owner user
+    const hasFee = followee && followee.subscriptionFee > 0;
+    const existing = this._findFollow({ followerKind, followerId, followeeKind, followeeId });
+
+    if (existing) {
+      const isExpired = existing.expiresAt && new Date(existing.expiresAt).getTime() <= Date.now();
+
+      if (existing.cancelledAt && !isExpired) {
+        this.db.prepare('UPDATE follows SET cancelledAt = NULL WHERE id = ?').run(existing.id);
+        return;
+      }
+
+      if (existing.cancelledAt && isExpired) {
+        this.db.prepare('DELETE FROM follows WHERE id = ?').run(existing.id);
+      } else if (!existing.cancelledAt) {
+        return;
+      }
+    }
+
+    const tx = this.db.transaction(() => {
+      if (hasFee) {
         let payer;
         if (followerKind === 'agent') {
           const agent = this.getAgent(followerId);
@@ -660,7 +1135,7 @@ class JsonDB {
           payer = this.getUser(followerId);
         }
         if (!payer) throw new Error('Follower (or owner) not found.');
-        // Resolve payee: for agents, credit the owner user
+
         let payee;
         if (followeeKind === 'agent') {
           const agent = this.getAgent(followeeId);
@@ -668,173 +1143,187 @@ class JsonDB {
         } else {
           payee = this.getUser(followeeId);
         }
-        // Skip fee if owner follows their own agent (payer is payee)
-        const skipFee = payee && payer.id === payee.id;
-        if (!skipFee) {
-          if (payer.credits < followee.subscriptionFee) {
-            throw new Error(`Insufficient credits. Following ${followee.name || 'this user'} costs ${followee.subscriptionFee} cr/month.`);
-          }
-          payer.credits -= followee.subscriptionFee;
-          if (payee) payee.credits += followee.subscriptionFee;
-          this.state.transfers.push({
-            id: newId('tx'),
-            type: 'subscription',
-            fromKind: followerKind,
-            fromId: followerId,
-            toKind: followeeKind,
-            toId: followeeId,
-            amount: followee.subscriptionFee,
-            createdAt: nowIso()
-          });
-        }
-      }
-    }
 
-    this._followDirect({ followerKind, followerId, followeeKind, followeeId });
-    // Mark first charge date
-    const follow = this.state.follows.find(
-      (f) => f.followerKind === followerKind && f.followerId === followerId &&
-             f.followeeKind === followeeKind && f.followeeId === followeeId
-    );
-    if (follow && !follow.lastChargedAt && followee?.subscriptionFee > 0) {
-      follow.lastChargedAt = nowIso();
-    }
-    this.save();
+        if (payer.credits < followee.subscriptionFee) {
+          throw new Error(`Insufficient credits. Following ${followee.name || 'this user'} costs ${followee.subscriptionFee} cr/month.`);
+        }
+        this.db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(followee.subscriptionFee, payer.id);
+        if (payee) this.db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(followee.subscriptionFee, payee.id);
+        this.db.prepare(`INSERT INTO transfers (id, type, fromKind, fromId, toKind, toId, amount, meta, description, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          newId('tx'), 'subscription', followerKind, followerId, followeeKind, followeeId,
+          followee.subscriptionFee, '{}', '', nowIso()
+        );
+      }
+
+      const now = nowIso();
+      this.db.prepare(`INSERT INTO follows (id, followerKind, followerId, followeeKind, followeeId, createdAt, lastChargedAt, expiresAt, cancelledAt, subscribedFee)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId('follow'), followerKind, followerId, followeeKind, followeeId,
+        now, hasFee ? now : null,
+        hasFee ? new Date(Date.now() + THIRTY_DAYS).toISOString() : null,
+        null, hasFee ? followee.subscriptionFee : 0
+      );
+    });
+    tx();
   }
 
-  /**
-   * Process monthly subscription charges for all active follows.
-   * Charges followers whose lastChargedAt is more than 30 days ago.
-   * Auto-unfollows if the payer has insufficient credits.
-   */
   chargeMonthlySubscriptions() {
     const now = Date.now();
     const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const allFollows = this.getAllFollows();
     const toRemove = [];
+    let charged = 0;
 
-    for (const f of this.state.follows) {
-      if (!f.lastChargedAt) continue;
-      const elapsed = now - new Date(f.lastChargedAt).getTime();
-      if (elapsed < THIRTY_DAYS) continue;
+    const tx = this.db.transaction(() => {
+      for (const f of allFollows) {
+        if (f.cancelledAt && f.expiresAt && new Date(f.expiresAt).getTime() <= now) {
+          toRemove.push(f.id);
+          continue;
+        }
+        if (!f.lastChargedAt) continue;
+        if (f.cancelledAt) continue;
+        if (f.expiresAt && new Date(f.expiresAt).getTime() > now) continue;
 
-      const followee = f.followeeKind === 'user' ? this.getUser(f.followeeId) : this.getAgent(f.followeeId);
-      if (!followee || !followee.subscriptionFee || followee.subscriptionFee <= 0) continue;
+        const followee = f.followeeKind === 'user' ? this.getUser(f.followeeId) : this.getAgent(f.followeeId);
+        const renewalFee = followee ? followee.subscriptionFee : 0;
+        if (!renewalFee || renewalFee <= 0) {
+          this.db.prepare('UPDATE follows SET subscribedFee = 0, lastChargedAt = NULL, expiresAt = NULL WHERE id = ?').run(f.id);
+          continue;
+        }
 
-      // Resolve payer
-      let payer;
-      if (f.followerKind === 'agent') {
-        const agent = this.getAgent(f.followerId);
-        payer = agent ? this.getUser(agent.ownerUserId) : null;
-      } else {
-        payer = this.getUser(f.followerId);
+        let payer;
+        if (f.followerKind === 'agent') {
+          const agent = this.getAgent(f.followerId);
+          payer = agent ? this.getUser(agent.ownerUserId) : null;
+        } else {
+          payer = this.getUser(f.followerId);
+        }
+        if (!payer) { toRemove.push(f.id); continue; }
+
+        let payee;
+        if (f.followeeKind === 'agent') {
+          const agent = this.getAgent(f.followeeId);
+          payee = agent ? this.getUser(agent.ownerUserId) : null;
+        } else {
+          payee = this.getUser(f.followeeId);
+        }
+
+        if (payer.credits < renewalFee) { toRemove.push(f.id); continue; }
+
+        this.db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(renewalFee, payer.id);
+        if (payee) this.db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(renewalFee, payee.id);
+        const chargeTime = nowIso();
+        this.db.prepare('UPDATE follows SET lastChargedAt = ?, expiresAt = ?, subscribedFee = ? WHERE id = ?').run(
+          chargeTime, new Date(now + THIRTY_DAYS).toISOString(), renewalFee, f.id
+        );
+        charged++;
+        this.db.prepare(`INSERT INTO transfers (id, type, fromKind, fromId, toKind, toId, amount, meta, description, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+          newId('tx'), 'subscription_renewal', f.followerKind, f.followerId, f.followeeKind, f.followeeId, renewalFee, '{}', '', chargeTime
+        );
       }
-      if (!payer) { toRemove.push(f.id); continue; }
 
-      if (payer.credits < followee.subscriptionFee) {
-        // Auto-unfollow on insufficient credits
-        toRemove.push(f.id);
-        continue;
+      for (const id of toRemove) {
+        this.db.prepare('DELETE FROM follows WHERE id = ?').run(id);
       }
-
-      // Resolve payee
-      let payee;
-      if (f.followeeKind === 'agent') {
-        const agent = this.getAgent(f.followeeId);
-        payee = agent ? this.getUser(agent.ownerUserId) : null;
-      } else {
-        payee = this.getUser(f.followeeId);
-      }
-
-      // Skip fee if owner follows their own agent
-      if (payee && payer.id === payee.id) {
-        f.lastChargedAt = nowIso();
-        continue;
-      }
-
-      payer.credits -= followee.subscriptionFee;
-      if (payee) payee.credits += followee.subscriptionFee;
-      f.lastChargedAt = nowIso();
-      this.state.transfers.push({
-        id: newId('tx'),
-        type: 'subscription_renewal',
-        fromKind: f.followerKind,
-        fromId: f.followerId,
-        toKind: f.followeeKind,
-        toId: f.followeeId,
-        amount: followee.subscriptionFee,
-        createdAt: nowIso()
-      });
-    }
-
-    if (toRemove.length > 0) {
-      const removeSet = new Set(toRemove);
-      this.state.follows = this.state.follows.filter(f => !removeSet.has(f.id));
-    }
-    this.save();
-    return { charged: this.state.follows.length, removed: toRemove.length };
+    });
+    tx();
+    return { charged, removed: toRemove.length };
   }
 
   unfollow({ followerKind = 'agent', followerId, followeeKind = 'agent', followeeId }) {
-    const before = this.state.follows.length;
-    this.state.follows = this.state.follows.filter(
-      (f) => !(f.followerKind === followerKind && f.followerId === followerId &&
-               f.followeeKind === followeeKind && f.followeeId === followeeId)
-    );
-    if (this.state.follows.length !== before) this.save();
+    const follow = this._findFollow({ followerKind, followerId, followeeKind, followeeId });
+    if (!follow) return;
+
+    if (follow.expiresAt && new Date(follow.expiresAt).getTime() > Date.now() && !follow.cancelledAt) {
+      this.db.prepare('UPDATE follows SET cancelledAt = ? WHERE id = ?').run(nowIso(), follow.id);
+      return;
+    }
+    this.db.prepare('DELETE FROM follows WHERE id = ?').run(follow.id);
   }
 
   isFollowing({ followerKind, followerId, followeeKind, followeeId }) {
-    return !!this.state.follows.find(
-      (f) => f.followerKind === followerKind && f.followerId === followerId &&
-             f.followeeKind === followeeKind && f.followeeId === followeeId
-    );
+    const f = this._findFollow({ followerKind, followerId, followeeKind, followeeId });
+    if (!f) return false;
+    if (f.cancelledAt && f.expiresAt && new Date(f.expiresAt).getTime() <= Date.now()) return false;
+    return true;
+  }
+
+  getFollowInfo({ followerKind, followerId, followeeKind, followeeId }) {
+    const f = this._findFollow({ followerKind, followerId, followeeKind, followeeId });
+    if (!f) return null;
+    if (f.cancelledAt && f.expiresAt && new Date(f.expiresAt).getTime() <= Date.now()) return null;
+    return {
+      isFollowing: true,
+      cancelledAt: f.cancelledAt || null,
+      expiresAt: f.expiresAt || null,
+      lastChargedAt: f.lastChargedAt || null,
+      subscribedFee: f.subscribedFee != null ? f.subscribedFee : 0
+    };
   }
 
   getActorFollowers(followeeKind, followeeId) {
-    return this.state.follows
-      .filter((f) => f.followeeKind === followeeKind && f.followeeId === followeeId)
-      .map((f) => {
-        if (f.followerKind === 'agent') return { kind: 'agent', ...this.getAgent(f.followerId) };
-        if (f.followerKind === 'user') {
+    const now = Date.now();
+    const rows = this.db.prepare('SELECT * FROM follows WHERE followeeKind = ? AND followeeId = ?').all(followeeKind, followeeId).map(hydrateFollow);
+    return rows
+      .filter(f => !(f.cancelledAt && f.expiresAt && new Date(f.expiresAt).getTime() <= now))
+      .map(f => {
+        let entity;
+        if (f.followerKind === 'agent') entity = { kind: 'agent', ...this.getAgent(f.followerId) };
+        else if (f.followerKind === 'user') {
           const u = this.getUser(f.followerId);
-          return u ? { kind: 'user', id: u.id, name: u.name, userType: u.userType, avatarUrl: u.avatarUrl || '' } : null;
+          entity = u ? { kind: 'user', id: u.id, name: u.name, userType: u.userType, avatarUrl: u.avatarUrl || '' } : null;
         }
-        return null;
+        return entity || null;
       })
       .filter(Boolean);
   }
 
   getActorFollowing(followerKind, followerId) {
-    return this.state.follows
-      .filter((f) => f.followerKind === followerKind && f.followerId === followerId)
-      .map((f) => {
-        if (f.followeeKind === 'agent') return { kind: 'agent', ...this.getAgent(f.followeeId) };
-        if (f.followeeKind === 'user') {
+    const now = Date.now();
+    const rows = this.db.prepare('SELECT * FROM follows WHERE followerKind = ? AND followerId = ?').all(followerKind, followerId).map(hydrateFollow);
+    return rows
+      .filter(f => !(f.cancelledAt && f.expiresAt && new Date(f.expiresAt).getTime() <= now))
+      .map(f => {
+        let entity;
+        if (f.followeeKind === 'agent') entity = { kind: 'agent', ...this.getAgent(f.followeeId) };
+        else if (f.followeeKind === 'user') {
           const u = this.getUser(f.followeeId);
-          return u ? { kind: 'user', id: u.id, name: u.name, userType: u.userType, avatarUrl: u.avatarUrl || '' } : null;
+          entity = u ? { kind: 'user', id: u.id, name: u.name, userType: u.userType, avatarUrl: u.avatarUrl || '', bio: u.bio || '' } : null;
         }
-        return null;
+        if (!entity) return null;
+        entity.subscriptionFee = f.subscribedFee != null ? f.subscribedFee : (entity.subscriptionFee || 0);
+        entity.followCancelledAt = f.cancelledAt || null;
+        entity.followExpiresAt = f.expiresAt || null;
+        return entity;
       })
       .filter(Boolean);
   }
 
-  // Keep legacy name for server.js compat
   getAgentFollowers(agentId) { return this.getActorFollowers('agent', agentId); }
   getAgentFollowing(agentId) { return this.getActorFollowing('agent', agentId); }
 
   getActorStats(kind, id) {
-    const posts = this.state.contents.filter((c) => c.authorKind === kind && c.authorId === id && !c.parentId).length;
-    const followers = this.state.follows.filter((f) => f.followeeKind === kind && f.followeeId === id).length;
-    const following = this.state.follows.filter((f) => f.followerKind === kind && f.followerId === id).length;
-    const totalLikes = this.state.reactions.filter(
-      (r) => r.type === 'like' && this.state.contents.some((c) => c.id === r.contentId && c.authorKind === kind && c.authorId === id)
-    ).length;
-    const agents = kind === 'user' ? this.state.agents.filter((a) => a.ownerUserId === id).length : undefined;
-    return { posts, followers, following, totalLikes, ...(agents !== undefined ? { agents } : {}) };
+    const posts = this.db.prepare("SELECT COUNT(*) as cnt FROM contents WHERE authorKind = ? AND authorId = ? AND (parentId IS NULL OR parentId = '')").get(kind, id).cnt;
+    const now = new Date().toISOString();
+    // Active followers
+    const followers = this.db.prepare(`SELECT COUNT(*) as cnt FROM follows WHERE followeeKind = ? AND followeeId = ?
+      AND (cancelledAt IS NULL OR expiresAt IS NULL OR expiresAt > ?)`).get(kind, id, now).cnt;
+    const following = this.db.prepare(`SELECT COUNT(*) as cnt FROM follows WHERE followerKind = ? AND followerId = ?
+      AND (cancelledAt IS NULL OR expiresAt IS NULL OR expiresAt > ?)`).get(kind, id, now).cnt;
+    // Total likes received on this actor's content
+    const totalLikes = this.db.prepare(`SELECT COUNT(*) as cnt FROM reactions r
+      JOIN contents c ON r.contentId = c.id
+      WHERE c.authorKind = ? AND c.authorId = ? AND r.type = 'like'`).get(kind, id).cnt;
+    const result = { posts, followers, following, totalLikes };
+    if (kind === 'user') {
+      result.agents = this.db.prepare('SELECT COUNT(*) as cnt FROM agents WHERE ownerUserId = ?').get(id).cnt;
+    }
+    return result;
   }
 
-  // Keep legacy name
   getAgentStats(agentId) { return this.getActorStats('agent', agentId); }
+
+  // ── Reactions ──────────────────────────────────────────────────────────────
 
   react({ actorKind = 'agent', actorId, agentId, contentId, type }) {
     const resolvedKind = actorKind;
@@ -842,19 +1331,17 @@ class JsonDB {
     const valid = new Set(['like', 'dislike', 'favorite']);
     if (!valid.has(type)) throw new Error('Invalid reaction type.');
 
-    this.state.reactions = this.state.reactions.filter(
-      (r) => !(r.actorKind === resolvedKind && r.actorId === resolvedId && r.contentId === contentId && r.type === type)
-    );
-    this.state.reactions.push({
-      id: newId('reaction'),
-      actorKind: resolvedKind,
-      actorId: resolvedId,
-      agentId: resolvedKind === 'agent' ? resolvedId : null, // backward compat
-      contentId,
-      type,
-      createdAt: nowIso()
+    const tx = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM reactions WHERE actorKind = ? AND actorId = ? AND contentId = ? AND type = ?').run(resolvedKind, resolvedId, contentId, type);
+      this.db.prepare(`INSERT INTO reactions (id, actorKind, actorId, agentId, userId, contentId, type, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId('reaction'), resolvedKind, resolvedId,
+        resolvedKind === 'agent' ? resolvedId : null,
+        resolvedKind === 'user' ? resolvedId : null,
+        contentId, type, nowIso()
+      );
     });
-    this.save();
+    tx();
   }
 
   unreact({ actorKind = 'agent', actorId, agentId, contentId, type }) {
@@ -862,60 +1349,79 @@ class JsonDB {
     const resolvedId = actorId || agentId;
     const valid = new Set(['like', 'dislike', 'favorite']);
     if (!valid.has(type)) throw new Error('Invalid reaction type.');
-    const before = this.state.reactions.length;
-    this.state.reactions = this.state.reactions.filter(
-      (r) => !(r.actorKind === resolvedKind && r.actorId === resolvedId && r.contentId === contentId && r.type === type)
-    );
-    if (this.state.reactions.length !== before) this.save();
-  }
-
-  recordView({ actorKind, actorId, targetKind, targetId }) {
-    // Deduplicate: remove existing view of same target, re-add as most recent
-    this.state.viewHistory = this.state.viewHistory.filter(
-      (v) => !(v.actorKind === actorKind && v.actorId === actorId && v.targetKind === targetKind && v.targetId === targetId)
-    );
-    this.state.viewHistory.push({
-      id: newId('view'),
-      actorKind,
-      actorId,
-      targetKind,
-      targetId,
-      createdAt: nowIso()
-    });
-    // Increment content viewCount
-    if (targetKind === 'content') {
-      const content = this.state.contents.find((c) => c.id === targetId);
-      if (content) content.viewCount = (content.viewCount || 0) + 1;
-    }
-    this.save();
+    this.db.prepare('DELETE FROM reactions WHERE actorKind = ? AND actorId = ? AND contentId = ? AND type = ?').run(resolvedKind, resolvedId, contentId, type);
   }
 
   getActorReactions(actorKind, actorId, type) {
-    const reactions = this.state.reactions
-      .filter((r) => {
-        const matchActor = (r.actorKind === actorKind && r.actorId === actorId) ||
-          (actorKind === 'agent' && r.agentId === actorId);
-        return matchActor && r.type === type;
-      })
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const contentIds = reactions.map((r) => r.contentId);
-    const contentMap = new Map(this.state.contents.map((c) => [c.id, c]));
-    return contentIds.map((id) => contentMap.get(id)).filter(Boolean);
+    const reactions = this.db.prepare(`SELECT * FROM reactions WHERE (actorKind = ? AND actorId = ? AND type = ?) OR (? = 'agent' AND agentId = ? AND type = ?) ORDER BY createdAt DESC`)
+      .all(actorKind, actorId, type, actorKind, actorId, type);
+    const contentIds = reactions.map(r => r.contentId);
+    return contentIds.map(id => this.getContent(id)).filter(Boolean);
+  }
+
+  getAgentFavorites(agentId) { return this.getActorReactions('agent', agentId, 'favorite'); }
+  getAgentLiked(agentId) { return this.getActorReactions('agent', agentId, 'like'); }
+
+  // ── View history ───────────────────────────────────────────────────────────
+
+  recordView({ actorKind, actorId, targetKind, targetId }) {
+    const tx = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM viewHistory WHERE actorKind = ? AND actorId = ? AND targetKind = ? AND targetId = ?').run(actorKind, actorId, targetKind, targetId);
+      this.db.prepare(`INSERT INTO viewHistory (id, actorKind, actorId, targetKind, targetId, createdAt) VALUES (?, ?, ?, ?, ?, ?)`).run(
+        newId('view'), actorKind, actorId, targetKind, targetId, nowIso()
+      );
+      if (targetKind === 'content') {
+        this.db.prepare('UPDATE contents SET viewCount = viewCount + 1 WHERE id = ?').run(targetId);
+      }
+    });
+    tx();
   }
 
   getActorViewHistory(actorKind, actorId, targetKind) {
-    const views = this.state.viewHistory
-      .filter((v) => v.actorKind === actorKind && v.actorId === actorId && v.targetKind === targetKind)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return views.map((v) => {
-      if (v.targetKind === 'content') return this.state.contents.find((c) => c.id === v.targetId);
+    const views = this.db.prepare('SELECT * FROM viewHistory WHERE actorKind = ? AND actorId = ? AND targetKind = ? ORDER BY createdAt DESC').all(actorKind, actorId, targetKind);
+    return views.map(v => {
+      if (v.targetKind === 'content') return this.getContent(v.targetId);
       if (v.targetKind === 'agent') return this.getAgent(v.targetId);
       if (v.targetKind === 'user') return this.getUser(v.targetId);
       return null;
     }).filter(Boolean);
   }
 
-  // Legacy comment() now creates a content with parentId
+  // ── External Favorites ─────────────────────────────────────────────────────
+
+  addExternalFavorite(agentId, { title, summary, url, source, tags }) {
+    if (!url) throw new Error('url is required.');
+    const existing = this.db.prepare('SELECT * FROM externalFavorites WHERE agentId = ? AND url = ?').get(agentId, url);
+    if (existing) return hydrateExternalFavorite(existing);
+    const item = {
+      id: newId('extfav'), agentId,
+      title: (title || '').slice(0, 300),
+      summary: (summary || '').slice(0, 1000),
+      url, source: source || '',
+      tags: tags || [],
+      createdAt: nowIso()
+    };
+    this.db.prepare(`INSERT INTO externalFavorites (id, agentId, title, summary, url, source, tags, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      item.id, item.agentId, item.title, item.summary, item.url, item.source, js(item.tags), item.createdAt
+    );
+    return item;
+  }
+
+  removeExternalFavorite(agentId, itemId) {
+    const info = this.db.prepare('DELETE FROM externalFavorites WHERE agentId = ? AND id = ?').run(agentId, itemId);
+    return info.changes > 0;
+  }
+
+  getExternalFavorites(agentId, { page = 1, perPage = 20 } = {}) {
+    const total = this.db.prepare('SELECT COUNT(*) as cnt FROM externalFavorites WHERE agentId = ?').get(agentId).cnt;
+    const totalPages = Math.ceil(total / perPage) || 1;
+    const offset = (page - 1) * perPage;
+    const items = this.db.prepare('SELECT * FROM externalFavorites WHERE agentId = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?').all(agentId, perPage, offset).map(hydrateExternalFavorite);
+    return { items, page, perPage, total, totalPages };
+  }
+
+  // ── Comment (legacy compat) ────────────────────────────────────────────────
+
   comment({ actorKind = 'agent', actorId, agentId, contentId, text }) {
     return this.createContent({
       authorKind: actorKind,
@@ -925,25 +1431,37 @@ class JsonDB {
     });
   }
 
+  // ── Credits & Billing ──────────────────────────────────────────────────────
+
   addCreditsToUser(userId, amount, meta = {}) {
     const user = this.getUser(userId);
     if (!user) throw new Error('User not found.');
-    user.credits += Number(amount) * CREDITS_PER_DOLLAR;
-    this.state.transfers.push({
-      id: newId('tx'),
-      type: 'topup',
-      fromKind: 'stripe',
-      fromId: 'stripe',
-      toKind: 'user',
-      toId: userId,
-      amount: Number(amount),
-      meta,
-      createdAt: nowIso()
+    const credits = Number(amount) * CREDITS_PER_DOLLAR;
+    const tx = this.db.transaction(() => {
+      this.db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(credits, userId);
+      this.db.prepare(`INSERT INTO transfers (id, type, fromKind, fromId, toKind, toId, amount, meta, description, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId('tx'), 'topup', 'stripe', 'stripe', 'user', userId,
+        Number(amount), js(meta), '', nowIso()
+      );
     });
-    this.save();
-    return user;
+    tx();
+    return this.getUser(userId);
   }
 
+  getUserBillingHistory(userId, { page = 1, perPage = 20 } = {}) {
+    const topups = this.db.prepare("SELECT * FROM transfers WHERE type = 'topup' AND toKind = 'user' AND toId = ? ORDER BY createdAt DESC").all(userId).map(hydrateTransfer);
+    const entries = topups.map(t => ({
+      id: t.id, date: t.createdAt,
+      dollars: t.amount, credits: t.amount * CREDITS_PER_DOLLAR
+    }));
+    const totalDollars = entries.reduce((s, e) => s + e.dollars, 0);
+    const totalCredits = entries.reduce((s, e) => s + e.credits, 0);
+    const total = entries.length;
+    const totalPages = Math.ceil(total / perPage) || 1;
+    const paged = entries.slice((page - 1) * perPage, page * perPage);
+    return { entries: paged, page, perPage, total, totalPages, totalDollars, totalCredits };
+  }
 
   getActivenessConfig(level) {
     const table = {
@@ -954,41 +1472,31 @@ class JsonDB {
       very_diligent: { intervalMinutes: 3 * 60 },
       workaholic: { intervalMinutes: 60 }
     };
-
     return table[level] || table.medium;
   }
 
   chargeTenantFee(agentId, reason = 'scheduled_action') {
     const agent = this.getAgent(agentId);
     if (!agent) throw new Error('Agent not found.');
-
     const owner = this.getUser(agent.ownerUserId);
     if (!owner) throw new Error('Agent owner not found.');
-
     const fee = this.calculateRunCost(agent);
+
     if (owner.credits < fee) {
-      agent.enabled = false;
-      this.save();
+      this.db.prepare('UPDATE agents SET enabled = 0 WHERE id = ?').run(agentId);
       return { charged: 0, disabled: true, reason: 'insufficient_owner_credits' };
     }
 
-    owner.credits -= fee;
-    this.state.tenantCharges.push({
-      id: newId('tenant'),
-      agentId,
-      amount: fee,
-      reason,
-      createdAt: nowIso()
+    const tx = this.db.transaction(() => {
+      this.db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(fee, owner.id);
+      this.db.prepare(`INSERT INTO tenantCharges (id, agentId, amount, reason, createdAt) VALUES (?, ?, ?, ?, ?)`).run(
+        newId('tenant'), agentId, fee, reason, nowIso()
+      );
     });
-    this.save();
-
+    tx();
     return { charged: fee, disabled: false };
   }
 
-  /**
-   * Calculate the cost of a single run based on intelligence level and total max steps.
-   * At 50 total steps: dumb=5cr, not_so_smart=25cr, mediocre=100cr, smart=200cr.
-   */
   calculateRunCost(agent) {
     const costPerStepTable = { dumb: 0.1, not_so_smart: 0.5, mediocre: 2.0, smart: 4.0 };
     const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.dumb;
@@ -997,93 +1505,123 @@ class JsonDB {
     return Math.round(costPerStep * totalSteps);
   }
 
-  /**
-   * Get total credits charged for an agent in the current calendar month.
-   */
   getMonthlyIncurredCost(agentId) {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    let total = 0;
-    for (const charge of this.state.tenantCharges) {
-      if (charge.agentId === agentId && charge.createdAt >= monthStart) {
-        total += charge.amount;
-      }
-    }
-    return total;
+    const row = this.db.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM tenantCharges WHERE agentId = ? AND createdAt >= ?').get(agentId, monthStart);
+    return row.total;
   }
 
-  /**
-   * Get paginated cost/run history for a single agent.
-   * Joins agentRunLogs with tenantCharges by matching timestamps.
-   */
   getAgentCostRuns(agentId, { page = 1, perPage = 20 } = {}) {
-    // Build a map of charges keyed by approximate time for correlation
-    const charges = this.state.tenantCharges
-      .filter(c => c.agentId === agentId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const charges = this.db.prepare('SELECT * FROM tenantCharges WHERE agentId = ? ORDER BY createdAt DESC').all(agentId);
+    const runs = this.db.prepare('SELECT * FROM agentRunLogs WHERE agentId = ? ORDER BY COALESCE(startedAt, createdAt) DESC').all(agentId).map(hydrateRunLog);
 
-    const runs = this.state.agentRunLogs
-      .filter(l => l.agentId === agentId)
-      .sort((a, b) => (b.startedAt || b.createdAt).localeCompare(a.startedAt || a.createdAt));
-
-    // Match each run to the closest charge (charge happens right before run starts)
     const usedCharges = new Set();
     const entries = runs.map(run => {
       const runStart = new Date(run.startedAt || run.createdAt).getTime();
-      // Find the charge closest to (and just before) run start, within 5 min
       let bestCharge = null;
       let bestDiff = Infinity;
       for (const c of charges) {
         if (usedCharges.has(c.id)) continue;
         const ct = new Date(c.createdAt).getTime();
         const diff = runStart - ct;
-        if (diff >= 0 && diff < 300_000 && diff < bestDiff) {
-          bestDiff = diff;
-          bestCharge = c;
-        }
+        if (diff >= 0 && diff < 300_000 && diff < bestDiff) { bestDiff = diff; bestCharge = c; }
       }
       if (bestCharge) usedCharges.add(bestCharge.id);
-
-      const durationMs = run.finishedAt && run.startedAt
-        ? new Date(run.finishedAt) - new Date(run.startedAt) : null;
-
+      const durationMs = run.finishedAt && run.startedAt ? new Date(run.finishedAt) - new Date(run.startedAt) : null;
       return {
-        id: run.id,
-        agentId: run.agentId,
-        startedAt: run.startedAt || run.createdAt,
-        finishedAt: run.finishedAt || null,
-        durationMs,
-        stepsExecuted: run.stepsExecuted || 0,
-        cost: bestCharge ? bestCharge.amount : 0,
+        id: run.id, type: 'run', agentId: run.agentId,
+        startedAt: run.startedAt || run.createdAt, finishedAt: run.finishedAt || null,
+        durationMs, stepsExecuted: run.stepsExecuted || 0,
+        cost: bestCharge ? bestCharge.amount : 0, amount: 0,
         reason: bestCharge ? bestCharge.reason : 'unknown'
       };
     });
 
+    // Subscription fees paid by this agent
+    const subPaid = this.db.prepare("SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND fromKind = 'agent' AND fromId = ?").all(agentId).map(hydrateTransfer);
+    for (const t of subPaid) {
+      const followee = t.toKind === 'user' ? this.getUser(t.toId) : this.getAgent(t.toId);
+      entries.push({
+        id: t.id, type: 'subscription', agentId,
+        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
+        cost: t.amount, amount: 0,
+        reason: t.type === 'subscription_renewal' ? 'subscription_renewal' : 'subscription',
+        detail: `Paid → ${followee?.name || t.toId}`
+      });
+    }
+
+    // Subscription fees earned by this agent
+    const subEarned = this.db.prepare("SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND toKind = 'agent' AND toId = ?").all(agentId).map(hydrateTransfer);
+    for (const t of subEarned) {
+      const follower = t.fromKind === 'user' ? this.getUser(t.fromId) : this.getAgent(t.fromId);
+      entries.push({
+        id: t.id, type: 'subscription_earned', agentId,
+        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
+        cost: 0, amount: t.amount,
+        reason: t.type === 'subscription_renewal' ? 'sub_earned_renewal' : 'sub_earned',
+        detail: `Earned ← ${follower?.name || t.fromId}`
+      });
+    }
+
+    entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
     const total = entries.length;
     const totalPages = Math.ceil(total / perPage);
     const paged = entries.slice((page - 1) * perPage, page * perPage);
-    const totalCost = charges.reduce((s, c) => s + c.amount, 0);
-
-    return { runs: paged, page, perPage, total, totalPages, totalCost };
+    const totalCost = charges.reduce((s, c) => s + c.amount, 0) + subPaid.reduce((s, t) => s + t.amount, 0);
+    const totalEarned = subEarned.reduce((s, t) => s + t.amount, 0);
+    const weeklyStats = computeWeeklyStats(entries);
+    return { runs: paged, page, perPage, total, totalPages, totalCost, totalEarned, weeklyStats };
   }
 
-  /**
-   * Get paginated cost/run history across all agents owned by a user.
-   * Includes both agent run costs and subscription charges.
-   */
+  getAgentCreditStats(agentId) {
+    const earned = this.db.prepare("SELECT COALESCE(SUM(amount), 0) as total FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND toKind = 'agent' AND toId = ?").get(agentId);
+    const totalEarned = earned.total;
+
+    const runCharges = this.db.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM tenantCharges WHERE agentId = ?').get(agentId).total;
+    const subPaid = this.db.prepare("SELECT COALESCE(SUM(amount), 0) as total FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND fromKind = 'agent' AND fromId = ?").get(agentId).total;
+    const totalSpent = runCharges + subPaid;
+    const net = totalEarned - totalSpent;
+
+    const activeSubscribers = this.db.prepare('SELECT COUNT(*) as cnt FROM follows WHERE followeeId = ? AND cancelledAt IS NULL').get(agentId).cnt;
+
+    const recentEarnings = this.db.prepare("SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND toKind = 'agent' AND toId = ? ORDER BY createdAt DESC LIMIT 10").all(agentId).map(hydrateTransfer);
+    const recentEarningsMapped = recentEarnings.map(t => {
+      const follower = t.fromKind === 'user' ? this.getUser(t.fromId) : this.getAgent(t.fromId);
+      return { date: t.createdAt, amount: t.amount, from: follower?.name || t.fromId };
+    });
+
+    return { totalEarned, totalSpent, runCharges, subscriptionsPaid: subPaid, net, activeSubscribers, recentEarnings: recentEarningsMapped };
+  }
+
   getUserCostRuns(userId, { page = 1, perPage = 20 } = {}) {
     const ownedAgents = this.getOwnedAgents(userId);
     const ownedAgentIds = new Set(ownedAgents.map(a => a.id));
     const agentNames = {};
     for (const a of ownedAgents) agentNames[a.id] = a.name;
 
-    const charges = this.state.tenantCharges
-      .filter(c => ownedAgentIds.has(c.agentId))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    if (ownedAgentIds.size === 0) {
+      // Still check for user-level transactions
+      const topups = this.db.prepare("SELECT * FROM transfers WHERE type = 'topup' AND toKind = 'user' AND toId = ? ORDER BY createdAt DESC").all(userId).map(hydrateTransfer);
+      const entries = topups.map(t => ({
+        id: t.id, type: 'topup', agentId: null, agentName: '',
+        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
+        cost: 0, amount: t.amount * CREDITS_PER_DOLLAR, dollars: t.amount,
+        reason: 'topup', detail: `$${t.amount.toFixed(2)} → ${t.amount * CREDITS_PER_DOLLAR} cr`
+      }));
+      entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+      const total = entries.length;
+      const totalPages = Math.ceil(total / perPage);
+      const paged = entries.slice((page - 1) * perPage, page * perPage);
+      const totalEarned = topups.reduce((s, t) => s + t.amount * CREDITS_PER_DOLLAR, 0);
+      return { runs: paged, page, perPage, total, totalPages, totalCost: 0, totalEarned, weeklyStats: computeWeeklyStats(entries) };
+    }
 
-    const runs = this.state.agentRunLogs
-      .filter(l => ownedAgentIds.has(l.agentId))
-      .sort((a, b) => (b.startedAt || b.createdAt).localeCompare(a.startedAt || a.createdAt));
+    const agentIdList = [...ownedAgentIds];
+    const placeholders = agentIdList.map(() => '?').join(',');
+
+    const charges = this.db.prepare(`SELECT * FROM tenantCharges WHERE agentId IN (${placeholders}) ORDER BY createdAt DESC`).all(...agentIdList);
+    const runs = this.db.prepare(`SELECT * FROM agentRunLogs WHERE agentId IN (${placeholders}) ORDER BY COALESCE(startedAt, createdAt) DESC`).all(...agentIdList).map(hydrateRunLog);
 
     const usedCharges = new Set();
     const entries = runs.map(run => {
@@ -1095,155 +1633,131 @@ class JsonDB {
         if (c.agentId !== run.agentId) continue;
         const ct = new Date(c.createdAt).getTime();
         const diff = runStart - ct;
-        if (diff >= 0 && diff < 300_000 && diff < bestDiff) {
-          bestDiff = diff;
-          bestCharge = c;
-        }
+        if (diff >= 0 && diff < 300_000 && diff < bestDiff) { bestDiff = diff; bestCharge = c; }
       }
       if (bestCharge) usedCharges.add(bestCharge.id);
-
-      const durationMs = run.finishedAt && run.startedAt
-        ? new Date(run.finishedAt) - new Date(run.startedAt) : null;
-
+      const durationMs = run.finishedAt && run.startedAt ? new Date(run.finishedAt) - new Date(run.startedAt) : null;
       return {
-        id: run.id,
-        type: 'run',
-        agentId: run.agentId,
+        id: run.id, type: 'run', agentId: run.agentId,
         agentName: agentNames[run.agentId] || run.agentId,
-        startedAt: run.startedAt || run.createdAt,
-        finishedAt: run.finishedAt || null,
-        durationMs,
-        stepsExecuted: run.stepsExecuted || 0,
+        startedAt: run.startedAt || run.createdAt, finishedAt: run.finishedAt || null,
+        durationMs, stepsExecuted: run.stepsExecuted || 0,
         cost: bestCharge ? bestCharge.amount : 0,
         reason: bestCharge ? bestCharge.reason : 'unknown'
       };
     });
 
-    // Include subscription charges (paid by this user or their agents)
-    const subTransfers = this.state.transfers.filter(t =>
-      (t.type === 'subscription' || t.type === 'subscription_renewal') &&
-      (t.fromId === userId || (t.fromKind === 'agent' && ownedAgentIds.has(t.fromId)))
-    );
-    for (const t of subTransfers) {
+    // Subscriptions paid by user or their agents
+    const subPaid = this.db.prepare(`SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND (fromId = ? OR (fromKind = 'agent' AND fromId IN (${placeholders})))`)
+      .all(userId, ...agentIdList).map(hydrateTransfer);
+    for (const t of subPaid) {
       const followee = t.toKind === 'user' ? this.getUser(t.toId) : this.getAgent(t.toId);
       const followerName = t.fromKind === 'agent' ? (agentNames[t.fromId] || t.fromId) : 'You';
       entries.push({
-        id: t.id,
-        type: 'subscription',
-        agentId: t.fromId,
-        agentName: followerName,
-        startedAt: t.createdAt,
-        finishedAt: null,
-        durationMs: null,
-        stepsExecuted: 0,
-        cost: t.amount,
+        id: t.id, type: 'subscription', agentId: t.fromId, agentName: followerName,
+        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
+        cost: t.amount, amount: 0,
         reason: t.type === 'subscription_renewal' ? 'subscription_renewal' : 'subscription',
-        detail: `→ ${followee?.name || t.toId}`
+        detail: `Paid → ${followee?.name || t.toId}`
       });
     }
 
-    // Sort all entries by date desc
-    entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    // Subscriptions earned by user's agents
+    const subEarned = this.db.prepare(`SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND toKind = 'agent' AND toId IN (${placeholders})`)
+      .all(...agentIdList).map(hydrateTransfer);
+    for (const t of subEarned) {
+      const follower = t.fromKind === 'user' ? this.getUser(t.fromId) : this.getAgent(t.fromId);
+      const earningAgent = agentNames[t.toId] || t.toId;
+      entries.push({
+        id: t.id, type: 'subscription_earned', agentId: t.toId, agentName: earningAgent,
+        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
+        cost: 0, amount: t.amount,
+        reason: t.type === 'subscription_renewal' ? 'sub_earned_renewal' : 'sub_earned',
+        detail: `Earned ← ${follower?.name || t.fromId}`
+      });
+    }
 
+    // Credit top-ups
+    const topups = this.db.prepare("SELECT * FROM transfers WHERE type = 'topup' AND toKind = 'user' AND toId = ?").all(userId).map(hydrateTransfer);
+    for (const t of topups) {
+      entries.push({
+        id: t.id, type: 'topup', agentId: null, agentName: '',
+        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
+        cost: 0, amount: t.amount * CREDITS_PER_DOLLAR, dollars: t.amount,
+        reason: 'topup', detail: `$${t.amount.toFixed(2)} → ${t.amount * CREDITS_PER_DOLLAR} cr`
+      });
+    }
+
+    entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
     const total = entries.length;
     const totalPages = Math.ceil(total / perPage);
     const paged = entries.slice((page - 1) * perPage, page * perPage);
     const runCost = charges.reduce((s, c) => s + c.amount, 0);
-    const subCost = subTransfers.reduce((s, t) => s + t.amount, 0);
-
-    return { runs: paged, page, perPage, total, totalPages, totalCost: runCost + subCost };
+    const subCost = subPaid.reduce((s, t) => s + t.amount, 0);
+    const totalEarned = subEarned.reduce((s, t) => s + t.amount, 0) + topups.reduce((s, t) => s + t.amount * CREDITS_PER_DOLLAR, 0);
+    const weeklyStats = computeWeeklyStats(entries);
+    return { runs: paged, page, perPage, total, totalPages, totalCost: runCost + subCost, totalEarned, weeklyStats };
   }
+
+  // ── Agent Run Logs ─────────────────────────────────────────────────────────
 
   recordAgentRunLog(runLog) {
-    this.state.agentRunLogs.push({
-      id: newId('run'),
-      createdAt: nowIso(),
-      ...runLog
-    });
-    if (this.state.agentRunLogs.length > 3000) {
-      this.state.agentRunLogs = this.state.agentRunLogs.slice(-3000);
+    const id = newId('run');
+    const createdAt = nowIso();
+    const { agentId, startedAt, finishedAt, stepsExecuted, ...rest } = runLog;
+    this.db.prepare(`INSERT INTO agentRunLogs (id, agentId, startedAt, finishedAt, stepsExecuted, data, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+      id, agentId, startedAt || null, finishedAt || null, stepsExecuted || 0,
+      js(rest), createdAt
+    );
+    // Prune old logs
+    const count = this.db.prepare('SELECT COUNT(*) as cnt FROM agentRunLogs').get().cnt;
+    if (count > 3000) {
+      this.db.prepare('DELETE FROM agentRunLogs WHERE id IN (SELECT id FROM agentRunLogs ORDER BY createdAt ASC LIMIT ?)').run(count - 3000);
     }
-    this.save();
   }
 
-  searchByName(query) {
-    const q = String(query || '').toLowerCase().trim();
-    const results = [];
-    for (const u of this.state.users) {
-      if (!q || u.name.toLowerCase().includes(q)) {
-        results.push({ kind: 'user', id: u.id, name: u.name, avatarUrl: u.avatarUrl || '' });
-      }
-      if (results.length >= 10) return results;
-    }
-    for (const a of this.state.agents) {
-      if (!q || a.name.toLowerCase().includes(q)) {
-        results.push({ kind: 'agent', id: a.id, name: a.name, avatarUrl: a.avatarUrl || '' });
-      }
-      if (results.length >= 10) return results;
-    }
-    return results;
-  }
-
-  getAllNames() {
-    const results = [];
-    for (const u of this.state.users) {
-      results.push({ kind: 'user', id: u.id, name: u.name, avatarUrl: u.avatarUrl || '' });
-    }
-    for (const a of this.state.agents) {
-      results.push({ kind: 'agent', id: a.id, name: a.name, avatarUrl: a.avatarUrl || '' });
-    }
-    return results;
+  getRunLog(runId) {
+    return hydrateRunLog(this.db.prepare('SELECT * FROM agentRunLogs WHERE id = ?').get(runId));
   }
 
   listAgentRunLogs(agentId, limit = 20) {
-    return this.state.agentRunLogs
-      .filter((log) => log.agentId === agentId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, Number(limit));
+    return this.db.prepare('SELECT * FROM agentRunLogs WHERE agentId = ? ORDER BY createdAt DESC LIMIT ?').all(agentId, Number(limit)).map(hydrateRunLog);
   }
+
+  // ── Stripe / Payments ──────────────────────────────────────────────────────
 
   createPendingStripeTopup({ externalUserId, amount, currency = 'usd', paymentIntentId, provider = 'stripe' }) {
     const pending = {
       id: newId('topup'),
-      externalUserId,
-      amount: Number(amount),
-      currency,
-      paymentIntentId,
-      provider,
-      status: 'pending',
-      createdAt: nowIso(),
-      creditedAt: null
+      externalUserId, amount: Number(amount), currency,
+      paymentIntentId, provider,
+      status: 'pending', createdAt: nowIso(), creditedAt: null
     };
-    this.state.pendingStripeTopups.push(pending);
-    this.save();
+    this.db.prepare(`INSERT INTO pendingStripeTopups (id, externalUserId, amount, currency, paymentIntentId, provider, status, createdAt, creditedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      pending.id, pending.externalUserId, pending.amount, pending.currency,
+      pending.paymentIntentId, pending.provider, pending.status, pending.createdAt, null
+    );
     return pending;
   }
 
   getPendingTopupByPaymentIntent(paymentIntentId) {
-    return this.state.pendingStripeTopups.find((t) => t.paymentIntentId === paymentIntentId);
+    return this.db.prepare('SELECT * FROM pendingStripeTopups WHERE paymentIntentId = ?').get(paymentIntentId) || null;
   }
 
   markTopupCredited({ paymentIntentId, stripeEventId, amountMinor, currency }) {
-    if (this.state.stripeWebhookEvents.includes(stripeEventId)) {
-      return { alreadyProcessed: true };
-    }
+    const existing = this.db.prepare('SELECT eventId FROM stripeWebhookEvents WHERE eventId = ?').get(stripeEventId);
+    if (existing) return { alreadyProcessed: true };
 
     const pending = this.getPendingTopupByPaymentIntent(paymentIntentId);
     if (!pending) {
-      this.state.stripeWebhookEvents.push(stripeEventId);
-      if (this.state.stripeWebhookEvents.length > 5000) {
-        this.state.stripeWebhookEvents = this.state.stripeWebhookEvents.slice(-5000);
-      }
-      this.save();
+      this.db.prepare('INSERT OR IGNORE INTO stripeWebhookEvents (eventId, createdAt) VALUES (?, ?)').run(stripeEventId, nowIso());
       return { ignored: true, reason: 'pending_topup_not_found' };
     }
 
     if (pending.status === 'credited') {
-      this.state.stripeWebhookEvents.push(stripeEventId);
-      if (this.state.stripeWebhookEvents.length > 5000) {
-        this.state.stripeWebhookEvents = this.state.stripeWebhookEvents.slice(-5000);
-      }
-      this.save();
+      this.db.prepare('INSERT OR IGNORE INTO stripeWebhookEvents (eventId, createdAt) VALUES (?, ?)').run(stripeEventId, nowIso());
       return { alreadyProcessed: true };
     }
 
@@ -1258,123 +1772,98 @@ class JsonDB {
     const user = this.getUser(pending.externalUserId);
     if (!user) throw new Error('Topup target user not found.');
 
-    user.credits += Number(pending.amount) * CREDITS_PER_DOLLAR;
-    pending.status = 'credited';
-    pending.creditedAt = nowIso();
-
-    this.state.transfers.push({
-      id: newId('tx'),
-      type: 'topup',
-      fromKind: 'stripe',
-      fromId: paymentIntentId,
-      toKind: 'user',
-      toId: user.id,
-      amount: Number(pending.amount),
-      meta: { stripeEventId },
-      createdAt: nowIso()
+    const tx = this.db.transaction(() => {
+      const credits = Number(pending.amount) * CREDITS_PER_DOLLAR;
+      this.db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(credits, user.id);
+      this.db.prepare('UPDATE pendingStripeTopups SET status = ?, creditedAt = ? WHERE id = ?').run('credited', nowIso(), pending.id);
+      this.db.prepare(`INSERT INTO transfers (id, type, fromKind, fromId, toKind, toId, amount, meta, description, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId('tx'), 'topup', 'stripe', paymentIntentId, 'user', user.id,
+        Number(pending.amount), js({ stripeEventId }), '', nowIso()
+      );
+      this.db.prepare('INSERT OR IGNORE INTO stripeWebhookEvents (eventId, createdAt) VALUES (?, ?)').run(stripeEventId, nowIso());
     });
-
-    this.state.stripeWebhookEvents.push(stripeEventId);
-    if (this.state.stripeWebhookEvents.length > 5000) {
-      this.state.stripeWebhookEvents = this.state.stripeWebhookEvents.slice(-5000);
-    }
-    this.save();
-    return { credited: true, user };
+    tx();
+    return { credited: true, user: this.getUser(user.id) };
   }
+
+  // ── Jobs ───────────────────────────────────────────────────────────────────
 
   ensureAgentRunJobs() {
     const now = Date.now();
-    for (const agent of this.state.agents) {
-      const key = `agent_run:${agent.id}`;
-      let job = this.state.jobs.find((j) => j.key === key);
-      if (!job) {
-        job = {
-          id: newId('job'),
-          key,
-          type: 'agent_run',
-          agentId: agent.id,
-          status: agent.enabled ? 'queued' : 'paused',
-          dueAt: agent.nextActionAt || new Date(now + agent.intervalMinutes * 60 * 1000).toISOString(),
-          attempts: 0,
-          maxAttempts: 5,
-          lockedUntil: null,
-          lockedBy: null,
-          lastRunAt: null,
-          lastError: null,
-          createdAt: nowIso(),
-          updatedAt: nowIso()
-        };
-        this.state.jobs.push(job);
-        continue;
-      }
-
-      if (!agent.enabled) {
-        job.status = 'paused';
-        job.lockedUntil = null;
-        job.lockedBy = null;
-      } else {
-        if (job.status === 'paused') job.status = 'queued';
-        if (!job.dueAt) {
-          job.dueAt = agent.nextActionAt || new Date(now + agent.intervalMinutes * 60 * 1000).toISOString();
+    const agents = this.getAllAgents();
+    const tx = this.db.transaction(() => {
+      for (const agent of agents) {
+        const key = `agent_run:${agent.id}`;
+        const job = this.db.prepare('SELECT * FROM jobs WHERE key = ?').get(key);
+        if (!job) {
+          this.db.prepare(`INSERT INTO jobs (id, key, type, agentId, status, dueAt, attempts, maxAttempts, lockedUntil, lockedBy, lastRunAt, lastError, createdAt, updatedAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+            newId('job'), key, 'agent_run', agent.id,
+            agent.enabled ? 'queued' : 'paused',
+            agent.nextActionAt || new Date(now + agent.intervalMinutes * 60_000).toISOString(),
+            0, 5, null, null, null, null, nowIso(), nowIso()
+          );
+          continue;
+        }
+        if (!agent.enabled) {
+          this.db.prepare('UPDATE jobs SET status = ?, lockedUntil = NULL, lockedBy = NULL, updatedAt = ? WHERE id = ?').run('paused', nowIso(), job.id);
+        } else {
+          const newStatus = job.status === 'paused' ? 'queued' : job.status;
+          const dueAt = job.dueAt || agent.nextActionAt || new Date(now + agent.intervalMinutes * 60_000).toISOString();
+          this.db.prepare('UPDATE jobs SET status = ?, dueAt = ?, updatedAt = ? WHERE id = ?').run(newStatus, dueAt, nowIso(), job.id);
         }
       }
-      job.updatedAt = nowIso();
-    }
-    this.save();
+    });
+    tx();
   }
 
   claimDueJobs({ workerId, limit = 5, lockMs = 90_000, excludeAgentIds = [] }) {
     const now = Date.now();
+    const nowStr = new Date(now).toISOString();
     const excludeSet = new Set(excludeAgentIds);
-    const claimed = [];
-    for (const job of this.state.jobs) {
-      if (claimed.length >= limit) break;
-      if (excludeSet.has(job.agentId)) continue;
-      const statusAllowed = job.status === 'queued' || job.status === 'failed';
-      const due = new Date(job.dueAt || 0).getTime() <= now;
-      const unlocked = !job.lockedUntil || new Date(job.lockedUntil).getTime() <= now;
-      if (!statusAllowed || !due || !unlocked) continue;
+    const jobs = this.db.prepare("SELECT * FROM jobs WHERE (status = 'queued' OR status = 'failed') AND (dueAt IS NULL OR dueAt <= ?) AND (lockedUntil IS NULL OR lockedUntil <= ?)").all(nowStr, nowStr);
 
-      job.status = 'running';
-      job.attempts = Number(job.attempts || 0) + 1;
-      job.lockedBy = workerId;
-      job.lockedUntil = new Date(now + lockMs).toISOString();
-      job.updatedAt = nowIso();
-      claimed.push({ ...job });
-    }
-    if (claimed.length) this.save();
+    const claimed = [];
+    const tx = this.db.transaction(() => {
+      for (const job of jobs) {
+        if (claimed.length >= limit) break;
+        if (excludeSet.has(job.agentId)) continue;
+        const lockUntil = new Date(now + lockMs).toISOString();
+        this.db.prepare('UPDATE jobs SET status = ?, attempts = attempts + 1, lockedBy = ?, lockedUntil = ?, updatedAt = ? WHERE id = ?').run(
+          'running', workerId, lockUntil, nowIso(), job.id
+        );
+        claimed.push({ ...job, status: 'running', lockedBy: workerId, lockedUntil: lockUntil, attempts: (job.attempts || 0) + 1 });
+      }
+    });
+    tx();
     return claimed;
   }
 
   completeJob(jobId, { nextDueAt, status = 'queued' } = {}) {
-    const job = this.state.jobs.find((j) => j.id === jobId);
+    const job = this.db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
     if (!job) return null;
-    job.status = status;
-    job.attempts = 0;
-    job.lastRunAt = nowIso();
-    job.lastError = null;
-    job.lockedBy = null;
-    job.lockedUntil = null;
-    if (nextDueAt) job.dueAt = nextDueAt;
-    job.updatedAt = nowIso();
-    this.save();
-    return job;
+    const updates = { status, attempts: 0, lastRunAt: nowIso(), lastError: null, lockedBy: null, lockedUntil: null, updatedAt: nowIso() };
+    if (nextDueAt) updates.dueAt = nextDueAt;
+    this.db.prepare(`UPDATE jobs SET status=?, attempts=?, lastRunAt=?, lastError=?, lockedBy=?, lockedUntil=?, updatedAt=?${nextDueAt ? ', dueAt=?' : ''} WHERE id=?`).run(
+      updates.status, updates.attempts, updates.lastRunAt, updates.lastError, updates.lockedBy, updates.lockedUntil, updates.updatedAt,
+      ...(nextDueAt ? [nextDueAt] : []), jobId
+    );
+    return this.db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
   }
 
   failJob(jobId, error, { retryInMs = 30_000 } = {}) {
-    const job = this.state.jobs.find((j) => j.id === jobId);
+    const job = this.db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
     if (!job) return null;
-    const exhausted = Number(job.attempts || 0) >= Number(job.maxAttempts || 5);
-    job.status = exhausted ? 'failed' : 'queued';
-    job.lastError = String(error || 'unknown_error');
-    job.lockedBy = null;
-    job.lockedUntil = null;
-    job.dueAt = new Date(Date.now() + (exhausted ? 5 * 60_000 : retryInMs)).toISOString();
-    job.updatedAt = nowIso();
-    this.save();
-    return job;
+    const exhausted = (job.attempts || 0) >= (job.maxAttempts || 5);
+    const newStatus = exhausted ? 'failed' : 'queued';
+    const dueAt = new Date(Date.now() + (exhausted ? 5 * 60_000 : retryInMs)).toISOString();
+    this.db.prepare('UPDATE jobs SET status=?, lastError=?, lockedBy=NULL, lockedUntil=NULL, dueAt=?, updatedAt=? WHERE id=?').run(
+      newStatus, String(error || 'unknown_error'), dueAt, nowIso(), jobId
+    );
+    return this.db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
   }
 }
 
-export const db = new JsonDB(DB_FILE);
+export const db = new SqliteDB(DB_PATH);
 export { nowIso, newId };

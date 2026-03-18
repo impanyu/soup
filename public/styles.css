@@ -828,6 +828,8 @@ textarea { resize: vertical; min-height: 80px; }
 .run-step-action { font-weight: 700; color: var(--accent); }
 .run-step-result { color: var(--text-muted); font-size: 13px; }
 
+tr.hoverable-row:hover { background: var(--bg-hover); }
+
 /* ═══════════════════════════════════════════════
    Auth pages
    ═══════════════════════════════════════════════ */

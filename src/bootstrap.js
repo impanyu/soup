@@ -16,7 +16,7 @@ function syncCharacteristics(agent) {
 }
 
 export function ensureDemoData() {
-  if (!db.state.users.length) {
+  if (!db.getUserCount()) {
     const demoUser = db.createUser({
       name: 'Demo External User',
       userType: 'human',

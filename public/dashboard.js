@@ -65,8 +65,9 @@ async function renderUserSection(user) {
       </div>
       <button class="btn btn-outline btn-sm" id="set-sub-fee-btn">Set Fee</button>
     </div>
-    <div style="margin-top:12px;">
-      <a href="/cost-history" class="text-accent text-sm" style="text-decoration:underline;">View cost history (all agents)</a>
+    <div style="margin-top:12px;display:flex;gap:16px;">
+      <a href="/cost-history" class="text-accent text-sm" style="text-decoration:underline;">View credits history (all agents)</a>
+      <a href="/billing-history" class="text-accent text-sm" style="text-decoration:underline;">View billing history</a>
     </div>
   `;
 
@@ -203,9 +204,11 @@ function renderAgentsGrid() {
     });
   });
 
-  // Logs modal
+  // Run logs — navigate to full page
   grid.querySelectorAll('.logs-btn').forEach(btn => {
-    btn.addEventListener('click', () => openLogsModal(btn.dataset.id, btn.dataset.name));
+    btn.addEventListener('click', () => {
+      window.location.href = `/run-logs?agentId=${encodeURIComponent(btn.dataset.id)}`;
+    });
   });
 
   // Remove agent
@@ -257,111 +260,6 @@ function renderAgentsGrid() {
     } catch { /* ignore */ }
   });
 }
-
-// ── Logs modal ────────────────────────────────────
-
-function formatDuration(startedAt, finishedAt) {
-  if (!startedAt || !finishedAt) return '—';
-  const ms = new Date(finishedAt) - new Date(startedAt);
-  if (ms < 1000) return `${ms}ms`;
-  const secs = Math.floor(ms / 1000);
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  const remainSecs = secs % 60;
-  return `${mins}m ${remainSecs}s`;
-}
-
-let _logsAgentId = null;
-let _logsAgentName = '';
-let _logsPage = 1;
-
-async function openLogsModal(agentId, agentName) {
-  _logsAgentId = agentId;
-  _logsAgentName = agentName;
-  _logsPage = 1;
-  const modal = document.getElementById('logs-modal');
-  document.getElementById('logs-modal-title').textContent = `Run Logs: ${agentName}`;
-  modal.style.display = 'flex';
-  await renderLogsPage();
-}
-
-async function renderLogsPage() {
-  const content = document.getElementById('logs-modal-content');
-  content.innerHTML = '<div class="spinner"></div>';
-
-  try {
-    const { logs, page, total, totalPages } = await api(
-      `/api/agents/${_logsAgentId}/run-logs?actorUserId=${encodeURIComponent(state.userId)}&page=${_logsPage}&perPage=10`
-    );
-    if (!logs.length && page === 1) {
-      content.innerHTML = '<p class="muted text-sm">No run logs yet.</p>';
-      return;
-    }
-    const phaseLabels = { browse: '📰 Browse', external_search: '📚 Ext. Search', create: '✏️ Create' };
-    const logsHtml = logs.map((log, idx) => {
-      const steps = log.steps || [];
-      const phaseGroups = [];
-      let currentPhase = null;
-      for (const step of steps) {
-        if (step.phase !== currentPhase) {
-          currentPhase = step.phase;
-          phaseGroups.push({ phase: currentPhase, steps: [] });
-        }
-        phaseGroups[phaseGroups.length - 1].steps.push(step);
-      }
-      const collapsed = idx > 0 ? ' collapsed' : '';
-      const duration = formatDuration(log.startedAt, log.finishedAt);
-      const runLabel = `Run ${formatDateTime(log.startedAt)} · ${log.stepsExecuted} steps · ${duration}`;
-      return `
-        <div class="run-log-panel${collapsed}">
-          <div class="run-log-panel-header" onclick="this.parentElement.classList.toggle('collapsed')">
-            <span class="run-log-panel-toggle">▶</span>
-            <span class="run-log-panel-title">${runLabel}</span>
-            <span class="run-log-id">${escapeHtml(log.id)}</span>
-          </div>
-          <div class="run-log-panel-body">
-            ${phaseGroups.map(group => `
-              <div class="run-phase-group">
-                <div class="run-phase-header">${phaseLabels[group.phase] || escapeHtml(group.phase)} <span class="muted text-xs">(${group.steps.length} steps)</span></div>
-                ${group.steps.map(step => `
-                  <div class="run-step">
-                    <span class="run-step-action">${escapeHtml(step.action)}</span>
-                    <div class="run-step-result">${escapeHtml(step.result?.summary || '')}</div>
-                  </div>
-                `).join('')}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    const paginationHtml = totalPages > 1 ? `
-      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
-        <button class="btn btn-outline btn-xs" id="logs-prev" ${page <= 1 ? 'disabled' : ''}>Previous</button>
-        <span class="text-sm muted">Page ${page} of ${totalPages} (${total} runs)</span>
-        <button class="btn btn-outline btn-xs" id="logs-next" ${page >= totalPages ? 'disabled' : ''}>Next</button>
-      </div>
-    ` : `<div class="text-xs muted" style="text-align:center;margin-top:8px;">${total} run${total !== 1 ? 's' : ''} total</div>`;
-
-    content.innerHTML = logsHtml + paginationHtml;
-
-    const prevBtn = document.getElementById('logs-prev');
-    const nextBtn = document.getElementById('logs-next');
-    if (prevBtn) prevBtn.addEventListener('click', () => { _logsPage--; renderLogsPage(); });
-    if (nextBtn) nextBtn.addEventListener('click', () => { _logsPage++; renderLogsPage(); });
-  } catch (err) {
-    content.innerHTML = `<p class="text-danger">${escapeHtml(err.message)}</p>`;
-  }
-}
-
-// ── Modal close handlers ──────────────────────────
-document.getElementById('close-logs-modal').addEventListener('click', () => {
-  document.getElementById('logs-modal').style.display = 'none';
-});
-document.getElementById('logs-modal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
-});
 
 // ── Data loaders ──────────────────────────────────
 async function loadAgents() {
