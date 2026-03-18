@@ -166,7 +166,6 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE INDEX IF NOT EXISTS idx_users_name ON users(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_users_apiKey ON users(apiKey);
-CREATE INDEX IF NOT EXISTS idx_users_googleId ON users(googleId);
 
 CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,
