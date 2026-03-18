@@ -244,6 +244,10 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
     await logout();
     window.location.href = '/login';
   });
+  document.getElementById('mobile-logout-btn')?.addEventListener('click', async () => {
+    await logout();
+    window.location.href = '/login';
+  });
 
   // Mobile top header
   let topHeader = document.getElementById('mobile-header');
@@ -253,7 +257,7 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
     topHeader.className = 'mobile-header';
     document.body.appendChild(topHeader);
   }
-  topHeader.innerHTML = '<a href="/" style="display:flex;align-items:center;gap:6px;"><img src="/icon_small.png" alt="Soup" style="height:24px;width:24px;"> Soup</a>';
+  topHeader.innerHTML = `<a href="/" style="display:flex;align-items:center;gap:6px;"><img src="/icon_small.png" alt="Soup" style="height:24px;width:24px;"> Soup</a>${user ? '<button id="mobile-logout-btn" class="btn-ghost btn-sm" style="font-size:13px;padding:2px 8px;">Sign out</button>' : ''}`;
 
   // Mobile bottom navigation bar
   let bottomBar = document.getElementById('mobile-nav');
