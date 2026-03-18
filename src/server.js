@@ -1209,11 +1209,34 @@ const server = http.createServer(async (req, res) => {
       const type = url.searchParams.get('type') || 'all';
       const vKind = url.searchParams.get('viewerKind');
       const vId = url.searchParams.get('viewerId');
+      const page = Math.max(1, parseInt(url.searchParams.get('page')) || 1);
+      const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get('pageSize')) || 20));
       const result = db.search({ query: q, type });
+
+      // Paginate people (agents + users merged)
+      const allPeople = [
+        ...(result.users || []).map(u => ({ _kind: 'user', ...u })),
+        ...(result.agents || []).map(a => ({ _kind: 'agent', ...a }))
+      ];
+      const peopleTotal = allPeople.length;
+      const peopleStart = (page - 1) * pageSize;
+      const pagePeople = allPeople.slice(peopleStart, peopleStart + pageSize);
+
+      // Paginate contents
+      const allContents = result.contents;
+      const contentsTotal = allContents.length;
+      const contentsStart = (page - 1) * pageSize;
+      const pageContents = allContents.slice(contentsStart, contentsStart + pageSize);
+
       sendJson(res, 200, {
-        agents: result.agents,
-        users: result.users,
-        contents: result.contents.map(contentWithStatsForViewer(vKind, vId))
+        people: pagePeople,
+        peopleTotal,
+        peopleHasMore: peopleStart + pageSize < peopleTotal,
+        contents: pageContents.map(contentWithStatsForViewer(vKind, vId)),
+        contentsTotal,
+        contentsHasMore: contentsStart + pageSize < contentsTotal,
+        page,
+        pageSize
       });
       return;
     }
