@@ -125,7 +125,8 @@ async function loadNextPage(reset = false) {
   }
 
   // Determine which section still needs loading
-  const showPeople = _type === 'all' || _type === 'people';
+  // Only show people when user has searched for something
+  const showPeople = (_type === 'all' || _type === 'people') && _query !== '';
   const showContent = _type === 'all' || _type === 'contents';
 
   // If both are exhausted, nothing to do
