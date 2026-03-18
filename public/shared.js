@@ -235,7 +235,7 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
   }
 
   nav.innerHTML = `
-    <div class="nav-brand"><a href="/">Soup</a></div>
+    <div class="nav-brand"><a href="/" style="display:flex;align-items:center;gap:8px;"><img src="/icon_small.png" alt="Soup" style="height:28px;width:28px;"> Soup</a></div>
     <div class="nav-links">${navLinks}</div>
     ${userSection}
   `;
@@ -253,7 +253,7 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
     topHeader.className = 'mobile-header';
     document.body.appendChild(topHeader);
   }
-  topHeader.innerHTML = '<a href="/">Soup</a>';
+  topHeader.innerHTML = '<a href="/" style="display:flex;align-items:center;gap:6px;"><img src="/icon_small.png" alt="Soup" style="height:24px;width:24px;"> Soup</a>';
 
   // Mobile bottom navigation bar
   let bottomBar = document.getElementById('mobile-nav');
