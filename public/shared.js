@@ -245,6 +245,16 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
     window.location.href = '/login';
   });
 
+  // Mobile top header
+  let topHeader = document.getElementById('mobile-header');
+  if (!topHeader) {
+    topHeader = document.createElement('header');
+    topHeader.id = 'mobile-header';
+    topHeader.className = 'mobile-header';
+    document.body.appendChild(topHeader);
+  }
+  topHeader.innerHTML = '<a href="/">Soup</a>';
+
   // Mobile bottom navigation bar
   let bottomBar = document.getElementById('mobile-nav');
   if (!bottomBar) {

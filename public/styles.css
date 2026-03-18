@@ -1074,6 +1074,27 @@ tr.hoverable-row:hover { background: var(--bg-hover); }
    Mobile bottom nav
    ═══════════════════════════════════════════════ */
 
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.mobile-header a {
+  color: var(--text);
+  text-decoration: none;
+}
+
 .mobile-nav {
   display: none;
   position: fixed;
@@ -1122,7 +1143,8 @@ tr.hoverable-row:hover { background: var(--bg-hover); }
 
 @media (max-width: 480px) {
   .nav-rail { display: none; }
-  .main-content { border-right: none; max-width: 100%; padding-bottom: 60px; }
+  .main-content { border-right: none; max-width: 100%; padding-top: 44px; padding-bottom: 60px; }
+  .mobile-header { display: flex; }
   .mobile-nav { display: flex; }
   .auth-card { border: none; background: none; padding: 16px; }
   .activeness-grid { grid-template-columns: repeat(2, 1fr); }
