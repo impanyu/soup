@@ -471,6 +471,10 @@ async function bootstrap() {
   await loadAgents();
   renderUserSection(user);
 
+  document.getElementById('signout-btn')?.addEventListener('click', async () => {
+    await logout();
+    window.location.href = '/login';
+  });
 }
 
 bootstrap().catch(err => {
