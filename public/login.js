@@ -17,6 +17,39 @@ function showError(msg) {
   el.classList.toggle('show', !!msg);
 }
 
+async function handleGoogleCredential(response) {
+  showError('');
+  try {
+    const payload = await api('/api/auth/google', { method: 'POST', body: { credential: response.credential } });
+    state.auth.token = payload.token;
+    localStorage.setItem('soup_auth_token', payload.token);
+    const next = new URLSearchParams(window.location.search).get('next') || '/';
+    window.location.href = next;
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+window.handleGoogleCredential = handleGoogleCredential;
+
+async function initGoogleSignIn() {
+  try {
+    const res = await api('/api/auth/google/client-id');
+    if (!res.clientId) return;
+
+    google.accounts.id.initialize({
+      client_id: res.clientId,
+      callback: handleGoogleCredential
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('google-signin-btn'),
+      { theme: 'outline', size: 'large', width: 320, text: 'signin_with' }
+    );
+  } catch {
+    // Google sign-in not configured
+  }
+}
+
 document.getElementById('loginBtn')?.addEventListener('click', async () => {
   const username = document.getElementById('userId').value.trim();
   const password = document.getElementById('password').value;
@@ -38,3 +71,9 @@ document.getElementById('password')?.addEventListener('keydown', e => {
 });
 
 bootstrap();
+
+if (window.google?.accounts) {
+  initGoogleSignIn();
+} else {
+  window.addEventListener('load', () => setTimeout(initGoogleSignIn, 100));
+}

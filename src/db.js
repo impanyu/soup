@@ -160,10 +160,13 @@ CREATE TABLE IF NOT EXISTS users (
   credits REAL DEFAULT 100,
   subscriptionFee REAL DEFAULT 0,
   stripeCustomerId TEXT,
+  googleId TEXT,
+  email TEXT,
   createdAt TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_users_name ON users(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_users_apiKey ON users(apiKey);
+CREATE INDEX IF NOT EXISTS idx_users_googleId ON users(googleId);
 
 CREATE TABLE IF NOT EXISTS agents (
   id TEXT PRIMARY KEY,
@@ -360,6 +363,9 @@ class SqliteDB {
     // Create tables
     this.db.exec(SCHEMA);
 
+    // Schema migrations for existing databases
+    this._runMigrations();
+
     // Migrate from JSON if SQLite is empty and JSON file exists
     if (this._isEmpty() && fs.existsSync(JSON_DB_FILE)) {
       this._migrateFromJson();
@@ -388,6 +394,17 @@ class SqliteDB {
         return undefined;
       }
     });
+  }
+
+  _runMigrations() {
+    const cols = this.db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+    if (!cols.includes('googleId')) {
+      this.db.exec('ALTER TABLE users ADD COLUMN googleId TEXT');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_users_googleId ON users(googleId)');
+    }
+    if (!cols.includes('email')) {
+      this.db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+    }
   }
 
   _isEmpty() {
@@ -717,7 +734,7 @@ class SqliteDB {
 
   // ── User methods ───────────────────────────────────────────────────────────
 
-  createUser({ name, userType = 'human', initialCredits = 100, password = '', subscriptionFee = 0, bio = '' }) {
+  createUser({ name, userType = 'human', initialCredits = 100, password = '', subscriptionFee = 0, bio = '', googleId = null, email = null, avatarUrl = '' }) {
     if (this.getUserByName(name)) {
       throw new Error(`Username "${name}" is already taken.`);
     }
@@ -725,20 +742,22 @@ class SqliteDB {
       id: newId('user'),
       name,
       bio: String(bio || ''),
-      avatarUrl: '',
+      avatarUrl: avatarUrl || '',
       userType,
       apiKey: newId('key'),
       passwordHash: hashPassword(password || newId('pw')),
       credits: Number(initialCredits),
       subscriptionFee: Number(subscriptionFee),
       stripeCustomerId: null,
+      googleId: googleId || null,
+      email: email || null,
       createdAt: nowIso()
     };
-    this.db.prepare(`INSERT INTO users (id, name, bio, avatarUrl, userType, apiKey, passwordHash, credits, subscriptionFee, stripeCustomerId, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    this.db.prepare(`INSERT INTO users (id, name, bio, avatarUrl, userType, apiKey, passwordHash, credits, subscriptionFee, stripeCustomerId, googleId, email, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       user.id, user.name, user.bio, user.avatarUrl, user.userType,
       user.apiKey, user.passwordHash, user.credits, user.subscriptionFee,
-      user.stripeCustomerId, user.createdAt
+      user.stripeCustomerId, user.googleId, user.email, user.createdAt
     );
     return user;
   }
@@ -753,6 +772,8 @@ class SqliteDB {
     if (patch.bio !== undefined) this.db.prepare('UPDATE users SET bio = ? WHERE id = ?').run(String(patch.bio || ''), userId);
     if (patch.name !== undefined) this.db.prepare('UPDATE users SET name = ? WHERE id = ?').run(String(patch.name), userId);
     if (patch.avatarUrl !== undefined) this.db.prepare('UPDATE users SET avatarUrl = ? WHERE id = ?').run(String(patch.avatarUrl || ''), userId);
+    if (patch.googleId !== undefined) this.db.prepare('UPDATE users SET googleId = ? WHERE id = ?').run(patch.googleId, userId);
+    if (patch.email !== undefined) this.db.prepare('UPDATE users SET email = ? WHERE id = ?').run(patch.email, userId);
     return this.getUser(userId);
   }
 
@@ -763,6 +784,14 @@ class SqliteDB {
 
   getUserByApiKey(apiKey) {
     return this.db.prepare('SELECT * FROM users WHERE apiKey = ?').get(apiKey) || null;
+  }
+
+  getUserByGoogleId(googleId) {
+    return this.db.prepare('SELECT * FROM users WHERE googleId = ?').get(googleId) || null;
+  }
+
+  getUserByEmail(email) {
+    return this.db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE').get(email) || null;
   }
 
   verifyUserPassword(userId, password) {

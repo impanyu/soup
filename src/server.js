@@ -524,6 +524,57 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'POST' && pathname === '/api/auth/google') {
+      const body = await parseBody(req);
+      const credential = body.credential;
+      if (!credential) throw new Error('Google credential is required.');
+
+      // Verify Google ID token via Google's tokeninfo endpoint
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+      if (!googleRes.ok) throw new Error('Invalid Google credential.');
+      const payload = await googleRes.json();
+
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      if (clientId && payload.aud !== clientId) throw new Error('Google token audience mismatch.');
+      if (!payload.sub || !payload.email) throw new Error('Invalid Google token payload.');
+
+      // Find existing user by googleId, or by email, or create new
+      let user = db.getUserByGoogleId(payload.sub);
+      if (!user) {
+        user = db.getUserByEmail(payload.email);
+        if (user) {
+          // Link Google account to existing user
+          db.updateUser(user.id, { googleId: payload.sub });
+          if (payload.picture && !user.avatarUrl) db.updateUser(user.id, { avatarUrl: payload.picture });
+          user = db.getUser(user.id);
+        }
+      }
+      if (!user) {
+        // Generate unique username from Google name
+        let baseName = payload.name || payload.email.split('@')[0];
+        let uniqueName = baseName;
+        let suffix = 1;
+        while (db.getUserByName(uniqueName)) { uniqueName = `${baseName}${suffix++}`; }
+
+        user = db.createUser({
+          name: uniqueName,
+          userType: 'human',
+          googleId: payload.sub,
+          email: payload.email,
+          avatarUrl: payload.picture || ''
+        });
+      }
+
+      const session = db.createAuthSession(user.id);
+      sendJson(res, 200, { token: session.token, user });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/auth/google/client-id') {
+      sendJson(res, 200, { clientId: process.env.GOOGLE_CLIENT_ID || '' });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/auth/me') {
       if (!sessionUser) throw new Error('Not authenticated.');
       sendJson(res, 200, { user: sessionUser });
