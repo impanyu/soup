@@ -1,7 +1,7 @@
 import {
   state, api, initAuth,
-  escapeHtml,
-  renderNavBar, ACTIVENESS_LEVELS
+  escapeHtml, formatCredits,
+  renderNavBar, showPromptModal, ACTIVENESS_LEVELS
 } from '/shared.js';
 
 // ── Server defaults ──
@@ -398,9 +398,67 @@ async function renderConfig(agentId) {
     </div>
   `;
 
-  // ── Render cost panel into right-rail ──
+  // ── Render credit balance + cost panels into right-rail ──
   const rightRail = document.querySelector('.right-rail');
   if (rightRail) {
+    const creditWidget = document.createElement('div');
+    creditWidget.className = 'widget';
+    creditWidget.innerHTML = `
+      <div class="widget-title">Agent Credits</div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px;">
+        <div>
+          <span class="text-xs muted">Balance</span>
+          <div id="agent-credit-balance" style="font-size:24px;font-weight:800;color:var(--accent);">${formatCredits(agent.credits)}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-outline btn-xs" id="cfg-fund-btn">Fund</button>
+          <button class="btn btn-outline btn-xs" id="cfg-withdraw-btn">Withdraw</button>
+        </div>
+      </div>
+    `;
+    rightRail.prepend(creditWidget);
+
+    document.getElementById('cfg-fund-btn').addEventListener('click', async () => {
+      const val = await showPromptModal({
+        title: `Fund ${agent.name}`,
+        message: `Transfer credits from your account to this agent. Your balance: ${formatCredits(state.auth.user.credits)}.`,
+        placeholder: 'Amount (credits)',
+        confirmText: 'Transfer'
+      });
+      if (!val) return;
+      const amount = Number(val);
+      if (!Number.isFinite(amount) || amount <= 0) { showToast('Invalid amount.'); return; }
+      try {
+        const result = await api(`/api/agents/${agentId}/transfer-credits`, {
+          method: 'POST', body: { actorUserId: state.userId, amount, direction: 'to_agent' }
+        });
+        state.auth.user.credits = result.user.credits;
+        document.getElementById('agent-credit-balance').textContent = formatCredits(result.agent.credits);
+        showToast(`Transferred ${amount} cr.`);
+      } catch (err) { showToast(err.message); }
+    });
+
+    document.getElementById('cfg-withdraw-btn').addEventListener('click', async () => {
+      const currentBalance = document.getElementById('agent-credit-balance').textContent;
+      const val = await showPromptModal({
+        title: `Withdraw from ${agent.name}`,
+        message: `Move credits from this agent back to your account. Agent balance: ${currentBalance}.`,
+        placeholder: 'Amount (credits)',
+        confirmText: 'Withdraw'
+      });
+      if (!val) return;
+      const amount = Number(val);
+      if (!Number.isFinite(amount) || amount <= 0) { showToast('Invalid amount.'); return; }
+      try {
+        const result = await api(`/api/agents/${agentId}/transfer-credits`, {
+          method: 'POST', body: { actorUserId: state.userId, amount, direction: 'from_agent' }
+        });
+        state.auth.user.credits = result.user.credits;
+        document.getElementById('agent-credit-balance').textContent = formatCredits(result.agent.credits);
+        showToast(`Withdrew ${amount} cr.`);
+      } catch (err) { showToast(err.message); }
+    });
+
     const costWidget = document.createElement('div');
     costWidget.className = 'widget';
     costWidget.innerHTML = `

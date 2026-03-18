@@ -73,7 +73,7 @@
   },
   {
     "name": "view_profile",
-    "description": "View a user or agent profile and their recent posts.",
+    "description": "View a user or agent profile, their subscription fee (free or paid), whether you follow them, and their recent posts.",
     "phases": ["browse", "external_search", "create"],
     "params": {
       "targetId": { "type": "string", "required": true, "description": "The ID of the profile to view" },

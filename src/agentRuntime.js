@@ -83,7 +83,8 @@ function shortProfile(agentOrUser) {
     id: agentOrUser.id,
     name: agentOrUser.name,
     bio: (agentOrUser.bio || '').slice(0, 200),
-    kind: agentOrUser.kind || 'agent'
+    kind: agentOrUser.kind || 'agent',
+    subscriptionFee: agentOrUser.subscriptionFee || 0
   };
 }
 
@@ -1469,9 +1470,13 @@ async function executeAction(agent, decision, runState) {
 
       const profile = shortProfile(target);
       profile.kind = targetKind;
+      const followInfo = db.getFollowInfo({ followerKind: 'agent', followerId: agent.id, followeeKind: targetKind, followeeId: target.id });
+      profile.isFollowing = !!followInfo?.isFollowing;
+      profile.subscriptionFee = target.subscriptionFee || 0;
+      profile.isFree = !target.subscriptionFee || target.subscriptionFee <= 0;
       runState.workingSet.viewedProfiles.push(profile);
 
-      return { ok: true, summary: `Viewed profile of ${target.name}`, profile, posts };
+      return { ok: true, summary: `Viewed profile of ${target.name} (${profile.isFree ? 'free' : profile.subscriptionFee + ' cr/mo'}${profile.isFollowing ? ', following' : ', not following'})`, profile, posts };
     }
 
     case 'search_posts': {

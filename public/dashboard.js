@@ -2,7 +2,7 @@ import {
   state, api, initAuth, logout,
   escapeHtml, formatDate, formatDateTime, formatCredits,
   activenessLabel, activenessColor,
-  renderNavBar, renderAvatar, ACTIVENESS_LEVELS, INTELLIGENCE_LEVELS
+  renderNavBar, renderAvatar, showPromptModal, ACTIVENESS_LEVELS, INTELLIGENCE_LEVELS
 } from '/shared.js';
 
 function formatCountdown(iso) {
@@ -41,7 +41,10 @@ async function renderUserSection(user) {
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">
       <div>
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">Signed in as</div>
-        <div style="font-size:20px;font-weight:800;">${escapeHtml(user.name)}</div>
+        <div style="font-size:20px;font-weight:800;display:flex;align-items:center;gap:6px;">
+          <span id="display-name">${escapeHtml(user.name)}</span>
+          <button class="btn btn-ghost btn-xs" id="rename-btn" title="Change display name" style="font-size:14px;padding:2px 6px;opacity:.6;">Rename</button>
+        </div>
         <div class="muted text-sm">${escapeHtml(user.userType)} · ID: <span class="mono">${escapeHtml(user.id)}</span></div>
       </div>
       <div>
@@ -66,10 +69,28 @@ async function renderUserSection(user) {
       <button class="btn btn-outline btn-sm" id="set-sub-fee-btn">Set Fee</button>
     </div>
     <div style="margin-top:12px;display:flex;gap:16px;">
-      <a href="/cost-history" class="text-accent text-sm" style="text-decoration:underline;">View credits history (all agents)</a>
+      <a href="/cost-history" class="text-accent text-sm" style="text-decoration:underline;">View credits history</a>
       <a href="/billing-history" class="text-accent text-sm" style="text-decoration:underline;">View billing history</a>
     </div>
   `;
+
+  document.getElementById('rename-btn').addEventListener('click', async () => {
+    const newName = await showPromptModal({
+      title: 'Change Display Name',
+      message: 'Enter your new display name.',
+      placeholder: 'Display name',
+      value: user.name,
+      confirmText: 'Save'
+    });
+    if (!newName || newName === user.name) return;
+    try {
+      await api(`/api/users/${user.id}`, {
+        method: 'PATCH', body: { actorUserId: user.id, name: newName }
+      });
+      showToast('Name updated!');
+      await refreshAll();
+    } catch (err) { showToast(err.message); }
+  });
 
   document.getElementById('topup-btn').addEventListener('click', async () => {
     const amount = Number(document.getElementById('topup-amount').value || 0);
@@ -126,7 +147,8 @@ function renderAgentsGrid() {
         </div>
         ${agent.bio ? `<p class="text-sm muted">${escapeHtml(agent.bio)}</p>` : ''}
         <div class="agent-manage-stats">
-<span class="agent-cost-monthly" data-agent-id="${escapeHtml(agent.id)}">This month: <strong>...</strong></span>
+          <span>Credits: <strong class="agent-credits" data-agent-id="${escapeHtml(agent.id)}">${formatCredits(agent.credits)}</strong></span>
+          <span class="agent-cost-monthly" data-agent-id="${escapeHtml(agent.id)}">This month: <strong>...</strong></span>
           <span>Next run: <strong class="next-run-countdown" data-next-at="${agent.enabled ? escapeHtml(agent.nextActionAt || '') : ''}" data-paused="${!agent.enabled}">${agent.enabled && agent.nextActionAt ? formatCountdown(agent.nextActionAt) : '—'}</strong></span>
         </div>
         <div class="agent-manage-actions">
@@ -135,6 +157,8 @@ function renderAgentsGrid() {
             ${agent.enabled ? 'Pause' : 'Activate'}
           </button>
           <button class="btn btn-accent btn-xs run-now-btn" data-id="${escapeHtml(agent.id)}">Run Now</button>
+          <button class="btn btn-outline btn-xs fund-agent-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}">Fund</button>
+          <button class="btn btn-outline btn-xs withdraw-agent-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}" data-credits="${agent.credits}">Withdraw</button>
           <button class="btn btn-outline btn-xs config-btn" data-id="${escapeHtml(agent.id)}">Configure</button>
           <button class="btn btn-ghost btn-xs logs-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}">Run Logs</button>
           <button class="btn btn-danger btn-xs remove-agent-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}">Remove</button>
@@ -169,8 +193,8 @@ function renderAgentsGrid() {
           method: 'POST', body: { actorUserId: state.userId }
         });
         if (!result.ok) {
-          showToast(result.reason === 'agent_already_running'
-            ? 'Agent is already running.' : result.reason || 'Run failed.');
+          showToast(result.message || (result.reason === 'agent_already_running'
+            ? 'Agent is already running.' : result.reason || 'Run failed.'));
           btn.disabled = false;
           btn.textContent = 'Run Now';
           return;
@@ -191,8 +215,7 @@ function renderAgentsGrid() {
         }, 3000);
       } catch (err) {
         showToast(err.message);
-        btn.disabled = false;
-        btn.textContent = 'Run Now';
+        await loadAgents();
       }
     });
   });
@@ -208,6 +231,50 @@ function renderAgentsGrid() {
   grid.querySelectorAll('.logs-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       window.location.href = `/run-logs?agentId=${encodeURIComponent(btn.dataset.id)}`;
+    });
+  });
+
+  // Fund agent
+  grid.querySelectorAll('.fund-agent-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const val = await showPromptModal({
+        title: `Fund ${btn.dataset.name}`,
+        message: `Transfer credits from your account to this agent. Your balance: ${formatCredits(state.auth.user.credits)}.`,
+        placeholder: 'Amount (credits)',
+        confirmText: 'Transfer'
+      });
+      if (!val) return;
+      const amount = Number(val);
+      if (!Number.isFinite(amount) || amount <= 0) { showToast('Invalid amount.'); return; }
+      try {
+        await api(`/api/agents/${btn.dataset.id}/transfer-credits`, {
+          method: 'POST', body: { actorUserId: state.userId, amount, direction: 'to_agent' }
+        });
+        showToast(`Transferred ${amount} cr to ${btn.dataset.name}.`);
+        await refreshAll();
+      } catch (err) { showToast(err.message); }
+    });
+  });
+
+  // Withdraw from agent
+  grid.querySelectorAll('.withdraw-agent-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const val = await showPromptModal({
+        title: `Withdraw from ${btn.dataset.name}`,
+        message: `Move credits from this agent back to your account. Agent balance: ${formatCredits(Number(btn.dataset.credits))}.`,
+        placeholder: 'Amount (credits)',
+        confirmText: 'Withdraw'
+      });
+      if (!val) return;
+      const amount = Number(val);
+      if (!Number.isFinite(amount) || amount <= 0) { showToast('Invalid amount.'); return; }
+      try {
+        await api(`/api/agents/${btn.dataset.id}/transfer-credits`, {
+          method: 'POST', body: { actorUserId: state.userId, amount, direction: 'from_agent' }
+        });
+        showToast(`Withdrew ${amount} cr from ${btn.dataset.name}.`);
+        await refreshAll();
+      } catch (err) { showToast(err.message); }
     });
   });
 
@@ -277,6 +344,7 @@ async function refreshAll() {
   renderNavBar({ active: 'dashboard', user });
   await loadAgents();
   renderUserSection(user);
+
 }
 
 // ── Stripe Payment Flow ──────────────────────────────
@@ -402,6 +470,7 @@ async function bootstrap() {
   document.getElementById('user-section').innerHTML = '<div class="spinner"></div>';
   await loadAgents();
   renderUserSection(user);
+
 }
 
 bootstrap().catch(err => {

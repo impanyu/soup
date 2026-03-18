@@ -30,7 +30,9 @@ function reasonLabel(reason) {
     subscription_renewal: 'Sub. Renewal Paid',
     sub_earned: 'Sub. Earned',
     sub_earned_renewal: 'Sub. Renewal Earned',
-    topup: 'Top-up'
+    topup: 'Top-up',
+    transfer_to_agent: 'Fund Agent',
+    withdraw_from_agent: 'Withdraw'
   };
   return map[reason] || reason;
 }
@@ -236,7 +238,7 @@ async function loadPage() {
 
     const title = _mode === 'agent'
       ? `Bill History — ${data.agentName}`
-      : 'Bill History — All Agents';
+      : 'Credits History';
     document.getElementById('page-title').textContent = title;
 
     if (!data.runs.length && _page === 1) {
@@ -254,6 +256,12 @@ async function loadPage() {
 
     const summaryHtml = `
       <div style="margin-bottom:16px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);display:flex;gap:24px;flex-wrap:wrap;">
+        ${_mode === 'user' && data.credits != null ? `
+        <div>
+          <span class="text-xs muted">Current balance</span>
+          <div style="font-size:18px;font-weight:700;color:var(--accent);">${Number(data.credits).toFixed(2)} cr</div>
+        </div>
+        ` : ''}
         <div>
           <span class="text-xs muted">Total spent</span>
           <div style="font-size:18px;font-weight:700;">${data.totalCost} cr <span class="muted text-sm">($${(data.totalCost / 100).toFixed(2)})</span></div>
@@ -275,40 +283,59 @@ async function loadPage() {
 
     const chartHtml = renderWeeklyChart(_weeklyStats);
 
-    const showAgent = _mode === 'user';
-    const headerCols = `
+    const isAgentMode = _mode === 'agent';
+    const headerCols = isAgentMode ? `
       <th class="text-sm" style="padding:8px 12px;">Time</th>
-      ${showAgent ? '<th class="text-sm" style="padding:8px 12px;">Agent</th>' : ''}
       <th class="text-sm" style="padding:8px 12px;">Type</th>
       <th class="text-sm" style="padding:8px 12px;text-align:right;">Steps</th>
       <th class="text-sm" style="padding:8px 12px;text-align:right;">Duration</th>
       <th class="text-sm" style="padding:8px 12px;text-align:right;">Spent (cr)</th>
       <th class="text-sm" style="padding:8px 12px;text-align:right;">Earned (cr)</th>
+    ` : `
+      <th class="text-sm" style="padding:8px 12px;">Time</th>
+      <th class="text-sm" style="padding:8px 12px;">Type</th>
+      <th class="text-sm" style="padding:8px 12px;">Details</th>
+      <th class="text-sm" style="padding:8px 12px;text-align:right;">Spent (cr)</th>
+      <th class="text-sm" style="padding:8px 12px;text-align:right;">Received (cr)</th>
     `;
 
     const rowsHtml = data.runs.map(run => {
       const isEarned = run.type === 'subscription_earned';
       const isTopup = run.type === 'topup';
+      const isTransfer = run.type === 'transfer';
+      const isWithdraw = run.type === 'withdraw';
       const isSub = run.type === 'subscription' || isEarned;
-      const isNonRun = isSub || isTopup;
       const isRun = run.type === 'run';
-      const rowStyle = isTopup
+      const rowStyle = isTopup || isWithdraw
         ? 'background:rgba(99,102,241,0.05);'
         : isEarned ? 'background:rgba(74,222,128,0.05);'
-        : isSub ? 'opacity:0.85;' : '';
+        : isTransfer ? 'background:rgba(245,158,11,0.05);' : '';
       const clickStyle = isRun ? 'cursor:pointer;' : '';
       const runLogHref = isRun
         ? `/run-log?id=${encodeURIComponent(run.id)}&from=${_mode}&agentId=${encodeURIComponent(run.agentId)}`
         : '';
       const onClick = isRun ? `onclick="window.location.href='${runLogHref}'"` : '';
-      const detailText = isTopup ? run.detail : (isSub && run.detail ? ` <span class="muted text-xs">${escapeHtml(run.detail)}</span>` : '');
+
+      if (isAgentMode) {
+        const isNonRun = !isRun;
+        return `
+        <tr style="border-bottom:1px solid var(--border);${rowStyle}${clickStyle}" ${onClick} ${isRun ? 'class="hoverable-row"' : ''}>
+          <td style="padding:8px 12px;white-space:nowrap;">${formatTime(run.startedAt)}</td>
+          <td style="padding:8px 12px;"><span class="badge" style="font-size:11px;">${reasonLabel(run.reason)}</span>${run.detail ? ` <span class="muted text-xs">${escapeHtml(run.detail)}</span>` : ''}</td>
+          <td style="padding:8px 12px;text-align:right;">${isNonRun ? '—' : run.stepsExecuted}</td>
+          <td style="padding:8px 12px;text-align:right;">${isNonRun ? '—' : formatDuration(run.durationMs)}</td>
+          <td style="padding:8px 12px;text-align:right;font-weight:600;">${run.cost || '—'}</td>
+          <td style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text-success,#4ade80);">${run.amount ? '+' + run.amount : '—'}</td>
+        </tr>`;
+      }
+
+      // User mode
+      const reasonBadgeStyle = isTopup ? 'color:var(--accent);border-color:var(--accent);' : isTransfer ? 'color:var(--warning,#f59e0b);border-color:var(--warning,#f59e0b);' : isWithdraw ? 'color:var(--text-success,#4ade80);border-color:var(--text-success,#4ade80);' : '';
       return `
-      <tr style="border-bottom:1px solid var(--border);${rowStyle}${clickStyle}" ${onClick} ${isRun ? 'class="hoverable-row"' : ''}>
+      <tr style="border-bottom:1px solid var(--border);${rowStyle}">
         <td style="padding:8px 12px;white-space:nowrap;">${formatTime(run.startedAt)}</td>
-        ${showAgent ? `<td style="padding:8px 12px;">${escapeHtml(run.agentName || (isTopup ? '—' : ''))}</td>` : ''}
-        <td style="padding:8px 12px;"><span class="badge" style="font-size:11px;${isTopup ? 'color:var(--accent);border-color:var(--accent);' : ''}">${reasonLabel(run.reason)}</span>${isTopup ? ` <span class="muted text-xs">${escapeHtml(run.detail || '')}</span>` : (isSub && run.detail ? ` <span class="muted text-xs">${escapeHtml(run.detail)}</span>` : '')}</td>
-        <td style="padding:8px 12px;text-align:right;">${isNonRun ? '—' : run.stepsExecuted}</td>
-        <td style="padding:8px 12px;text-align:right;">${isNonRun ? '—' : formatDuration(run.durationMs)}</td>
+        <td style="padding:8px 12px;"><span class="badge" style="font-size:11px;${reasonBadgeStyle}">${reasonLabel(run.reason)}</span></td>
+        <td style="padding:8px 12px;" class="text-sm muted">${escapeHtml(run.detail || '')}</td>
         <td style="padding:8px 12px;text-align:right;font-weight:600;">${run.cost || '—'}</td>
         <td style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text-success,#4ade80);">${run.amount ? '+' + run.amount : '—'}</td>
       </tr>`;

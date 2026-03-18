@@ -1506,17 +1506,15 @@ class SqliteDB {
   chargeTenantFee(agentId, reason = 'scheduled_action') {
     const agent = this.getAgent(agentId);
     if (!agent) throw new Error('Agent not found.');
-    const owner = this.getUser(agent.ownerUserId);
-    if (!owner) throw new Error('Agent owner not found.');
     const fee = this.calculateRunCost(agent);
 
-    if (owner.credits < fee) {
+    if (agent.credits < fee) {
       this.db.prepare('UPDATE agents SET enabled = 0 WHERE id = ?').run(agentId);
-      return { charged: 0, disabled: true, reason: 'insufficient_owner_credits' };
+      return { charged: 0, disabled: true, reason: 'insufficient_agent_credits' };
     }
 
     const tx = this.db.transaction(() => {
-      this.db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(fee, owner.id);
+      this.db.prepare('UPDATE agents SET credits = credits - ? WHERE id = ?').run(fee, agentId);
       this.db.prepare(`INSERT INTO tenantCharges (id, agentId, amount, reason, createdAt) VALUES (?, ?, ?, ?, ?)`).run(
         newId('tenant'), agentId, fee, reason, nowIso()
       );
@@ -1531,6 +1529,48 @@ class SqliteDB {
     const phaseSteps = agent.runConfig?.phaseMaxSteps || {};
     const totalSteps = (phaseSteps.browse || 20) + (phaseSteps.external_search || 20) + (phaseSteps.create || 10);
     return Math.round(costPerStep * totalSteps);
+  }
+
+  transferCreditsToAgent(userId, agentId, amount) {
+    const user = this.getUser(userId);
+    if (!user) throw new Error('User not found.');
+    const agent = this.getAgent(agentId);
+    if (!agent) throw new Error('Agent not found.');
+    if (agent.ownerUserId !== userId) throw new Error('Not the owner of this agent.');
+    if (amount <= 0) throw new Error('Amount must be positive.');
+    if (user.credits < amount) throw new Error('Insufficient credits.');
+    const tx = this.db.transaction(() => {
+      this.db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(amount, userId);
+      this.db.prepare('UPDATE agents SET credits = credits + ? WHERE id = ?').run(amount, agentId);
+      this.db.prepare(`INSERT INTO transfers (id, type, fromKind, fromId, toKind, toId, amount, meta, description, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId('tx'), 'transfer', 'user', userId, 'agent', agentId,
+        amount, '{}', `Transfer ${amount} cr to agent ${agent.name}`, nowIso()
+      );
+    });
+    tx();
+    return { user: this.getUser(userId), agent: this.getAgent(agentId) };
+  }
+
+  withdrawCreditsFromAgent(userId, agentId, amount) {
+    const user = this.getUser(userId);
+    if (!user) throw new Error('User not found.');
+    const agent = this.getAgent(agentId);
+    if (!agent) throw new Error('Agent not found.');
+    if (agent.ownerUserId !== userId) throw new Error('Not the owner of this agent.');
+    if (amount <= 0) throw new Error('Amount must be positive.');
+    if (agent.credits < amount) throw new Error('Agent has insufficient credits.');
+    const tx = this.db.transaction(() => {
+      this.db.prepare('UPDATE agents SET credits = credits - ? WHERE id = ?').run(amount, agentId);
+      this.db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(amount, userId);
+      this.db.prepare(`INSERT INTO transfers (id, type, fromKind, fromId, toKind, toId, amount, meta, description, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId('tx'), 'withdraw', 'agent', agentId, 'user', userId,
+        amount, '{}', `Withdraw ${amount} cr from agent ${agent.name}`, nowIso()
+      );
+    });
+    tx();
+    return { user: this.getUser(userId), agent: this.getAgent(agentId) };
   }
 
   getMonthlyIncurredCost(agentId) {
@@ -1624,95 +1664,55 @@ class SqliteDB {
 
   getUserCostRuns(userId, { page = 1, perPage = 20 } = {}) {
     const ownedAgents = this.getOwnedAgents(userId);
-    const ownedAgentIds = new Set(ownedAgents.map(a => a.id));
     const agentNames = {};
     for (const a of ownedAgents) agentNames[a.id] = a.name;
 
-    if (ownedAgentIds.size === 0) {
-      // Still check for user-level transactions
-      const topups = this.db.prepare("SELECT * FROM transfers WHERE type = 'topup' AND toKind = 'user' AND toId = ? ORDER BY createdAt DESC").all(userId).map(hydrateTransfer);
-      const entries = topups.map(t => ({
-        id: t.id, type: 'topup', agentId: null, agentName: '',
-        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
-        cost: 0, amount: t.amount * CREDITS_PER_DOLLAR, dollars: t.amount,
-        reason: 'topup', detail: `$${t.amount.toFixed(2)} → ${t.amount * CREDITS_PER_DOLLAR} cr`
-      }));
-      entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-      const total = entries.length;
-      const totalPages = Math.ceil(total / perPage);
-      const paged = entries.slice((page - 1) * perPage, page * perPage);
-      const totalEarned = topups.reduce((s, t) => s + t.amount * CREDITS_PER_DOLLAR, 0);
-      return { runs: paged, page, perPage, total, totalPages, totalCost: 0, totalEarned, weeklyStats: computeWeeklyStats(entries) };
-    }
-
-    const agentIdList = [...ownedAgentIds];
-    const placeholders = agentIdList.map(() => '?').join(',');
-
-    const charges = this.db.prepare(`SELECT * FROM tenantCharges WHERE agentId IN (${placeholders}) ORDER BY createdAt DESC`).all(...agentIdList);
-    const runs = this.db.prepare(`SELECT * FROM agentRunLogs WHERE agentId IN (${placeholders}) ORDER BY COALESCE(startedAt, createdAt) DESC`).all(...agentIdList).map(hydrateRunLog);
-
-    const usedCharges = new Set();
-    const entries = runs.map(run => {
-      const runStart = new Date(run.startedAt || run.createdAt).getTime();
-      let bestCharge = null;
-      let bestDiff = Infinity;
-      for (const c of charges) {
-        if (usedCharges.has(c.id)) continue;
-        if (c.agentId !== run.agentId) continue;
-        const ct = new Date(c.createdAt).getTime();
-        const diff = runStart - ct;
-        if (diff >= 0 && diff < 300_000 && diff < bestDiff) { bestDiff = diff; bestCharge = c; }
-      }
-      if (bestCharge) usedCharges.add(bestCharge.id);
-      const durationMs = run.finishedAt && run.startedAt ? new Date(run.finishedAt) - new Date(run.startedAt) : null;
-      return {
-        id: run.id, type: 'run', agentId: run.agentId,
-        agentName: agentNames[run.agentId] || run.agentId,
-        startedAt: run.startedAt || run.createdAt, finishedAt: run.finishedAt || null,
-        durationMs, stepsExecuted: run.stepsExecuted || 0,
-        cost: bestCharge ? bestCharge.amount : 0,
-        reason: bestCharge ? bestCharge.reason : 'unknown'
-      };
-    });
-
-    // Subscriptions paid by user or their agents
-    const subPaid = this.db.prepare(`SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND (fromId = ? OR (fromKind = 'agent' AND fromId IN (${placeholders})))`)
-      .all(userId, ...agentIdList).map(hydrateTransfer);
-    for (const t of subPaid) {
-      const followee = t.toKind === 'user' ? this.getUser(t.toId) : this.getAgent(t.toId);
-      const followerName = t.fromKind === 'agent' ? (agentNames[t.fromId] || t.fromId) : 'You';
-      entries.push({
-        id: t.id, type: 'subscription', agentId: t.fromId, agentName: followerName,
-        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
-        cost: t.amount, amount: 0,
-        reason: t.type === 'subscription_renewal' ? 'subscription_renewal' : 'subscription',
-        detail: `Paid → ${followee?.name || t.toId}`
-      });
-    }
-
-    // Subscriptions earned by user's agents
-    const subEarned = this.db.prepare(`SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND toKind = 'agent' AND toId IN (${placeholders})`)
-      .all(...agentIdList).map(hydrateTransfer);
-    for (const t of subEarned) {
-      const follower = t.fromKind === 'user' ? this.getUser(t.fromId) : this.getAgent(t.fromId);
-      const earningAgent = agentNames[t.toId] || t.toId;
-      entries.push({
-        id: t.id, type: 'subscription_earned', agentId: t.toId, agentName: earningAgent,
-        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
-        cost: 0, amount: t.amount,
-        reason: t.type === 'subscription_renewal' ? 'sub_earned_renewal' : 'sub_earned',
-        detail: `Earned ← ${follower?.name || t.fromId}`
-      });
-    }
+    const entries = [];
 
     // Credit top-ups
     const topups = this.db.prepare("SELECT * FROM transfers WHERE type = 'topup' AND toKind = 'user' AND toId = ?").all(userId).map(hydrateTransfer);
     for (const t of topups) {
       entries.push({
         id: t.id, type: 'topup', agentId: null, agentName: '',
-        startedAt: t.createdAt, finishedAt: null, durationMs: null, stepsExecuted: 0,
-        cost: 0, amount: t.amount * CREDITS_PER_DOLLAR, dollars: t.amount,
+        startedAt: t.createdAt, cost: 0, amount: t.amount * CREDITS_PER_DOLLAR, dollars: t.amount,
         reason: 'topup', detail: `$${t.amount.toFixed(2)} → ${t.amount * CREDITS_PER_DOLLAR} cr`
+      });
+    }
+
+    // Transfers to/from agents
+    const agentTransfers = this.db.prepare("SELECT * FROM transfers WHERE (type = 'transfer' OR type = 'withdraw') AND ((fromKind = 'user' AND fromId = ?) OR (toKind = 'user' AND toId = ?))").all(userId, userId).map(hydrateTransfer);
+    for (const t of agentTransfers) {
+      const isToAgent = t.type === 'transfer';
+      const agentId = isToAgent ? t.toId : t.fromId;
+      entries.push({
+        id: t.id, type: t.type, agentId, agentName: agentNames[agentId] || agentId,
+        startedAt: t.createdAt, cost: isToAgent ? t.amount : 0, amount: isToAgent ? 0 : t.amount,
+        reason: isToAgent ? 'transfer_to_agent' : 'withdraw_from_agent',
+        detail: isToAgent ? `→ ${agentNames[agentId] || agentId}` : `← ${agentNames[agentId] || agentId}`
+      });
+    }
+
+    // Subscriptions paid by user directly (fromKind='user')
+    const subPaid = this.db.prepare("SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND fromKind = 'user' AND fromId = ?").all(userId).map(hydrateTransfer);
+    for (const t of subPaid) {
+      const followee = t.toKind === 'user' ? this.getUser(t.toId) : this.getAgent(t.toId);
+      entries.push({
+        id: t.id, type: 'subscription', agentId: null, agentName: '',
+        startedAt: t.createdAt, cost: t.amount, amount: 0,
+        reason: t.type === 'subscription_renewal' ? 'subscription_renewal' : 'subscription',
+        detail: `Paid → ${followee?.name || t.toId}`
+      });
+    }
+
+    // Subscriptions earned by user directly (toKind='user')
+    const subEarned = this.db.prepare("SELECT * FROM transfers WHERE (type = 'subscription' OR type = 'subscription_renewal') AND toKind = 'user' AND toId = ?").all(userId).map(hydrateTransfer);
+    for (const t of subEarned) {
+      const follower = t.fromKind === 'user' ? this.getUser(t.fromId) : this.getAgent(t.fromId);
+      entries.push({
+        id: t.id, type: 'subscription_earned', agentId: null, agentName: '',
+        startedAt: t.createdAt, cost: 0, amount: t.amount,
+        reason: t.type === 'subscription_renewal' ? 'sub_earned_renewal' : 'sub_earned',
+        detail: `Earned ← ${follower?.name || t.fromId}`
       });
     }
 
@@ -1720,11 +1720,10 @@ class SqliteDB {
     const total = entries.length;
     const totalPages = Math.ceil(total / perPage);
     const paged = entries.slice((page - 1) * perPage, page * perPage);
-    const runCost = charges.reduce((s, c) => s + c.amount, 0);
-    const subCost = subPaid.reduce((s, t) => s + t.amount, 0);
-    const totalEarned = subEarned.reduce((s, t) => s + t.amount, 0) + topups.reduce((s, t) => s + t.amount * CREDITS_PER_DOLLAR, 0);
+    const totalCost = subPaid.reduce((s, t) => s + t.amount, 0) + agentTransfers.filter(t => t.type === 'transfer').reduce((s, t) => s + t.amount, 0);
+    const totalEarned = topups.reduce((s, t) => s + t.amount * CREDITS_PER_DOLLAR, 0) + subEarned.reduce((s, t) => s + t.amount, 0) + agentTransfers.filter(t => t.type === 'withdraw').reduce((s, t) => s + t.amount, 0);
     const weeklyStats = computeWeeklyStats(entries);
-    return { runs: paged, page, perPage, total, totalPages, totalCost: runCost + subCost, totalEarned, weeklyStats };
+    return { runs: paged, page, perPage, total, totalPages, totalCost, totalEarned, weeklyStats };
   }
 
   // ── Agent Run Logs ─────────────────────────────────────────────────────────

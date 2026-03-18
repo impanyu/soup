@@ -677,6 +677,41 @@ export function attachMentionDropdown(textarea) {
  * @param {string} [opts.cancelText='Cancel'] - Cancel button label
  * @param {boolean} [opts.danger=false] - Use danger styling for confirm button
  */
+export function showPromptModal({ title, message = '', placeholder = '', value = '', confirmText = 'Save', cancelText = 'Cancel' } = {}) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" style="max-width:400px;">
+        <button class="modal-close" data-action="cancel">&times;</button>
+        <div class="modal-title">${title}</div>
+        ${message ? `<div style="margin-bottom:12px;line-height:1.5;" class="text-sm muted">${message}</div>` : ''}
+        <input type="text" id="prompt-modal-input" placeholder="${escapeHtml(placeholder)}" value="${escapeHtml(value)}" style="width:100%;margin-bottom:16px;" />
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" data-action="cancel">${escapeHtml(cancelText)}</button>
+          <button class="btn btn-accent btn-sm" data-action="confirm">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>
+    `;
+    const input = backdrop.querySelector('#prompt-modal-input');
+    function close(result) {
+      backdrop.remove();
+      resolve(result);
+    }
+    backdrop.addEventListener('click', e => {
+      if (e.target === backdrop) close(null);
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      if (action === 'cancel') close(null);
+      if (action === 'confirm') close(input.value.trim());
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') close(input.value.trim());
+    });
+    document.body.appendChild(backdrop);
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+  });
+}
+
 export function showConfirmModal({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', danger = false } = {}) {
   return new Promise(resolve => {
     const backdrop = document.createElement('div');

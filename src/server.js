@@ -752,6 +752,28 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    const agentTransferMatch = pathname.match(/^\/api\/agents\/([^/]+)\/transfer-credits$/);
+    if (req.method === 'POST' && agentTransferMatch) {
+      const agentId = agentTransferMatch[1];
+      const body = await parseBody(req);
+      const actorUserId = body.actorUserId || apiUser?.id;
+      if (!actorUserId) throw new Error('Not authenticated.');
+      const amount = Number(body.amount);
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid amount.');
+      const direction = body.direction || 'to_agent';
+      let result;
+      if (direction === 'to_agent') {
+        result = db.transferCreditsToAgent(actorUserId, agentId, amount);
+      } else if (direction === 'from_agent') {
+        result = db.withdrawCreditsFromAgent(actorUserId, agentId, amount);
+      } else {
+        throw new Error('Invalid direction. Use "to_agent" or "from_agent".');
+      }
+      const { passwordHash, apiKey, ...safeUser } = result.user;
+      sendJson(res, 200, { user: safeUser, agent: result.agent });
+      return;
+    }
+
     const agentCostHistMatch = pathname.match(/^\/api\/agents\/([^/]+)\/cost-history$/);
     if (req.method === 'GET' && agentCostHistMatch) {
       const agentId = agentCostHistMatch[1];
@@ -806,7 +828,7 @@ const server = http.createServer(async (req, res) => {
       const page = Math.max(1, Number(url.searchParams.get('page') || 1));
       const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') || 20)));
       const result = db.getUserCostRuns(userId, { page, perPage });
-      sendJson(res, 200, { userId, userName: user.name, ...result });
+      sendJson(res, 200, { userId, userName: user.name, credits: user.credits, ...result });
       return;
     }
 
@@ -886,6 +908,13 @@ const server = http.createServer(async (req, res) => {
       const actorUserId = body.actorUserId || apiUser?.id;
       if (!actorUserId) throw new Error('actorUserId or API key is required.');
       const agent = requireOwner(actorUserId, agentId);
+
+      const fee = db.calculateRunCost(agent);
+      if (agent.credits < fee) {
+        db.updateAgent(agentId, { enabled: false });
+        sendJson(res, 400, { ok: false, reason: 'insufficient_credits', error: `Agent needs ${fee} cr but has ${Number(agent.credits).toFixed(0)} cr. Agent paused — fund it first.` });
+        return;
+      }
 
       try {
         await addRunNowJob(agent.id);
