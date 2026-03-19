@@ -425,6 +425,140 @@ const server = http.createServer(async (req, res) => {
   const apiUser = sessionUser || apiKeyUser;
 
   try {
+
+    // ── Admin routes ────────────────────────────────────────────────
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+    if (req.method === 'POST' && pathname === '/api/admin/login') {
+      const body = await parseBody(req);
+      if (!ADMIN_SECRET) { sendJson(res, 500, { error: 'Admin not configured.' }); return; }
+      if (body.password !== ADMIN_SECRET) { sendJson(res, 401, { error: 'Invalid password.' }); return; }
+      const token = crypto.randomBytes(32).toString('hex');
+      // Store admin token in memory (survives until restart)
+      if (!global._adminTokens) global._adminTokens = new Set();
+      global._adminTokens.add(token);
+      sendJson(res, 200, { ok: true, token });
+      return;
+    }
+
+    function verifyAdmin(req) {
+      const token = req.headers['x-admin-token'];
+      return token && global._adminTokens?.has(token);
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/verify') {
+      if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/finance') {
+      if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
+
+      const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+      const perPage = Math.min(100, Math.max(1, parseInt(url.searchParams.get('perPage') || '30')));
+
+      // Gather all income (top-ups) and expenses (tenant charges)
+      const topups = db.db.prepare("SELECT id, amount, fromId, toId, createdAt, description FROM transfers WHERE type = 'topup' ORDER BY createdAt DESC").all();
+      const charges = db.db.prepare("SELECT id, agentId, amount, reason, createdAt FROM tenantCharges ORDER BY createdAt DESC").all();
+
+      // Look up agent names
+      const agentNameCache = {};
+      function agentName(id) {
+        if (!id) return '?';
+        if (!agentNameCache[id]) {
+          const a = db.getAgent(id);
+          agentNameCache[id] = a ? a.name : id.slice(0, 12);
+        }
+        return agentNameCache[id];
+      }
+      // Look up user names
+      const userNameCache = {};
+      function userName(id) {
+        if (!id) return '?';
+        if (!userNameCache[id]) {
+          const u = db.getUser(id);
+          userNameCache[id] = u ? u.name : id.slice(0, 12);
+        }
+        return userNameCache[id];
+      }
+
+      // Build unified entries list
+      const allEntries = [];
+      for (const t of topups) {
+        allEntries.push({
+          createdAt: t.createdAt,
+          category: 'income',
+          typeLabel: 'Top-up',
+          detail: `${userName(t.toId)} +${Number(t.amount).toFixed(0)} cr ($${(t.amount / 100).toFixed(2)})`,
+          amount: t.amount
+        });
+      }
+      for (const c of charges) {
+        allEntries.push({
+          createdAt: c.createdAt,
+          category: 'expense',
+          typeLabel: c.reason === 'manual_run' ? 'Manual Run' : c.reason === 'scheduled_action' ? 'Scheduled Run' : c.reason || 'Run',
+          detail: `${agentName(c.agentId)} — ${Number(c.amount).toFixed(1)} cr`,
+          amount: c.amount
+        });
+      }
+      allEntries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+      const totalIncome = topups.reduce((s, t) => s + t.amount, 0);
+      const totalExpense = charges.reduce((s, c) => s + c.amount, 0);
+      const netProfit = totalIncome - totalExpense;
+
+      // Pagination
+      const totalEntries = allEntries.length;
+      const totalPages = Math.ceil(totalEntries / perPage) || 1;
+      const entries = allEntries.slice((page - 1) * perPage, page * perPage);
+
+      // Weekly stats (last 12 weeks)
+      const weeklyStats = [];
+      const now = new Date();
+      for (let w = 0; w < 12; w++) {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(weekEnd.getDate() - w * 7);
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekStart.getDate() - 6);
+        const ws = weekStart.toISOString().slice(0, 10);
+        const we = weekEnd.toISOString().slice(0, 10);
+        const wsIso = weekStart.toISOString();
+        const weIso = new Date(weekEnd.getTime() + 86400000).toISOString(); // end of day
+
+        let income = 0, expense = 0, runs = 0, topupCount = 0;
+        for (const t of topups) {
+          if (t.createdAt >= wsIso && t.createdAt < weIso) { income += t.amount; topupCount++; }
+        }
+        for (const c of charges) {
+          if (c.createdAt >= wsIso && c.createdAt < weIso) { expense += c.amount; runs++; }
+        }
+        weeklyStats.push({
+          weekStart: ws, weekEnd: we,
+          income: Math.round(income * 100) / 100,
+          expense: Math.round(expense * 100) / 100,
+          net: Math.round((income - expense) * 100) / 100,
+          runs, topups: topupCount
+        });
+      }
+
+      // Counts
+      const totalUsers = db.db.prepare("SELECT COUNT(*) as c FROM users").get().c;
+      const totalAgents = db.db.prepare("SELECT COUNT(*) as c FROM agents").get().c;
+      const totalRuns = charges.length;
+
+      sendJson(res, 200, {
+        totalIncome: Math.round(totalIncome * 100) / 100,
+        totalExpense: Math.round(totalExpense * 100) / 100,
+        netProfit: Math.round(netProfit * 100) / 100,
+        totalUsers, totalAgents, totalRuns,
+        weeklyStats,
+        entries, page, totalPages, totalEntries
+      });
+      return;
+    }
+
     if (req.method === 'POST' && pathname === '/api/stripe/webhook') {
       const rawBody = await readRawBody(req);
       verifyStripeWebhookSignature({
@@ -1424,20 +1558,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const content = body.content;
+      const MAX_SKILL_CHARS = 24000;
+      let content = body.content;
       if (typeof content !== 'string') {
         sendJson(res, 400, { error: 'content is required' });
         return;
       }
+      const wasTruncated = content.length > MAX_SKILL_CHARS;
+      content = content.slice(0, MAX_SKILL_CHARS);
       // If content matches global exactly, delete the override
       const globalPath = path.join(__dirname, 'skills', `${phase}.md`);
       const globalContent = fs.existsSync(globalPath) ? fs.readFileSync(globalPath, 'utf8') : '';
       if (content === globalContent) {
         agentStorage.deleteSkill(agentId, phase);
-        sendJson(res, 200, { ok: true, isOverride: false });
+        sendJson(res, 200, { ok: true, isOverride: false, truncated: wasTruncated, warning: wasTruncated ? `Content exceeded ${MAX_SKILL_CHARS} character limit and was truncated.` : undefined });
       } else {
         agentStorage.writeSkill(agentId, phase, content);
-        sendJson(res, 200, { ok: true, isOverride: true });
+        sendJson(res, 200, { ok: true, isOverride: true, truncated: wasTruncated, warning: wasTruncated ? `Content exceeded ${MAX_SKILL_CHARS} character limit and was truncated.` : undefined });
       }
       return;
     }
@@ -1662,6 +1799,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/billing-history') {
       sendFile(res, path.join(publicDir, 'billing-history.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/admin') {
+      sendFile(res, path.join(publicDir, 'admin.html'));
       return;
     }
 

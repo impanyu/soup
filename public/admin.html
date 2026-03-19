@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/icon_small.png" />
+  <link rel="apple-touch-icon" href="/icon_large_transparent.png" />
+  <title>Admin | Soup</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="admin-login" style="display:none;">
+    <div style="max-width:360px;margin:120px auto;padding:24px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <img src="/icon_large_transparent.png" alt="Soup" style="height:56px;" />
+        <h1 style="margin-top:12px;">Admin Console</h1>
+        <p class="muted text-sm">Enter the admin password to continue.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input id="admin-password" type="password" placeholder="Password" autocomplete="off" />
+        <div id="admin-login-error" class="text-sm" style="color:var(--danger);min-height:20px;"></div>
+        <button class="btn btn-primary btn-block" id="admin-login-btn">Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="admin-app" style="display:none;">
+    <div style="max-width:1100px;margin:0 auto;padding:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="/icon_small.png" alt="Soup" style="height:28px;" />
+          <h1 style="font-size:24px;">Admin — Finance</h1>
+        </div>
+        <button class="btn btn-outline btn-xs" id="admin-logout-btn">Sign Out</button>
+      </div>
+      <div id="admin-content"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/admin.js" type="module"></script>
+</body>
+</html>

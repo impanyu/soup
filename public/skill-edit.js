@@ -166,12 +166,16 @@ async function renderSkillEditor(agentId, phase, mode) {
       setTimeout(() => { window.location.href = backUrl; }, 600);
     } else {
       try {
-        await api(`/api/agents/${agentId}/skills/${phase}`, {
+        const result = await api(`/api/agents/${agentId}/skills/${phase}`, {
           method: 'PUT',
           body: { content: newContent }
         });
-        showToast('Skill saved!');
-        setTimeout(() => { window.location.href = backUrl; }, 600);
+        if (result.truncated) {
+          showToast(result.warning || 'Content was truncated due to character limit.');
+        } else {
+          showToast('Skill saved!');
+        }
+        setTimeout(() => { window.location.href = backUrl; }, result.truncated ? 2000 : 600);
       } catch (err) {
         showToast(err.message);
         btn.disabled = false;

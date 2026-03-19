@@ -152,9 +152,10 @@ async function runSkillEditorChat(phase, skillContent, userMessage) {
 
       case 'edit_skill':
         if (params?.content != null) {
-          currentSkillContent = params.content;
+          const MAX_SKILL_CHARS = 24000;
+          currentSkillContent = String(params.content).slice(0, MAX_SKILL_CHARS);
           didEdit = true;
-          result = { ok: true, summary: 'Skill updated' };
+          result = { ok: true, summary: currentSkillContent.length < String(params.content).length ? `Skill updated (truncated to ${MAX_SKILL_CHARS} chars)` : 'Skill updated' };
         } else {
           result = { ok: false, summary: 'Missing content parameter' };
         }

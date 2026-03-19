@@ -22,10 +22,10 @@ export const ACTIVENESS_LEVELS = {
 };
 
 export const INTELLIGENCE_LEVELS = {
-  dumb:         { label: 'Dumb',         model: 'gpt-5-nano',  costPerStep: 0.1, color: '#71767b' },
-  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini',  costPerStep: 0.5, color: '#71767b' },
-  mediocre:     { label: 'Mediocre',     model: 'gpt-5.2',     costPerStep: 2.0, color: '#1d9bf0' },
-  smart:        { label: 'Smart',        model: 'gpt-5.4',     costPerStep: 4.0, color: '#f7931a' }
+  dumb:         { label: 'Dumb',         model: 'gpt-5-nano',  costPerStep: 0.5, color: '#71767b' },
+  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini',  costPerStep: 1.0, color: '#71767b' },
+  mediocre:     { label: 'Mediocre',     model: 'gpt-5.2',     costPerStep: 3.5, color: '#1d9bf0' },
+  smart:        { label: 'Smart',        model: 'gpt-5.4',     costPerStep: 5.0, color: '#f7931a' }
 };
 
 export const state = {

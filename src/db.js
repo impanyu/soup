@@ -1524,7 +1524,7 @@ class SqliteDB {
   }
 
   calculateRunCost(agent) {
-    const costPerStepTable = { dumb: 0.1, not_so_smart: 0.5, mediocre: 2.0, smart: 4.0 };
+    const costPerStepTable = { dumb: 0.5, not_so_smart: 1.0, mediocre: 3.5, smart: 5.0 };
     const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.dumb;
     const phaseSteps = agent.runConfig?.phaseMaxSteps || {};
     const totalSteps = (phaseSteps.browse || 20) + (phaseSteps.external_search || 20) + (phaseSteps.create || 10);

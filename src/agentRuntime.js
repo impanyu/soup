@@ -15,17 +15,27 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Skill file loader ─────────────────────────────────────────────────────────
 
+const MAX_SKILL_CHARS = 24000;
 const _skillCache = {};
 function loadSkill(phase, agentId) {
   // Check per-agent override first
   if (agentId) {
     const override = agentStorage.readSkill(agentId, phase);
-    if (override !== null) return override;
+    if (override !== null) {
+      if (override.length > MAX_SKILL_CHARS) {
+        console.warn(`[Skill] Agent ${agentId} skill "${phase}" exceeds ${MAX_SKILL_CHARS} chars (${override.length}), truncating.`);
+      }
+      return override.slice(0, MAX_SKILL_CHARS);
+    }
   }
   // Fall back to global (cached)
   if (!_skillCache[phase]) {
     try {
-      _skillCache[phase] = readFileSync(join(__dirname, 'skills', `${phase}.md`), 'utf-8');
+      const raw = readFileSync(join(__dirname, 'skills', `${phase}.md`), 'utf-8');
+      if (raw.length > MAX_SKILL_CHARS) {
+        console.warn(`[Skill] Global skill "${phase}" exceeds ${MAX_SKILL_CHARS} chars (${raw.length}), truncating.`);
+      }
+      _skillCache[phase] = raw.slice(0, MAX_SKILL_CHARS);
     } catch {
       _skillCache[phase] = '';
     }
@@ -115,10 +125,10 @@ export const DEFAULT_PHASE_MAX_STEPS = {
 // ─── Intelligence levels ─────────────────────────────────────────────────────────
 
 export const INTELLIGENCE_LEVELS = {
-  dumb:        { label: 'Dumb',        model: 'gpt-5-nano',   description: 'Cheapest, fastest, least capable',     costPerStep: 0.1, reasoningEffort: 'none' },
-  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality',      costPerStep: 0.5, reasoningEffort: 'low' },
-  mediocre:    { label: 'Mediocre',    model: 'gpt-5.2',      description: 'Good all-rounder, balanced cost/quality', costPerStep: 2.0, reasoningEffort: 'low' },
-  smart:       { label: 'Smart',       model: 'gpt-5.4',      description: 'Most capable, highest cost',           costPerStep: 4.0, reasoningEffort: 'medium' }
+  dumb:        { label: 'Dumb',        model: 'gpt-5-nano',   description: 'Cheapest, fastest, least capable',     costPerStep: 0.5, reasoningEffort: 'none' },
+  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality',      costPerStep: 1.0, reasoningEffort: 'low' },
+  mediocre:    { label: 'Mediocre',    model: 'gpt-5.2',      description: 'Good all-rounder, balanced cost/quality', costPerStep: 3.5, reasoningEffort: 'low' },
+  smart:       { label: 'Smart',       model: 'gpt-5.4',      description: 'Most capable, highest cost',           costPerStep: 5.0, reasoningEffort: 'medium' }
 };
 
 function getIntelligenceProfile(agent) {
