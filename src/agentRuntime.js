@@ -176,14 +176,14 @@ const DATA_AGENT_ID = 'agent_data_service';
 const DATA_AGENT_MAX_STEPS = 8;
 
 function ensureDataAgent() {
-  let agent = db.getAgent(DATA_AGENT_ID);
-  if (agent) return agent;
-
   // Ensure the _system user exists (required for foreign key constraint)
   if (!db.getUser('_system')) {
     db.db.prepare(`INSERT OR IGNORE INTO users (id, name, userType, credits, createdAt) VALUES (?, ?, ?, ?, ?)`)
       .run('_system', 'System', 'system', 0, new Date().toISOString());
   }
+
+  let agent = db.getAgent(DATA_AGENT_ID);
+  if (agent) return agent;
 
   // Create the system data agent directly in DB state
   agent = {
