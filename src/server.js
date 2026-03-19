@@ -458,55 +458,79 @@ const server = http.createServer(async (req, res) => {
       const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
       const perPage = Math.min(100, Math.max(1, parseInt(url.searchParams.get('perPage') || '30')));
 
-      // Gather all income (top-ups) and expenses (tenant charges)
-      const topups = db.db.prepare("SELECT id, amount, fromId, toId, createdAt, description FROM transfers WHERE type = 'topup' ORDER BY createdAt DESC").all();
-      const charges = db.db.prepare("SELECT id, agentId, amount, reason, createdAt FROM tenantCharges ORDER BY createdAt DESC").all();
+      // Actual API cost per 1M tokens by model (USD)
+      const MODEL_PRICING = {
+        'gpt-5-nano':  { input: 0.05, output: 0.40 },
+        'gpt-5-mini':  { input: 0.25, output: 2.00 },
+        'gpt-5.2':     { input: 1.75, output: 14.00 },
+        'gpt-5.4':     { input: 2.50, output: 15.00 },
+      };
 
-      // Look up agent names
-      const agentNameCache = {};
-      function agentName(id) {
-        if (!id) return '?';
-        if (!agentNameCache[id]) {
-          const a = db.getAgent(id);
-          agentNameCache[id] = a ? a.name : id.slice(0, 12);
-        }
-        return agentNameCache[id];
+      function calcApiCostUsd(model, inputTokens, outputTokens) {
+        const p = MODEL_PRICING[model] || MODEL_PRICING['gpt-5-nano'];
+        return (inputTokens / 1e6) * p.input + (outputTokens / 1e6) * p.output;
       }
-      // Look up user names
+
+      // Gather all income (top-ups stored in dollars) and run logs
+      const topups = db.db.prepare("SELECT id, amount, fromId, toId, createdAt, description FROM transfers WHERE type = 'topup' ORDER BY createdAt DESC").all();
+      const runLogs = db.db.prepare("SELECT * FROM agentRunLogs ORDER BY createdAt DESC").all();
+
+      // Look up agent names & models
+      const agentCache = {};
+      function getAgent(id) {
+        if (!id) return null;
+        if (!agentCache[id]) agentCache[id] = db.getAgent(id);
+        return agentCache[id];
+      }
       const userNameCache = {};
       function userName(id) {
         if (!id) return '?';
-        if (!userNameCache[id]) {
-          const u = db.getUser(id);
-          userNameCache[id] = u ? u.name : id.slice(0, 12);
-        }
+        if (!userNameCache[id]) { const u = db.getUser(id); userNameCache[id] = u ? u.name : id.slice(0, 12); }
         return userNameCache[id];
       }
 
-      // Build unified entries list
+      // Build unified entries list (all amounts in USD)
       const allEntries = [];
+
+      // Income entries: topup amount is already in dollars
       for (const t of topups) {
+        const dollars = Number(t.amount);
+        const credits = dollars * 100;
         allEntries.push({
           createdAt: t.createdAt,
           category: 'income',
           typeLabel: 'Top-up',
-          detail: `${userName(t.toId)} +${Number(t.amount).toFixed(0)} cr ($${(t.amount / 100).toFixed(2)})`,
-          amount: t.amount
+          detail: `${userName(t.toId)} — ${credits.toFixed(0)} cr`,
+          amountUsd: dollars
         });
       }
-      for (const c of charges) {
+
+      // Expense entries: calculate actual API cost from run log token usage
+      for (const r of runLogs) {
+        let data;
+        try { data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data; } catch { data = {}; }
+        const steps = data?.steps || [];
+        const agent = getAgent(r.agentId);
+        const model = agent ? (INTELLIGENCE_LEVELS[agent.intelligenceLevel] || INTELLIGENCE_LEVELS.dumb).model : 'gpt-5-nano';
+        let totalIn = 0, totalOut = 0;
+        for (const s of steps) {
+          const tu = s.tokenUsage || {};
+          totalIn += tu.input || 0;
+          totalOut += tu.output || 0;
+        }
+        const apiCostUsd = calcApiCostUsd(model, totalIn, totalOut);
         allEntries.push({
-          createdAt: c.createdAt,
+          createdAt: r.startedAt || r.createdAt,
           category: 'expense',
-          typeLabel: c.reason === 'manual_run' ? 'Manual Run' : c.reason === 'scheduled_action' ? 'Scheduled Run' : c.reason || 'Run',
-          detail: `${agentName(c.agentId)} — ${Number(c.amount).toFixed(1)} cr`,
-          amount: c.amount
+          typeLabel: data?.reason === 'manual_run' ? 'Manual Run' : 'Scheduled Run',
+          detail: `${agent?.name || r.agentId?.slice(0, 12)} (${model}) — ${r.stepsExecuted || steps.length} steps, ${totalIn.toLocaleString()} in + ${totalOut.toLocaleString()} out`,
+          amountUsd: Math.round(apiCostUsd * 1e6) / 1e6
         });
       }
       allEntries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-      const totalIncome = topups.reduce((s, t) => s + t.amount, 0);
-      const totalExpense = charges.reduce((s, c) => s + c.amount, 0);
+      const totalIncome = allEntries.filter(e => e.category === 'income').reduce((s, e) => s + e.amountUsd, 0);
+      const totalExpense = allEntries.filter(e => e.category === 'expense').reduce((s, e) => s + e.amountUsd, 0);
       const netProfit = totalIncome - totalExpense;
 
       // Pagination
@@ -514,7 +538,7 @@ const server = http.createServer(async (req, res) => {
       const totalPages = Math.ceil(totalEntries / perPage) || 1;
       const entries = allEntries.slice((page - 1) * perPage, page * perPage);
 
-      // Weekly stats (last 12 weeks)
+      // Weekly stats (last 12 weeks, in USD)
       const weeklyStats = [];
       const now = new Date();
       for (let w = 0; w < 12; w++) {
@@ -525,14 +549,14 @@ const server = http.createServer(async (req, res) => {
         const ws = weekStart.toISOString().slice(0, 10);
         const we = weekEnd.toISOString().slice(0, 10);
         const wsIso = weekStart.toISOString();
-        const weIso = new Date(weekEnd.getTime() + 86400000).toISOString(); // end of day
+        const weIso = new Date(weekEnd.getTime() + 86400000).toISOString();
 
         let income = 0, expense = 0, runs = 0, topupCount = 0;
-        for (const t of topups) {
-          if (t.createdAt >= wsIso && t.createdAt < weIso) { income += t.amount; topupCount++; }
-        }
-        for (const c of charges) {
-          if (c.createdAt >= wsIso && c.createdAt < weIso) { expense += c.amount; runs++; }
+        for (const e of allEntries) {
+          if (e.createdAt >= wsIso && e.createdAt < weIso) {
+            if (e.category === 'income') { income += e.amountUsd; topupCount++; }
+            else { expense += e.amountUsd; runs++; }
+          }
         }
         weeklyStats.push({
           weekStart: ws, weekEnd: we,
@@ -543,15 +567,14 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      // Counts
       const totalUsers = db.db.prepare("SELECT COUNT(*) as c FROM users").get().c;
       const totalAgents = db.db.prepare("SELECT COUNT(*) as c FROM agents").get().c;
-      const totalRuns = charges.length;
+      const totalRuns = runLogs.length;
 
       sendJson(res, 200, {
         totalIncome: Math.round(totalIncome * 100) / 100,
-        totalExpense: Math.round(totalExpense * 100) / 100,
-        netProfit: Math.round(netProfit * 100) / 100,
+        totalExpense: Math.round(totalExpense * 1e6) / 1e6,
+        netProfit: Math.round((totalIncome - totalExpense) * 100) / 100,
         totalUsers, totalAgents, totalRuns,
         weeklyStats,
         entries, page, totalPages, totalEntries

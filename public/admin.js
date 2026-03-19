@@ -26,8 +26,8 @@ function formatWeekDate(iso) {
   return new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function cr(n) { return Number(n || 0).toFixed(2); }
-function usd(credits) { return '$' + (credits / 100).toFixed(2); }
+function usd(dollars) { return '$' + Number(dollars || 0).toFixed(2); }
+function usdPrecise(dollars) { return '$' + Number(dollars || 0).toFixed(4); }
 
 // ── Auth ──
 
@@ -79,7 +79,7 @@ function renderWeeklyChart(weeks) {
     const gy = pad.top + (plotH / gridSteps) * i;
     const label = Math.round(yMax - ((yMax - yMin) / gridSteps) * i);
     gridLines += `<line x1="${pad.left}" y1="${gy}" x2="${W - pad.right}" y2="${gy}" stroke="var(--border)" stroke-dasharray="3,3" />`;
-    gridLines += `<text x="${pad.left - 6}" y="${gy + 4}" text-anchor="end" fill="var(--text-muted)" font-size="10">${label}</text>`;
+    gridLines += `<text x="${pad.left - 6}" y="${gy + 4}" text-anchor="end" fill="var(--text-muted)" font-size="10">$${label}</text>`;
   }
   if (yMin < 0) {
     const zeroY = yPos(0);
@@ -116,7 +116,7 @@ function renderWeeklyChart(weeks) {
   return `
     <div style="margin-bottom:16px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);overflow-x:auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-        <span class="text-xs muted">Weekly overview (last ${n} weeks, cr)</span>
+        <span class="text-xs muted">Weekly overview (last ${n} weeks, USD)</span>
         <div style="display:flex;gap:6px;" id="chart-toggles">
           <button class="btn btn-xs ${_chartVis.income ? '' : 'btn-outline'}" data-series="income" style="font-size:11px;padding:2px 8px;${_chartVis.income ? 'background:#4ade80;color:#000;border-color:#4ade80;' : ''}">Income</button>
           <button class="btn btn-xs ${_chartVis.expense ? '' : 'btn-outline'}" data-series="expense" style="font-size:11px;padding:2px 8px;${_chartVis.expense ? 'background:var(--accent,#6366f1);color:#fff;border-color:var(--accent,#6366f1);' : ''}">Expense</button>
@@ -158,15 +158,15 @@ async function loadFinance() {
       <div style="margin-bottom:16px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);display:flex;gap:24px;flex-wrap:wrap;">
         <div>
           <span class="text-xs muted">Total Income (top-ups)</span>
-          <div style="font-size:18px;font-weight:700;color:#4ade80;">${usd(data.totalIncome)} <span class="muted text-sm">(${cr(data.totalIncome)} cr)</span></div>
+          <div style="font-size:18px;font-weight:700;color:#4ade80;">${usd(data.totalIncome)}</div>
         </div>
         <div>
-          <span class="text-xs muted">Total Run Expense</span>
-          <div style="font-size:18px;font-weight:700;">${usd(data.totalExpense)} <span class="muted text-sm">(${cr(data.totalExpense)} cr)</span></div>
+          <span class="text-xs muted">Total API Expense</span>
+          <div style="font-size:18px;font-weight:700;">${usd(data.totalExpense)}</div>
         </div>
         <div>
           <span class="text-xs muted">Net Profit</span>
-          <div style="font-size:18px;font-weight:700;${netColor}">${netSign}${usd(Math.abs(data.netProfit))} <span class="muted text-sm">(${netSign}${cr(data.netProfit)} cr)</span></div>
+          <div style="font-size:18px;font-weight:700;${netColor}">${netSign}${usd(Math.abs(data.netProfit))}</div>
         </div>
         <div>
           <span class="text-xs muted">Total Users</span>
@@ -200,8 +200,7 @@ async function loadFinance() {
             <span class="badge" style="font-size:11px;${isIncome ? 'color:#4ade80;border-color:#4ade80;' : ''}">${escapeHtml(e.typeLabel)}</span>
           </td>
           <td style="padding:8px 12px;" class="text-sm muted">${escapeHtml(e.detail)}</td>
-          <td style="padding:8px 12px;text-align:right;font-weight:600;${isIncome ? 'color:#4ade80;' : ''}">${isIncome ? '+' : '-'}${cr(e.amount)} cr</td>
-          <td style="padding:8px 12px;text-align:right;" class="text-sm muted">${usd(e.amount)}</td>
+          <td style="padding:8px 12px;text-align:right;font-weight:600;${isIncome ? 'color:#4ade80;' : ''}">${isIncome ? '+' : '-'}${e.amountUsd < 0.01 ? usdPrecise(e.amountUsd) : usd(e.amountUsd)}</td>
         </tr>`;
     }).join('');
 
@@ -223,8 +222,7 @@ async function loadFinance() {
             <th class="text-sm" style="padding:8px 12px;">Time</th>
             <th class="text-sm" style="padding:8px 12px;">Type</th>
             <th class="text-sm" style="padding:8px 12px;">Details</th>
-            <th class="text-sm" style="padding:8px 12px;text-align:right;">Amount (cr)</th>
-            <th class="text-sm" style="padding:8px 12px;text-align:right;">USD</th>
+            <th class="text-sm" style="padding:8px 12px;text-align:right;">Amount (USD)</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -267,15 +265,15 @@ function renderWeekSummary() {
       <div style="display:flex;gap:24px;flex-wrap:wrap;">
         <div>
           <span class="text-xs muted">Income</span>
-          <div style="font-size:16px;font-weight:700;color:#4ade80;">+${usd(w.income)} <span class="muted text-xs">(${cr(w.income)} cr)</span></div>
+          <div style="font-size:16px;font-weight:700;color:#4ade80;">+${usd(w.income)}</div>
         </div>
         <div>
           <span class="text-xs muted">Expense</span>
-          <div style="font-size:16px;font-weight:700;">${usd(w.expense)} <span class="muted text-xs">(${cr(w.expense)} cr)</span></div>
+          <div style="font-size:16px;font-weight:700;">${usd(w.expense)}</div>
         </div>
         <div>
           <span class="text-xs muted">Net Profit</span>
-          <div style="font-size:16px;font-weight:700;${netColor}">${netSign}${usd(Math.abs(w.net))} <span class="muted text-xs">(${netSign}${cr(w.net)} cr)</span></div>
+          <div style="font-size:16px;font-weight:700;${netColor}">${netSign}${usd(Math.abs(w.net))}</div>
         </div>
         <div>
           <span class="text-xs muted">Runs</span>
