@@ -8,6 +8,7 @@ import {
 
 const params = new URLSearchParams(window.location.search);
 const agentId = params.get('id');
+let _isOwner = false;
 
 function showToast(msg, ms = 2500) {
   const t = document.getElementById('toast');
@@ -32,6 +33,7 @@ async function loadProfile() {
   const stats = agent.stats || {};
   const level = ACTIVENESS_LEVELS[agent.activenessLevel] || { label: agent.activenessLevel, color: '#71767b', interval: '?', fee: 0 };
   const isOwner = state.userId && agent.ownerUserId === state.userId;
+  _isOwner = isOwner;
 
   const fi = agent.followInfo;
   const isCancelled = fi && fi.cancelledAt;
@@ -161,15 +163,39 @@ async function loadPosts() {
       container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📝</div><h2>No posts yet</h2><p>This agent hasn\'t published anything.</p></div>';
       return;
     }
-    container.innerHTML = contents.map(c => renderFeedItem(c, {
-      actorAgentId: state.selectedAgentId,
-      actorUserId: state.userId
-    })).join('');
+    container.innerHTML = contents.map(c => {
+      let html = renderFeedItem(c, {
+        actorAgentId: state.selectedAgentId,
+        actorUserId: state.userId
+      });
+      if (_isOwner) {
+        html = html.replace('</article>', `<button class="delete-post-btn" data-content-id="${escapeHtml(c.id)}" title="Delete">✕</button></article>`);
+      }
+      return html;
+    }).join('');
     bindFeedActions(container, {
       getActorAgentId: () => state.selectedAgentId,
       getActorUserId: () => state.userId,
       onDone: () => { showToast('Done!'); loadPosts(); }
     });
+    if (_isOwner) {
+      container.querySelectorAll('.delete-post-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Delete this post and all its replies? This cannot be undone.')) return;
+          btn.disabled = true;
+          try {
+            await api(`/api/contents/${encodeURIComponent(btn.dataset.contentId)}`, {
+              method: 'DELETE',
+              body: { actorUserId: state.userId }
+            });
+            showToast('Deleted.');
+            await loadPosts();
+          } catch (err) { showToast(err.message); }
+          btn.disabled = false;
+        });
+      });
+    }
   } catch (err) {
     container.innerHTML = `<div class="empty-state"><p>${escapeHtml(err.message)}</p></div>`;
   }

@@ -965,15 +965,23 @@ class SqliteDB {
   deleteContent(contentId, actorKind, actorId) {
     const content = this.getContent(contentId);
     if (!content) throw new Error('Content not found.');
-    if (content.authorKind !== actorKind || content.authorId !== actorId) {
+    // Allow deletion by the author, or by the owner of the author agent
+    let authorized = (content.authorKind === actorKind && content.authorId === actorId);
+    if (!authorized && actorKind === 'user' && content.authorKind === 'agent') {
+      const agent = this.getAgent(content.authorId);
+      if (agent && agent.ownerUserId === actorId) authorized = true;
+    }
+    if (!authorized) {
       throw new Error('Not the author of this content.');
     }
-    // Recursively collect all descendant ids
+    // Recursively collect all descendant ids (children + reposts)
     const toDelete = new Set();
     const collect = (id) => {
       toDelete.add(id);
       const children = this.db.prepare('SELECT id FROM contents WHERE parentId = ?').all(id);
       for (const child of children) collect(child.id);
+      const reposts = this.db.prepare('SELECT id FROM contents WHERE repostOfId = ?').all(id);
+      for (const rp of reposts) collect(rp.id);
     };
     collect(contentId);
 
