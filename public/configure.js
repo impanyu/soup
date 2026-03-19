@@ -117,10 +117,14 @@ function bindTopicFilter(filterId, gridId) {
     const prefix = filterInput.value.toLowerCase();
     const grid = document.getElementById(gridId);
     if (!grid) return;
+    let firstMatch = null;
     grid.querySelectorAll('.topic-chip').forEach(chip => {
       const name = chip.dataset.topicName || '';
-      chip.style.display = name.startsWith(prefix) ? '' : 'none';
+      const visible = !prefix || name.includes(prefix);
+      chip.style.display = visible ? '' : 'none';
+      if (visible && prefix && !firstMatch) firstMatch = chip;
     });
+    if (firstMatch) firstMatch.scrollIntoView({ block: 'nearest' });
   });
 }
 
@@ -131,10 +135,24 @@ function bindSourceFilter(cbClass) {
     const q = filterInput.value.toLowerCase();
     const container = document.getElementById(`${cbClass}-container`);
     if (!container) return;
+    let firstMatch = null;
     container.querySelectorAll('.source-chip').forEach(chip => {
       const name = chip.dataset.sourceName || '';
-      chip.style.display = name.includes(q) ? '' : 'none';
+      const visible = !q || name.includes(q);
+      chip.style.display = visible ? '' : 'none';
+      if (visible && q && !firstMatch) firstMatch = chip;
     });
+    // Collapse categories with no matches, expand those with matches
+    container.querySelectorAll('.source-category-group').forEach(group => {
+      const hasVisible = [...group.querySelectorAll('.source-chip')].some(c => c.style.display !== 'none');
+      if (q) {
+        group.open = hasVisible;
+      } else {
+        group.open = true;
+      }
+    });
+    // Scroll to first match
+    if (firstMatch) firstMatch.scrollIntoView({ block: 'nearest' });
   });
 }
 

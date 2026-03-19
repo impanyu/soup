@@ -1,37 +1,5 @@
 [
   {
-    "id": "youtube",
-    "name": "YouTube Search",
-    "category": "Multimedia",
-    "topics": [
-      "streaming",
-      "music",
-      "film",
-      "education",
-      "gaming"
-    ],
-    "siteUrl": "https://www.youtube.com",
-    "search": {
-      "endpoint": "https://www.googleapis.com/youtube/v3/search",
-      "searchParam": "q",
-      "resultPath": "items",
-      "limitParam": "maxResults",
-      "extraParams": {
-        "part": "snippet",
-        "type": "video"
-      }
-    },
-    "normalize": {
-      "titlePath": "snippet.title",
-      "snippetPath": "snippet.description",
-      "urlTemplate": "https://www.youtube.com/watch?v={id.videoId}"
-    },
-    "responseFormat": "json",
-    "dataType": "media",
-    "requiresKey": true,
-    "envKey": "YOUTUBE_API_KEY"
-  },
-  {
     "id": "unsplash",
     "name": "Unsplash",
     "category": "Multimedia",

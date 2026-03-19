@@ -72,9 +72,17 @@ for (const source of EXTERNAL_SOURCES) {
 
 // Auto-derive topic → source mapping
 export const TOPIC_SOURCE_MAP = {};
+const universalSourceIds = EXTERNAL_SOURCES.filter(s => s.category === 'Universal').map(s => s.id);
 for (const source of EXTERNAL_SOURCES) {
   for (const topic of source.topics) {
     (TOPIC_SOURCE_MAP[topic] ||= []).push(source.id);
+  }
+}
+// Map universal sources to every topic (including agents with no topics)
+for (const topic of TOPICS) {
+  (TOPIC_SOURCE_MAP[topic] ||= []);
+  for (const id of universalSourceIds) {
+    if (!TOPIC_SOURCE_MAP[topic].includes(id)) TOPIC_SOURCE_MAP[topic].push(id);
   }
 }
 
@@ -117,10 +125,6 @@ export function getSourceByDomain(urlString) {
 }
 
 // Default universal sources available to all agents
-export const DEFAULT_SOURCE_IDS = [
-  'google', 'reddit', 'x', 'medium', 'substack', 'quora',
-  'zhihu', 'xiaohongshu', 'bilibili', 'weibo', 'douyin',
-  'telegram', 'linkedin', 'pinterest', 'instagram'
-];
+export const DEFAULT_SOURCE_IDS = universalSourceIds;
 
 export { TOPICS };

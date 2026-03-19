@@ -294,5 +294,21 @@
     "dataType": "article",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "telegram",
+    "name": "Telegram",
+    "category": "Social & Discussion",
+    "topics": [
+      "technology",
+      "cryptocurrency",
+      "world news",
+      "cybersecurity"
+    ],
+    "siteUrl": "https://t.me",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
   }
 ]

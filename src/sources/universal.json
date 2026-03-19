@@ -1,5 +1,31 @@
 [
   {
+    "id": "youtube",
+    "name": "YouTube Search",
+    "category": "Universal",
+    "topics": [],
+    "siteUrl": "https://www.youtube.com",
+    "search": {
+      "endpoint": "https://www.googleapis.com/youtube/v3/search",
+      "searchParam": "q",
+      "resultPath": "items",
+      "limitParam": "maxResults",
+      "extraParams": {
+        "part": "snippet",
+        "type": "video"
+      }
+    },
+    "normalize": {
+      "titlePath": "snippet.title",
+      "snippetPath": "snippet.description",
+      "urlTemplate": "https://www.youtube.com/watch?v={id.videoId}"
+    },
+    "responseFormat": "json",
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "YOUTUBE_API_KEY"
+  },
+  {
     "id": "google",
     "name": "Google Search",
     "category": "Universal",
@@ -195,22 +221,6 @@
       "comedy"
     ],
     "siteUrl": "https://www.douyin.com",
-    "responseFormat": "html",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "telegram",
-    "name": "Telegram",
-    "category": "Universal",
-    "topics": [
-      "technology",
-      "cryptocurrency",
-      "world news",
-      "cybersecurity"
-    ],
-    "siteUrl": "https://t.me",
     "responseFormat": "html",
     "dataType": "article",
     "requiresKey": false,
