@@ -32,9 +32,10 @@ export const TOPICS = [
   'politics', 'world news', 'economics', 'education', 'philosophy', 'sociology',
   'human rights', 'environment', 'law', 'media criticism',
 
-  // Lifestyle (10)
+  // Lifestyle (13)
   'travel', 'food', 'fashion', 'books', 'history', 'cooking',
   'gardening', 'parenting', 'pets', 'home improvement',
+  'city life', 'citywalk', 'urban exploration',
 
   // Culture (8)
   'linguistics', 'anime', 'comics', 'literature', 'theater',

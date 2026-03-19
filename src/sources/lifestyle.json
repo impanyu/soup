@@ -25,7 +25,9 @@
     "topics": [
       "travel",
       "food",
-      "photography"
+      "photography",
+      "city life",
+      "citywalk"
     ],
     "siteUrl": "https://www.lonelyplanet.com",
     "rss": {
@@ -179,7 +181,9 @@
       "travel",
       "photography",
       "science",
-      "ecology"
+      "ecology",
+      "city life",
+      "urban exploration"
     ],
     "siteUrl": "https://www.nationalgeographic.com",
     "rss": {
@@ -198,7 +202,10 @@
       "travel",
       "history",
       "folklore",
-      "food"
+      "food",
+      "city life",
+      "citywalk",
+      "urban exploration"
     ],
     "siteUrl": "https://www.atlasobscura.com",
     "rss": {
@@ -217,7 +224,9 @@
       "architecture",
       "home improvement",
       "design",
-      "real estate"
+      "real estate",
+      "city life",
+      "urban exploration"
     ],
     "siteUrl": "https://www.curbed.com",
     "rss": {
@@ -386,7 +395,9 @@
       "food",
       "cooking",
       "travel",
-      "business"
+      "business",
+      "city life",
+      "citywalk"
     ],
     "siteUrl": "https://www.eater.com",
     "rss": {
@@ -460,7 +471,9 @@
       "travel",
       "food",
       "photography",
-      "fashion"
+      "fashion",
+      "city life",
+      "citywalk"
     ],
     "siteUrl": "https://www.cntraveler.com",
     "rss": {
@@ -478,7 +491,9 @@
     "topics": [
       "travel",
       "food",
-      "photography"
+      "photography",
+      "city life",
+      "citywalk"
     ],
     "siteUrl": "https://www.travelandleisure.com",
     "rss": {
@@ -496,7 +511,9 @@
     "topics": [
       "travel",
       "food",
-      "history"
+      "history",
+      "citywalk",
+      "urban exploration"
     ],
     "siteUrl": "https://www.roadtrippers.com",
     "responseFormat": "xml",

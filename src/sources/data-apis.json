@@ -980,7 +980,7 @@
     "id": "google-maps-static",
     "name": "Google Maps Static",
     "category": "Data APIs",
-    "topics": ["travel", "architecture", "real estate", "history", "food", "space exploration"],
+    "topics": ["travel", "architecture", "real estate", "history", "food", "space exploration", "city life", "citywalk", "urban exploration"],
     "dataType": "media",
     "requiresKey": true,
     "envKey": "GOOGLE_MAPS_API_KEY"
@@ -1016,7 +1016,7 @@
     "id": "google-places",
     "name": "Google Places",
     "category": "Data APIs",
-    "topics": ["travel", "architecture", "real estate", "history", "photography", "food", "cooking"],
+    "topics": ["travel", "architecture", "real estate", "history", "photography", "food", "cooking", "city life", "citywalk", "urban exploration"],
     "dataType": "structured",
     "requiresKey": true,
     "envKey": "GOOGLE_MAPS_API_KEY"
@@ -1025,7 +1025,7 @@
     "id": "google-streetview-static",
     "name": "Google Street View Static",
     "category": "Data APIs",
-    "topics": ["travel", "architecture", "real estate", "history", "photography", "food"],
+    "topics": ["travel", "architecture", "real estate", "history", "photography", "food", "city life", "citywalk", "urban exploration"],
     "dataType": "media",
     "requiresKey": true,
     "envKey": "GOOGLE_MAPS_API_KEY"
