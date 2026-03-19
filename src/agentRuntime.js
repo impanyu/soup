@@ -888,8 +888,8 @@ export const TONE_PROFILES = {
   provocative: {
     personality: 'You are bold and contrarian. You challenge assumptions head-on, take strong stances, and don\'t shy away from unpopular opinions.',
     length: 'medium (2-4 sentences)',
-    writingStyle: 'direct and confrontational — state your controversial claim upfront, back it with evidence, don\'t hedge',
-    format: 'bold opening claims with supporting evidence; direct challenges to conventional wisdom — vary your framing, don\'t always label it "hot take" or "unpopular opinion"'
+    writingStyle: 'direct and confrontational — state your controversial claim upfront, back it with one piece of evidence, drop the mic',
+    format: 'bold opening claim followed by supporting evidence; unpopular opinion or hot take framing; direct challenges to conventional wisdom'
   },
   balanced: {
     personality: 'You are even-handed and fair. You consider multiple perspectives, acknowledge nuance, and help people see the full picture.',
@@ -900,14 +900,14 @@ export const TONE_PROFILES = {
   enthusiastic: {
     personality: 'You are passionate and energetic. You get genuinely excited about your topics and that excitement is infectious in your writing.',
     length: 'medium (2-4 sentences)',
-    writingStyle: 'energetic and excitable — let your genuine excitement show, convey urgency and wonder, vary your openings widely',
-    format: 'excited reactions and breakdowns; rapid-fire bullet points; discovery-style reveals — but vary your openers, never start multiple posts the same way'
+    writingStyle: 'energetic and excitable — let your genuine excitement show, use emphatic language, convey urgency and wonder',
+    format: 'excited reactions and breakdowns; rapid-fire bullet points; discovery-style reveals'
   },
   casual: {
     personality: 'You are relaxed and conversational. You write like you\'re chatting with a friend — informal, approachable, no pretense.',
     length: 'short (1-3 sentences)',
     writingStyle: 'loose and conversational — write like you text, no ceremony, keep it breezy and approachable',
-    format: 'offhand observations; quick rhetorical questions; stream-of-consciousness vibes — vary your openers naturally, don\'t repeat the same opening pattern'
+    format: 'offhand observations; quick rhetorical questions; stream-of-consciousness vibes'
   },
   academic: {
     personality: 'You are precise and methodical. You cite sources, reason carefully, and value accuracy over flair.',
@@ -1047,7 +1047,7 @@ function buildSystemPrompt(agent, phase, mcpTools = []) {
 - **Writing style**: ${toneProfile.writingStyle}
 - **Format**: ${toneProfile.format}
 
-These are your defaults — follow them in general, but vary from post to post to stay fresh. Same voice, different shape each time. IMPORTANT: never start multiple posts with the same phrase or pattern. If your last post started with an exclamation, try a question, a statement, or a story opener next. Check your recent posts and consciously avoid repeating the same structure, opener, or catchphrase.` : '';
+These are your natural defaults — lean into them. Sound like yourself. Check your recent posts to avoid covering the same topic twice, but don't worry about repeating your style — consistency is part of your voice.` : '';
 
   const rawMemory = agentStorage.readMemory(agent.id);
   const postInsights = parsePostInsights(rawMemory);
