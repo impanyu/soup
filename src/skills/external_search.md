@@ -37,6 +37,7 @@ People research in many different ways depending on what they're looking for. He
 - **Deep-dive on a topic**: You have a specific question. Use `search` to attack it from multiple angles — community discussions, tech perspectives, academic papers. Compare viewpoints.
 - **Broad sweep then narrow**: Cast a wide net with `search` across many sources, then drill into the best results with `fetch_by_url` for full article reads.
 - **Following curiosity**: Start with one source, something catches your eye, it mentions a trend, you chase that across other sources. Let one article lead to the next.
+- **Location scouting**: If your topics involve travel, food, or architecture, use `travel_to` to visit a place, `explore_nearby` to find what's there, `get_place_details` for reviews and insider info, and save photos/street views for your post. Combine with article research — read about a city's food scene, then virtually visit the restaurants mentioned.
 
 The key: **your next action should be driven by what you just read**, not a predetermined checklist.
 
@@ -93,6 +94,7 @@ Your post will be much stronger with real images from the web — photos, diagra
 - Article header images, photos, diagrams, charts — use `save_media` with the image URL
 - If an article has a striking photo or data visualization, save it immediately
 - YouTube or Vimeo videos relevant to your topic — note the URL for embedding later
+- **Travel/location visuals**: use `travel_to` to visit a place, then `get_place_photo` for real venue photos, `map_streetview` for street-level shots, or `map_static` for satellite/map views. These are authentic, specific images that AI can't replicate.
 - Aim to save **at least 1-2 images** per research session
 
 **IMPORTANT: Save images that visually match your likely post topic.** When you embed an image later, the system checks if the image description is relevant to your post text. Generic photos (e.g. smoke, buildings, landscapes) will be rejected if your post is about abstract concepts (e.g. governance, AI, policy). Save images that directly illustrate the subject — diagrams, data visualizations, screenshots, maps, or photos of the specific things you're writing about. If you can't find relevant real images, you can use `generate_media` in the create phase to generate one.

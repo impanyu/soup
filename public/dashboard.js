@@ -112,7 +112,118 @@ async function renderUserSection(user) {
 }
 
 // ── Agents grid ────────────────────────────────────
+// Track active polling intervals per agent — cleared on re-render or pause
+const _pollIntervals = new Map();
+let _globalRunChecker = null;
+
+function clearAgentPoll(agentId) {
+  const id = _pollIntervals.get(agentId);
+  if (id) { clearInterval(id); _pollIntervals.delete(agentId); }
+}
+
+function clearAllPolls() {
+  for (const id of _pollIntervals.values()) clearInterval(id);
+  _pollIntervals.clear();
+}
+
+function startGlobalRunChecker() {
+  if (_globalRunChecker) return;
+  const checkAll = async () => {
+    for (const agent of state.agents) {
+      if (_pollIntervals.has(agent.id)) continue;
+      try {
+        const status = await api(`/api/agents/${agent.id}/running`);
+        if (status.running) {
+          if (status.progress) updateRunProgress(agent.id, status.progress);
+          const btn = document.querySelector(`.run-now-btn[data-id="${agent.id}"]`);
+          if (btn && status.progress?.manual) { btn.disabled = true; btn.textContent = 'Running…'; }
+          clearAgentPoll(agent.id);
+          const poll = setInterval(async () => {
+            try {
+              const s = await api(`/api/agents/${agent.id}/running`);
+              if (s.progress) updateRunProgress(agent.id, s.progress);
+              if (!s.running) {
+                clearAgentPoll(agent.id);
+                updateRunProgress(agent.id, null);
+                const b = document.querySelector(`.run-now-btn[data-id="${agent.id}"]`);
+                if (b) { b.disabled = false; b.textContent = 'Run Now'; }
+                await loadAgents();
+              } else if (!s.progress?.manual) {
+                const b = document.querySelector(`.run-now-btn[data-id="${agent.id}"]`);
+                if (b) { b.disabled = false; b.textContent = 'Run Now'; }
+              }
+            } catch { /* ignore */ }
+          }, 2000);
+          _pollIntervals.set(agent.id, poll);
+        }
+      } catch { /* ignore */ }
+    }
+  };
+  checkAll(); // run immediately to restore progress bars after re-render
+  _globalRunChecker = setInterval(checkAll, 5000);
+}
+
+function stopGlobalRunChecker() {
+  if (_globalRunChecker) { clearInterval(_globalRunChecker); _globalRunChecker = null; }
+}
+
+function updateRunProgress(agentId, progressMap) {
+  const container = document.querySelector(`.run-progress-container[data-id="${agentId}"]`);
+  if (!container) return;
+  if (!progressMap || Object.keys(progressMap).length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // Show pause notice if agent is paused but still has running instances
+  const agent = state.agents.find(a => a.id === agentId);
+  let notice = container.querySelector('.run-pause-notice');
+  if (agent && !agent.enabled) {
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.className = 'run-pause-notice text-sm';
+      notice.style.cssText = 'color:var(--warning, #f7931a);margin-bottom:4px;';
+      notice.textContent = 'Running instance will continue, pause from next run';
+      container.prepend(notice);
+    }
+  } else if (notice) {
+    notice.remove();
+  }
+
+  const triggerLabels = { manual: 'Manual', scheduled: 'Scheduled' };
+  const phaseLabels = { browse: 'Browsing', external_search: 'Researching', create: 'Creating' };
+  for (const [trigger, progress] of Object.entries(progressMap)) {
+    let wrap = container.querySelector(`.run-progress-wrap[data-trigger="${trigger}"]`);
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'run-progress-wrap';
+      wrap.dataset.trigger = trigger;
+      wrap.style.marginTop = '4px';
+      wrap.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+          <span class="text-sm muted run-progress-label">Running…</span>
+          <span class="text-sm muted run-progress-pct">0%</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+          <div class="run-progress-bar" style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width 0.3s ease;"></div>
+        </div>`;
+      container.appendChild(wrap);
+    }
+    const pct = Math.min(100, Math.round((progress.currentStep / progress.totalSteps) * 100));
+    wrap.querySelector('.run-progress-bar').style.width = pct + '%';
+    wrap.querySelector('.run-progress-pct').textContent = pct + '%';
+    wrap.querySelector('.run-progress-label').textContent =
+      `${phaseLabels[progress.phase] || 'Running…'} (${triggerLabels[trigger] || trigger})`;
+  }
+  // Remove bars for triggers no longer active
+  container.querySelectorAll('.run-progress-wrap').forEach(w => {
+    if (!progressMap[w.dataset.trigger]) w.remove();
+  });
+}
+
 function renderAgentsGrid() {
+  clearAllPolls();
+  stopGlobalRunChecker();
   const grid = document.getElementById('agents-grid');
   if (!grid) return;
   if (!state.agents.length) {
@@ -147,7 +258,7 @@ function renderAgentsGrid() {
         </div>
         ${agent.bio ? `<p class="text-sm muted">${escapeHtml(agent.bio)}</p>` : ''}
         <div class="agent-manage-stats">
-          <span>Credits: <strong class="agent-credits" data-agent-id="${escapeHtml(agent.id)}">${formatCredits(agent.credits)}</strong></span>
+          <span>Credits: <strong class="agent-credits" data-agent-id="${escapeHtml(agent.id)}" style="font-size:1.15em;color:var(--accent);">${formatCredits(agent.credits)}</strong></span>
           <span class="agent-cost-monthly" data-agent-id="${escapeHtml(agent.id)}">This month: <strong>...</strong></span>
           <span>Next run: <strong class="next-run-countdown" data-next-at="${agent.enabled ? escapeHtml(agent.nextActionAt || '') : ''}" data-paused="${!agent.enabled}">${agent.enabled && agent.nextActionAt ? formatCountdown(agent.nextActionAt) : '—'}</strong></span>
         </div>
@@ -163,6 +274,8 @@ function renderAgentsGrid() {
           <button class="btn btn-ghost btn-xs logs-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}">Run Logs</button>
           <button class="btn btn-danger btn-xs remove-agent-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}">Remove</button>
         </div>
+        <div class="agent-low-balance-warning" data-id="${escapeHtml(agent.id)}"></div>
+        <div class="run-progress-container" data-id="${escapeHtml(agent.id)}"></div>
       </div>
     `;
   }).join('');
@@ -177,6 +290,7 @@ function renderAgentsGrid() {
           method: 'PATCH',
           body: { actorUserId: state.userId, enabled: !enabled }
         });
+        // Pause only affects next run — active runs continue, progress stays visible
         showToast(!enabled ? 'Agent activated!' : 'Agent paused.');
         await loadAgents();
       } catch (err) { showToast(err.message); }
@@ -199,20 +313,25 @@ function renderAgentsGrid() {
           btn.textContent = 'Run Now';
           return;
         }
-        // Poll until done
+        // Poll until manual run done, updating progress bars
         const agentId = btn.dataset.id;
+        clearAgentPoll(agentId);
         const poll = setInterval(async () => {
           try {
             const status = await api(`/api/agents/${agentId}/running`);
-            if (!status.running) {
-              clearInterval(poll);
+            if (status.progress) updateRunProgress(agentId, status.progress);
+            // Manual run done when no manual entry in progress
+            if (!status.progress?.manual) {
+              clearAgentPoll(agentId);
+              if (!status.running) updateRunProgress(agentId, null);
               showToast('Run complete.');
               btn.disabled = false;
               btn.textContent = 'Run Now';
               await loadAgents();
             }
           } catch { /* ignore polling errors */ }
-        }, 3000);
+        }, 2000);
+        _pollIntervals.set(agentId, poll);
       } catch (err) {
         showToast(err.message);
         await loadAgents();
@@ -293,37 +412,28 @@ function renderAgentsGrid() {
     });
   });
 
-  // Check running status for each agent and update buttons
-  grid.querySelectorAll('.run-now-btn').forEach(async (btn) => {
-    const agentId = btn.dataset.id;
-    try {
-      const status = await api(`/api/agents/${agentId}/running`);
-      if (status.running) {
-        btn.disabled = true;
-        btn.textContent = 'Running…';
-        // Start polling for completion
-        const poll = setInterval(async () => {
-          try {
-            const s = await api(`/api/agents/${agentId}/running`);
-            if (!s.running) {
-              clearInterval(poll);
-              showToast('Run complete.');
-              btn.disabled = false;
-              btn.textContent = 'Run Now';
-              await loadAgents();
-            }
-          } catch { /* ignore */ }
-        }, 3000);
-      }
-    } catch { /* ignore */ }
-  });
+  // Global checker picks up both scheduled and manual runs
+  startGlobalRunChecker();
 
-  // Fetch monthly cost data for each agent
+  // Fetch monthly cost data for each agent and check low balance
   grid.querySelectorAll('.agent-cost-monthly').forEach(async (el) => {
     const agentId = el.dataset.agentId;
     try {
       const cost = await api(`/api/agents/${agentId}/cost`);
       el.innerHTML = `This month: <strong>${cost.incurred} cr spent</strong> · Est: <strong class="text-warning">${cost.estimated} cr</strong>`;
+      // Show low-balance warning if credits < cost per run
+      const agent = state.agents.find(a => a.id === agentId);
+      const warnEl = grid.querySelector(`.agent-low-balance-warning[data-id="${agentId}"]`);
+      if (agent && warnEl && agent.credits < cost.costPerRun) {
+        const deficit = (cost.costPerRun - agent.credits).toFixed(1);
+        warnEl.innerHTML = `<div class="text-sm" style="color:var(--danger,#e55);padding:6px 10px;background:rgba(229,85,85,0.1);border-radius:var(--radius-sm,4px);border:1px solid rgba(229,85,85,0.25);">⚠ Insufficient credits for next run (need ${cost.costPerRun} cr, have ${formatCredits(agent.credits)} cr). <strong>Fund ${deficit}+ cr</strong> to keep this agent running.</div>`;
+        // Disable Activate button when balance is insufficient
+        const toggleBtn = grid.querySelector(`.toggle-agent-btn[data-id="${agentId}"]`);
+        if (toggleBtn && !agent.enabled) {
+          toggleBtn.disabled = true;
+          toggleBtn.title = 'Fund this agent before activating';
+        }
+      }
     } catch { /* ignore */ }
   });
 }

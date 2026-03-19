@@ -13,6 +13,25 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// ─── Run progress tracking ──────────────────────────────────────────────────────
+// Key: `${agentId}:${trigger}` → allows manual + scheduled to run concurrently
+
+const _runProgress = new Map();
+
+export function getRunProgress(agentId) {
+  const result = {};
+  for (const [key, val] of _runProgress) {
+    if (key.startsWith(agentId + ':')) {
+      result[key.slice(agentId.length + 1)] = val;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+export function getRunProgressByTrigger(agentId, trigger) {
+  return _runProgress.get(`${agentId}:${trigger}`) || null;
+}
+
 // ─── Skill file loader ─────────────────────────────────────────────────────────
 
 const MAX_SKILL_CHARS = 24000;
@@ -53,18 +72,20 @@ function safeString(v) {
   return String(v || '').trim();
 }
 
-function shortContent(content) {
-  const author = content.authorAgentId
-    ? db.getAgent(content.authorAgentId)
-    : null;
+function shortContent(content, { includeEngagement = false } = {}) {
+  const authorKind = content.authorKind || (content.authorAgentId ? 'agent' : 'user');
+  const authorId = content.authorId || content.authorAgentId || content.authorUserId || null;
+  const author = authorKind === 'agent' ? db.getAgent(authorId) : db.getUser(authorId);
   let media = content.media;
   if (!Array.isArray(media) || media.length === 0) {
     media = (content.mediaUrl && content.mediaType !== 'text')
       ? [{ type: content.mediaType || 'image', url: content.mediaUrl, prompt: '', generationMode: 'text-to-image' }]
       : [];
   }
-  return {
+  const result = {
     id: content.id,
+    authorKind,
+    authorId,
     authorAgentId: content.authorAgentId || null,
     authorUserId: content.authorUserId || null,
     authorName: author?.name || content.authorName || 'Unknown',
@@ -77,6 +98,11 @@ function shortContent(content) {
     repostOfId: content.repostOfId || null,
     createdAt: content.createdAt
   };
+  if (includeEngagement) {
+    result.commentCount = db.getReplyCount(content.id);
+    result.repostCount = db.getRepostCount(content.id);
+  }
+  return result;
 }
 
 function pickSummary(content) {
@@ -763,6 +789,11 @@ function buildStepMessages(runState, phase) {
   // Current phase prompt
   const phaseStepCount = steps.filter(s => s.phase === phase).length;
   let prompt = `\n=== Phase: ${phase} | Step ${phaseStepCount + 1} ===\nChoose your next action.`;
+  // Show current travel location if set
+  const travelLoc = runState.workingSet.travelLocation;
+  if (travelLoc) {
+    prompt += `\nCURRENT TRAVEL LOCATION: ${travelLoc.formattedAddress} (${travelLoc.lat}, ${travelLoc.lng}). Use explore_nearby to discover places, map_streetview to see streets, or travel_to to go somewhere else.`;
+  }
   if (phase === 'create') {
     // Show saved media files from this run for the agent to use
     const savedFiles = runState.workingSet.savedFilesThisRun || [];
@@ -1421,44 +1452,57 @@ async function executeAction(agent, decision, runState) {
     case 'view_post': {
       const contentId = decision.params?.postId;
       const content = contentId ? db.getContent(contentId) : null;
-      if (!content) return { ok: false, summary: 'Post not found. Provide a valid postId.' };
+      if (!content) return { ok: false, summary: 'Post not found. Provide a valid postId (works for posts, comments, and reposts).' };
 
       db.recordView({ actorKind: 'agent', actorId: agent.id, targetKind: 'content', targetId: content.id });
       runState.workingSet.viewedContentIds.add(content.id);
       const sc = { ...shortContent(content), engagement: getPostEngagement(content.id) };
       runState.workingSet.viewedContents.push(sc);
 
-      const comments = db.getChildren(content.id).slice(0, 10).map(c => ({ ...shortContent(c), childType: 'comment' }));
-      const reposts = db.getRepostsOf(content.id)
+      // Separate children into pure comments and reposts, deduplicated
+      const allChildren = db.getChildren(content.id);
+      const comments = allChildren.filter(c => !c.repostOfId).slice(0, 10)
+        .map(c => ({ ...shortContent(c, { includeEngagement: true }), childType: 'comment' }));
+      const repostIds = new Set();
+      const repostItems = [];
+      for (const c of allChildren.filter(c => c.repostOfId)) {
+        if (!repostIds.has(c.id)) { repostIds.add(c.id); repostItems.push(c); }
+      }
+      for (const c of db.getRepostsOf(content.id)) {
+        if (!repostIds.has(c.id)) { repostIds.add(c.id); repostItems.push(c); }
+      }
+      const reposts = repostItems
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
         .slice(0, 10)
-        .map(c => ({ ...shortContent(c), childType: 'repost' }));
-      const children = [...comments, ...reposts].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      const ancestors = db.getAncestors(content.id).map(shortContent);
+        .map(c => ({ ...shortContent(c, { includeEngagement: true }), childType: 'repost' }));
+      const ancestors = db.getAncestors(content.id).map(c => shortContent(c));
 
-      return { ok: true, summary: `Viewed post ${content.id} (${sc.engagement.likes} likes, ${sc.engagement.favorites} favs, ${comments.length} comments, ${reposts.length} reposts)`, viewed: sc, children, ancestors };
+      const hint = comments.some(c => c.commentCount > 0 || c.repostCount > 0)
+        ? ' Some comments/reposts have sub-threads — use view_post with their ID to explore deeper.'
+        : '';
+      return { ok: true, summary: `Viewed post ${content.id} (${sc.engagement.likes} likes, ${sc.engagement.favorites} favs, ${comments.length} comments, ${reposts.length} reposts).${hint} Use comment/repost with any ID to reply. Use view_profile with authorId + authorKind to check any author.`, viewed: sc, comments, reposts, ancestors };
     }
 
     case 'list_comments': {
       const postId = decision.params?.postId;
       if (!postId) return { ok: false, summary: 'postId is required.' };
       const post = db.getContent(postId);
-      if (!post) return { ok: false, summary: 'Post not found.' };
-      const allComments = db.getChildren(postId).map(shortContent);
+      if (!post) return { ok: false, summary: 'Content not found. Works on posts, comments, and reposts.' };
+      const allComments = db.getChildren(postId).filter(c => !c.repostOfId).map(c => shortContent(c, { includeEngagement: true }));
       const pg = paginate(allComments, decision.params?.page, 10);
-      return { ok: true, summary: `${pg.totalItems} comment(s) on post ${postId}, page ${pg.page}/${pg.totalPages}`, comments: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
+      return { ok: true, summary: `${pg.totalItems} comment(s) on ${postId}, page ${pg.page}/${pg.totalPages}. Use view_post on any comment ID to see its sub-thread.`, comments: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'list_reposts': {
       const postId = decision.params?.postId;
       if (!postId) return { ok: false, summary: 'postId is required.' };
       const post = db.getContent(postId);
-      if (!post) return { ok: false, summary: 'Post not found.' };
+      if (!post) return { ok: false, summary: 'Content not found. Works on posts, comments, and reposts.' };
       const allReposts = db.getRepostsOf(postId)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .map(shortContent);
+        .map(c => shortContent(c, { includeEngagement: true }));
       const pg = paginate(allReposts, decision.params?.page, 10);
-      return { ok: true, summary: `${pg.totalItems} repost(s) of post ${postId}, page ${pg.page}/${pg.totalPages}`, reposts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
+      return { ok: true, summary: `${pg.totalItems} repost(s) of ${postId}, page ${pg.page}/${pg.totalPages}. Use view_post on any repost ID to see its sub-thread.`, reposts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'view_profile': {
@@ -1476,7 +1520,7 @@ async function executeAction(agent, decision, runState) {
       const posts = (targetKind === 'user'
         ? db.getUserPublished(target.id)
         : db.getAgentPublished(target.id)
-      ).slice(-5).map(shortContent);
+      ).slice(-5).map(c => shortContent(c, { includeEngagement: true }));
 
       const profile = shortProfile(target);
       profile.kind = targetKind;
@@ -1486,7 +1530,7 @@ async function executeAction(agent, decision, runState) {
       profile.isFree = !target.subscriptionFee || target.subscriptionFee <= 0;
       runState.workingSet.viewedProfiles.push(profile);
 
-      return { ok: true, summary: `Viewed profile of ${target.name} (${profile.isFree ? 'free' : profile.subscriptionFee + ' cr/mo'}${profile.isFollowing ? ', following' : ', not following'})`, profile, posts };
+      return { ok: true, summary: `Viewed profile of ${target.name} (${profile.isFree ? 'free' : profile.subscriptionFee + ' cr/mo'}${profile.isFollowing ? ', following' : ', not following'}). Posts include commentCount/repostCount — use view_post to explore threads, or follow/unfollow this ${targetKind}.`, profile, posts };
     }
 
     case 'search_posts': {
@@ -2311,6 +2355,299 @@ async function executeAction(agent, decision, runState) {
         return result;
       } catch (err) {
         return { ok: false, summary: `Data agent failed: ${err.message}` };
+      }
+    }
+
+    // ── Astrology & Tarot tools ──
+
+    case 'get_horoscope': {
+      const p = decision.params || {};
+      const sign = (p.sign || '').toLowerCase().trim();
+      const validSigns = ['aries','taurus','gemini','cancer','leo','virgo','libra','scorpio','sagittarius','capricorn','aquarius','pisces'];
+      if (!sign || !validSigns.includes(sign)) {
+        return { ok: false, summary: `Invalid sign "${sign}". Use one of: ${validSigns.join(', ')}` };
+      }
+      try {
+        const res = await fetch(`https://ohmanda.com/api/horoscope/${sign}/`, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`Horoscope API: ${res.status}`);
+        const data = await res.json();
+        return {
+          ok: true,
+          summary: `Horoscope for ${sign} (${data.date}): ${(data.horoscope || '').slice(0, 150)}...`,
+          horoscope: { sign: data.sign, date: data.date, reading: data.horoscope }
+        };
+      } catch (err) {
+        return { ok: false, summary: `get_horoscope failed: ${err.message}` };
+      }
+    }
+
+    case 'draw_tarot': {
+      const p = decision.params || {};
+      const count = Math.min(10, Math.max(1, p.count || 3));
+      try {
+        const res = await fetch(`https://tarotapi.dev/api/v1/cards/random?n=${count}`, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`Tarot API: ${res.status}`);
+        const data = await res.json();
+        const cards = (data.cards || []).map(c => ({
+          name: c.name,
+          suit: c.suit || 'major arcana',
+          type: c.type,
+          meaningUpright: c.meaning_up,
+          meaningReversed: c.meaning_rev,
+          description: c.desc
+        }));
+        const names = cards.map(c => c.name).join(', ');
+        return {
+          ok: true,
+          summary: `Drew ${cards.length} tarot card(s): ${names}`,
+          cards
+        };
+      } catch (err) {
+        return { ok: false, summary: `draw_tarot failed: ${err.message}` };
+      }
+    }
+
+    // ── Travel & Google Maps tools ──
+
+    case 'travel_to': {
+      const p = decision.params || {};
+      const destination = p.destination;
+      if (!destination) return { ok: false, summary: 'destination is required.' };
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured (GOOGLE_MAPS_API_KEY).' };
+
+      try {
+        // Geocode the destination
+        const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${apiKey}`;
+        const geoRes = await fetch(geoUrl, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(10000) });
+        if (!geoRes.ok) throw new Error(`Geocoding API: ${geoRes.status}`);
+        const geoData = await geoRes.json();
+        if (!geoData.results || geoData.results.length === 0) {
+          return { ok: false, summary: `Could not find "${destination}". Try a more specific address or landmark name.` };
+        }
+
+        const place = geoData.results[0];
+        const lat = place.geometry.location.lat;
+        const lng = place.geometry.location.lng;
+        const formattedAddress = place.formatted_address;
+        const components = {};
+        for (const c of place.address_components || []) {
+          if (c.types.includes('country')) components.country = c.long_name;
+          if (c.types.includes('locality')) components.city = c.long_name;
+          if (c.types.includes('administrative_area_level_1')) components.region = c.long_name;
+        }
+
+        // Store travel location in working set
+        runState.workingSet.travelLocation = { lat, lng, formattedAddress, ...components, destination };
+
+        // Save satellite map
+        const zoom = Math.min(20, Math.max(1, p.zoom || 14));
+        const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=600x400&maptype=satellite&key=${apiKey}`;
+        const mapResult = await agentStorage.downloadToAgentStorage(agent.id, mapUrl);
+        const mapDesc = `Satellite view of ${formattedAddress}`;
+        agentStorage.recordFileMetadata(agent.id, mapResult.filename, { caption: mapDesc, sourceUrl: mapUrl });
+        runState.workingSet.savedFilesThisRun.push({ filename: mapResult.filename, localUrl: mapResult.localUrl, description: mapDesc });
+
+        // Save street view
+        const svUrl = `https://maps.googleapis.com/maps/api/streetview?location=${lat},${lng}&size=600x400&fov=90&pitch=0&key=${apiKey}`;
+        const svResult = await agentStorage.downloadToAgentStorage(agent.id, svUrl);
+        const svDesc = `Street view of ${formattedAddress}`;
+        agentStorage.recordFileMetadata(agent.id, svResult.filename, { caption: svDesc, sourceUrl: svUrl });
+        runState.workingSet.savedFilesThisRun.push({ filename: svResult.filename, localUrl: svResult.localUrl, description: svDesc });
+
+        return {
+          ok: true,
+          summary: `Traveled to ${formattedAddress}. Saved satellite map and street view. Use explore_nearby to discover places, map_streetview to look around, or get_place_photo to capture specific spots.`,
+          location: { lat, lng, formattedAddress, ...components },
+          mapImage: mapResult.localUrl,
+          streetViewImage: svResult.localUrl
+        };
+      } catch (err) {
+        return { ok: false, summary: `travel_to failed: ${err.message}` };
+      }
+    }
+
+    case 'explore_nearby': {
+      const p = decision.params || {};
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured (GOOGLE_MAPS_API_KEY).' };
+
+      let lat, lng;
+      if (p.location && /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(p.location.replace(/\s/g, ''))) {
+        const parts = p.location.replace(/\s/g, '').split(',');
+        lat = parts[0]; lng = parts[1];
+      } else if (runState.workingSet.travelLocation) {
+        lat = runState.workingSet.travelLocation.lat;
+        lng = runState.workingSet.travelLocation.lng;
+      } else {
+        return { ok: false, summary: 'No travel location set. Use travel_to first, or provide a location as "lat,lng".' };
+      }
+
+      const type = p.type || 'tourist_attraction';
+      const radius = Math.min(50000, Math.max(100, p.radius || 2000));
+      let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${apiKey}`;
+      if (p.keyword) url += `&keyword=${encodeURIComponent(p.keyword)}`;
+
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Places API: ${res.status}`);
+        const data = await res.json();
+        if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+          throw new Error(`Places API status: ${data.status}${data.error_message ? ' — ' + data.error_message : ''}`);
+        }
+        const places = (data.results || []).slice(0, 15).map(r => ({
+          name: r.name,
+          place_id: r.place_id,
+          rating: r.rating || null,
+          totalRatings: r.user_ratings_total || 0,
+          priceLevel: r.price_level ?? null,
+          address: r.vicinity || '',
+          types: (r.types || []).slice(0, 4),
+          openNow: r.opening_hours?.open_now ?? null,
+          photoRef: r.photos?.[0]?.photo_reference || null
+        }));
+
+        const locLabel = runState.workingSet.travelLocation?.formattedAddress || `${lat},${lng}`;
+        return {
+          ok: true,
+          summary: `Found ${places.length} ${type.replace(/_/g, ' ')}(s) near ${locLabel}${p.keyword ? ` matching "${p.keyword}"` : ''}. Use get_place_details for more info, get_place_photo to save photos.`,
+          places,
+          searchLocation: { lat, lng },
+          type,
+          radius
+        };
+      } catch (err) {
+        return { ok: false, summary: `explore_nearby failed: ${err.message}` };
+      }
+    }
+
+    case 'get_place_details': {
+      const p = decision.params || {};
+      const placeId = p.place_id;
+      if (!placeId) return { ok: false, summary: 'place_id is required (from explore_nearby results).' };
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured (GOOGLE_MAPS_API_KEY).' };
+
+      const fields = 'name,formatted_address,geometry,rating,user_ratings_total,formatted_phone_number,website,opening_hours,reviews,photos,price_level,types,editorial_summary';
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=${fields}&key=${apiKey}`;
+
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Place Details API: ${res.status}`);
+        const data = await res.json();
+        if (data.status !== 'OK') throw new Error(`Place Details: ${data.status}`);
+
+        const r = data.result;
+        const details = {
+          name: r.name,
+          address: r.formatted_address,
+          rating: r.rating || null,
+          totalRatings: r.user_ratings_total || 0,
+          priceLevel: r.price_level ?? null,
+          phone: r.formatted_phone_number || null,
+          website: r.website || null,
+          types: (r.types || []).slice(0, 5),
+          summary: r.editorial_summary?.overview || null,
+          openingHours: r.opening_hours?.weekday_text || null,
+          reviews: (r.reviews || []).slice(0, 5).map(rev => ({
+            author: rev.author_name,
+            rating: rev.rating,
+            text: (rev.text || '').slice(0, 300),
+            time: rev.relative_time_description
+          })),
+          photos: (r.photos || []).slice(0, 5).map(ph => ({
+            photo_reference: ph.photo_reference,
+            width: ph.width,
+            height: ph.height,
+            attribution: ph.html_attributions?.[0] || ''
+          })),
+          location: r.geometry?.location || null
+        };
+
+        return {
+          ok: true,
+          summary: `${r.name} — ${r.rating ? r.rating + '★' : 'unrated'} (${r.user_ratings_total || 0} reviews). ${details.photos.length} photo(s) available. Use get_place_photo with photo_reference to save photos.`,
+          details
+        };
+      } catch (err) {
+        return { ok: false, summary: `get_place_details failed: ${err.message}` };
+      }
+    }
+
+    case 'get_place_photo': {
+      const p = decision.params || {};
+      const photoRef = p.photo_reference;
+      if (!photoRef) return { ok: false, summary: 'photo_reference is required (from get_place_details results).' };
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured (GOOGLE_MAPS_API_KEY).' };
+
+      const maxwidth = Math.min(1600, Math.max(100, p.maxwidth || 600));
+      const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxwidth}&photo_reference=${encodeURIComponent(photoRef)}&key=${apiKey}`;
+      const description = p.title || 'Google Places photo';
+
+      try {
+        const result = await agentStorage.downloadToAgentStorage(agent.id, url);
+        agentStorage.recordFileMetadata(agent.id, result.filename, { caption: description, sourceUrl: url });
+        runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl: result.localUrl, description });
+        return { ok: true, summary: `Saved place photo: ${description}`, localUrl: result.localUrl, description };
+      } catch (err) {
+        return { ok: false, summary: `get_place_photo failed: ${err.message}` };
+      }
+    }
+
+    case 'map_static': {
+      const p = decision.params || {};
+      const center = p.center;
+      if (!center) return { ok: false, summary: 'center is required (address, city, or lat,lng).' };
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured (GOOGLE_MAPS_API_KEY).' };
+
+      const zoom = Math.min(20, Math.max(1, p.zoom || 13));
+      const maptype = ['roadmap', 'satellite', 'terrain', 'hybrid'].includes(p.maptype) ? p.maptype : 'roadmap';
+      const size = /^\d+x\d+$/.test(p.size || '') ? p.size : '600x400';
+      let url = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(center)}&zoom=${zoom}&size=${size}&maptype=${maptype}&key=${apiKey}`;
+
+      if (p.markers) {
+        const locs = p.markers.split('|').map(s => s.trim()).filter(Boolean);
+        for (const loc of locs) {
+          url += `&markers=${encodeURIComponent(loc)}`;
+        }
+      }
+
+      const description = p.title || `Google Maps ${maptype} view of ${center} (zoom ${zoom})`;
+      try {
+        const result = await agentStorage.downloadToAgentStorage(agent.id, url);
+        agentStorage.recordFileMetadata(agent.id, result.filename, { caption: description, sourceUrl: url });
+        runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl: result.localUrl, description });
+        return { ok: true, summary: `Saved map: ${description}`, localUrl: result.localUrl, description };
+      } catch (err) {
+        return { ok: false, summary: `map_static failed: ${err.message}` };
+      }
+    }
+
+    case 'map_streetview': {
+      const p = decision.params || {};
+      const location = p.location;
+      if (!location) return { ok: false, summary: 'location is required (address, landmark, or lat,lng).' };
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured (GOOGLE_MAPS_API_KEY).' };
+
+      const size = /^\d+x\d+$/.test(p.size || '') ? p.size : '600x400';
+      const fov = Math.min(120, Math.max(10, p.fov || 90));
+      const pitch = Math.min(90, Math.max(-90, p.pitch || 0));
+      let url = `https://maps.googleapis.com/maps/api/streetview?location=${encodeURIComponent(location)}&size=${size}&fov=${fov}&pitch=${pitch}&key=${apiKey}`;
+      if (p.heading !== undefined && p.heading !== null) {
+        url += `&heading=${Math.min(360, Math.max(0, p.heading))}`;
+      }
+
+      const description = p.title || `Street View of ${location}`;
+      try {
+        const result = await agentStorage.downloadToAgentStorage(agent.id, url);
+        agentStorage.recordFileMetadata(agent.id, result.filename, { caption: description, sourceUrl: url });
+        runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl: result.localUrl, description });
+        return { ok: true, summary: `Saved Street View: ${description}`, localUrl: result.localUrl, description };
+      } catch (err) {
+        return { ok: false, summary: `map_streetview failed: ${err.message}` };
       }
     }
 
@@ -3695,7 +4032,7 @@ async function executeAction(agent, decision, runState) {
 
 // ─── Main runtime ───────────────────────────────────────────────────────────────
 
-export async function executeAgentRun(agent) {
+export async function executeAgentRun(agent, trigger = 'scheduled') {
   const phaseMaxStepsCfg = agent.runConfig?.phaseMaxSteps || {};
   const phaseMaxSteps = {
     browse:          clamp(Number(phaseMaxStepsCfg.browse          ?? DEFAULT_PHASE_MAX_STEPS.browse),          1, 50),
@@ -3725,6 +4062,7 @@ export async function executeAgentRun(agent) {
       reactedThisRun: [],
       createdContentIds: [],
       savedFilesThisRun: [],
+      travelLocation: null,
       lastActionResult: null,
       phase: 'browse',
       hasDraft: false
@@ -3733,12 +4071,18 @@ export async function executeAgentRun(agent) {
 
   let totalSteps = 0;
   const runTokens = { input: 0, output: 0 };
+  const totalMaxSteps = phaseMaxSteps.browse + phaseMaxSteps.external_search + phaseMaxSteps.create;
+  const myRunId = runState.runId;
+  const progressKey = `${agent.id}:${trigger}`;
+  _runProgress.set(progressKey, { runId: myRunId, currentStep: 0, totalSteps: totalMaxSteps, phase: 'browse' });
 
   console.log(`[${agent.name}] Starting run ${runState.runId} with model ${getModelForAgent(agent)} (intelligence: ${agent.intelligenceLevel || 'dumb'})`);
 
+  try {
   for (const phase of PHASES) {
     runState.workingSet.phase = phase;
     const maxPhaseSteps = phaseMaxSteps[phase];
+    _runProgress.set(progressKey, { runId: myRunId, currentStep: totalSteps, totalSteps: totalMaxSteps, phase });
     console.log(`[${agent.name}] Entering phase: ${phase} (max ${maxPhaseSteps} steps)`);
 
     // Discover MCP tools and data API chart tools before external_search phase
@@ -3787,6 +4131,7 @@ export async function executeAgentRun(agent) {
         };
         runState.steps.push(errorStep);
         totalSteps += 1;
+        _runProgress.set(progressKey, { runId: myRunId, currentStep: totalSteps, totalSteps: totalMaxSteps, phase });
         continue;
       }
 
@@ -3830,6 +4175,7 @@ export async function executeAgentRun(agent) {
         };
         runState.steps.push(validationStep);
         totalSteps += 1;
+        _runProgress.set(progressKey, { runId: myRunId, currentStep: totalSteps, totalSteps: totalMaxSteps, phase });
         continue;
       }
 
@@ -3844,6 +4190,7 @@ export async function executeAgentRun(agent) {
       runState.workingSet.lastActionResult = actionResult;
 
       totalSteps += 1;
+      _runProgress.set(progressKey, { runId: myRunId, currentStep: totalSteps, totalSteps: totalMaxSteps, phase });
       const llmStep = {
         stepIndex: totalSteps,
         phase,
@@ -3878,6 +4225,7 @@ export async function executeAgentRun(agent) {
       const autoResult = await executeAction(agent, autoDecision, runState);
       runState.workingSet.lastActionResult = autoResult;
       totalSteps += 1;
+      _runProgress.set(progressKey, { runId: myRunId, currentStep: totalSteps, totalSteps: totalMaxSteps, phase });
       const autoStep = {
         stepIndex: totalSteps,
         phase,
@@ -3891,6 +4239,16 @@ export async function executeAgentRun(agent) {
       runState.steps.push(autoStep);
     }
   }
+  } finally {
+    // Only clean up if progress still belongs to THIS run (not a newer one)
+    const current = _runProgress.get(progressKey);
+    if (current && current.runId === myRunId) {
+      _runProgress.delete(progressKey);
+    }
+  }
+
+  // Charge by actual steps after run completes
+  db.chargeByActualSteps(agent.id, runState.steps.length, 'agent_run');
 
   const finishedAt = new Date().toISOString();
   const elapsed = ((new Date(finishedAt) - new Date(runState.startedAt)) / 1000).toFixed(1);
@@ -3911,6 +4269,7 @@ export async function executeAgentRun(agent) {
   return {
     runId: runState.runId,
     stepsExecuted: runState.steps.length,
+    totalMaxSteps: totalMaxSteps,
     stoppedByLimit: false
   };
 }

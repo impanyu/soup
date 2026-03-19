@@ -1,6 +1,12 @@
 import { Queue, Worker } from 'bullmq';
 import { db } from './db.js';
-import { executeAgentRun } from './agentRuntime.js';
+import { executeAgentRun, getRunProgress, getRunProgressByTrigger } from './agentRuntime.js';
+
+const _pendingManualRuns = new Set();
+
+export function clearPendingRun(agentId) {
+  _pendingManualRuns.delete(agentId);
+}
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 const CONCURRENCY = Number(process.env.AGENT_RUN_CONCURRENCY) || 200;
@@ -31,29 +37,25 @@ export function getNextScheduledRun(createdAt, intervalMs) {
 }
 
 async function processAgentRun(job) {
+  console.log(`[worker] Processing job ${job.id}, data:`, JSON.stringify(job.data));
   const { agentId, trigger } = job.data;
+  if (trigger === 'manual') _pendingManualRuns.delete(agentId);
+
   const agent = db.getAgent(agentId);
   if (!agent) {
     console.log(`[worker] Agent ${agentId} not found — skipping`);
     return { status: 'skipped', reason: 'agent_not_found' };
   }
-  if (!agent.enabled) {
-    console.log(`[worker] Agent ${agent.name} (${agentId}) is disabled — skipping`);
+  if (!agent.enabled && trigger !== 'manual') {
+    console.log(`[worker] Agent ${agent.name} (${agentId}) is disabled — skipping scheduled run`);
     return { status: 'paused' };
   }
 
-  const feeType = trigger === 'manual' ? 'manual_run' : 'autonomous_action';
-  const fee = db.chargeTenantFee(agent.id, feeType);
-  if (fee.disabled) {
-    console.log(`[worker] Agent ${agent.name} (${agentId}) — insufficient agent credits — skipping`);
-    return { status: 'skipped', reason: 'insufficient_credits' };
-  }
-
   try {
-    await executeAgentRun(agent);
+    await executeAgentRun(agent, trigger);
   } catch (err) {
     console.error(`[worker] Agent ${agent.name} (${agentId}) run CRASHED:`, err);
-    throw err; // re-throw so BullMQ marks it as failed
+    throw err;
   }
 
   // Update lastActionAt; nextActionAt stays on the fixed grid
@@ -64,6 +66,18 @@ async function processAgentRun(job) {
     nextActionAt
   });
 
+  // Auto-pause if agent can't afford the next run
+  const updatedAgent = db.getAgent(agentId);
+  if (updatedAgent && updatedAgent.enabled) {
+    const nextRunCost = db.calculateRunCost(updatedAgent);
+    if (updatedAgent.credits < nextRunCost) {
+      db.updateAgent(agentId, { enabled: false });
+      await agentRunQueue.removeJobScheduler(`scheduler:${agentId}`);
+      console.log(`[worker] Agent ${agent.name} (${agentId}) auto-paused: credits ${updatedAgent.credits} < next run cost ${nextRunCost}`);
+    }
+  }
+
+  console.log(`[worker] Agent ${agent.name} (${agentId}) completed: ${trigger}`);
   return { status: 'completed' };
 }
 
@@ -72,6 +86,10 @@ export const agentRunWorker = new Worker('agent-runs', processAgentRun, {
   concurrency: CONCURRENCY,
   lockDuration: 600_000
 });
+
+agentRunWorker.on('ready', () => console.log('[worker] Ready and listening for jobs'));
+agentRunWorker.on('error', (err) => console.error('[worker] Error:', err.message));
+agentRunWorker.on('failed', (job, err) => console.error(`[worker] Job ${job?.id} FAILED:`, err.message));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,7 +112,6 @@ export async function syncAgentSchedules() {
     const intervalMs = agent.intervalMinutes * 60_000;
     const nextRunMs = getNextScheduledRun(agent.createdAt, intervalMs);
 
-    // Also update the DB so dashboard shows the correct next run time
     const nextActionAt = new Date(nextRunMs).toISOString();
     if (agent.nextActionAt !== nextActionAt) {
       db.updateAgent(agent.id, { nextActionAt });
@@ -107,15 +124,15 @@ export async function syncAgentSchedules() {
         name: 'agent-run',
         data: { agentId: agent.id, trigger: 'scheduled' },
         opts: {
-          jobId: agent.id,
           attempts: 5,
-          backoff: { type: 'exponential', delay: 30_000 }
+          backoff: { type: 'exponential', delay: 30_000 },
+          removeOnComplete: true,
+          removeOnFail: true
         }
       }
     );
   }
 
-  // Remove schedulers for deleted agents
   for (const sched of existingSchedulers) {
     if (!activeKeys.has(sched.key)) {
       await agentRunQueue.removeJobScheduler(sched.key);
@@ -142,27 +159,39 @@ export async function syncSingleAgent(agentId) {
       name: 'agent-run',
       data: { agentId: agent.id, trigger: 'scheduled' },
       opts: {
-        jobId: agent.id,
         attempts: 5,
-        backoff: { type: 'exponential', delay: 30_000 }
+        backoff: { type: 'exponential', delay: 30_000 },
+        removeOnComplete: true,
+        removeOnFail: true
       }
     }
   );
 }
 
+// Only blocks duplicate manual runs — scheduled runs are always allowed
 export async function addRunNowJob(agentId) {
-  await agentRunQueue.add(
-    'agent-run',
-    { agentId, trigger: 'manual' },
-    { jobId: agentId, priority: 1, removeOnComplete: true, removeOnFail: true }
-  );
+  if (_pendingManualRuns.has(agentId) || getRunProgressByTrigger(agentId, 'manual')) {
+    throw new Error('agent_already_running');
+  }
+
+  _pendingManualRuns.add(agentId);
+  try {
+    const job = await agentRunQueue.add(
+      'agent-run',
+      { agentId, trigger: 'manual' },
+      { removeOnComplete: true, removeOnFail: true }
+    );
+    console.log(`[queue] Run Now job added: id=${job.id}, agentId=${agentId}`);
+  } catch (err) {
+    _pendingManualRuns.delete(agentId);
+    throw err;
+  }
 }
 
-export async function isAgentRunning(agentId) {
-  const job = await agentRunQueue.getJob(agentId);
-  if (!job) return false;
-  const state = await job.getState();
-  return state === 'active' || state === 'waiting';
+export function isAgentRunning(agentId) {
+  if (_pendingManualRuns.has(agentId)) return true;
+  if (getRunProgress(agentId)) return true;
+  return false;
 }
 
 export async function closeQueue() {

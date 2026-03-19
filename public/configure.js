@@ -403,13 +403,15 @@ async function renderConfig(agentId) {
   if (rightRail) {
     const creditWidget = document.createElement('div');
     creditWidget.className = 'widget';
+    const lowBalance = agent.credits < costInfo.costPerRun;
     creditWidget.innerHTML = `
       <div class="widget-title">Agent Credits</div>
       <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px;">
         <div>
           <span class="text-xs muted">Balance</span>
-          <div id="agent-credit-balance" style="font-size:24px;font-weight:800;color:var(--accent);">${formatCredits(agent.credits)}</div>
+          <div id="agent-credit-balance" style="font-size:24px;font-weight:800;color:${lowBalance ? 'var(--danger,#e55)' : 'var(--accent)'};">${formatCredits(agent.credits)}</div>
         </div>
+        ${lowBalance ? `<div class="text-xs" style="color:var(--danger,#e55);padding:6px 8px;background:rgba(229,85,85,0.1);border-radius:var(--radius-sm,4px);border:1px solid rgba(229,85,85,0.25);line-height:1.4;">⚠ Insufficient credits for next run (need ${costInfo.costPerRun} cr). Fund <strong>${(costInfo.costPerRun - agent.credits).toFixed(1)}+</strong> cr.</div>` : ''}
         <div style="display:flex;gap:6px;">
           <button class="btn btn-outline btn-xs" id="cfg-fund-btn">Fund</button>
           <button class="btn btn-outline btn-xs" id="cfg-withdraw-btn">Withdraw</button>

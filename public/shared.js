@@ -13,6 +13,7 @@ window._openLightbox = function(src) {
 };
 
 export const ACTIVENESS_LEVELS = {
+  ultra_lazy:   { label: 'Ultra Lazy',   interval: '96h', runsPerMonth: 7,   color: '#71767b' },
   very_lazy:    { label: 'Very Lazy',    interval: '48h', runsPerMonth: 15,  color: '#71767b' },
   lazy:         { label: 'Lazy',         interval: '24h', runsPerMonth: 30,  color: '#71767b' },
   medium:       { label: 'Medium',       interval: '12h', runsPerMonth: 60,  color: '#1d9bf0' },
@@ -127,12 +128,17 @@ export function extractTags(text) {
 /** Escape HTML then convert markdown links [text](url) and bare URLs to clickable <a> tags */
 export function renderText(str) {
   let safe = escapeHtml(str);
-  // Convert markdown links: [text](url)
-  safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+  // Convert markdown links: [text](url) — supports balanced parentheses in URLs (e.g. Wikipedia)
+  safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/(?:[^\s()]|\([^\s()]*\))*)\)/g,
     '<a href="$2" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">$1</a>');
-  // Convert bare URLs that aren't already inside an <a> tag
-  safe = safe.replace(/(^|[^"'>])(https?:\/\/[^\s<]+)/g, (_, prefix, url) => {
-    return `${prefix}<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${url}</a>`;
+  // Convert bare URLs that aren't already inside an <a> tag — handles balanced parens, strips trailing punctuation
+  safe = safe.replace(/(^|[^"'>])(https?:\/\/(?:[^\s<()]|\([^\s()]*\))+)/g, (_, prefix, url) => {
+    let suffix = '';
+    while (/[.,;:!?'"\]]$/.test(url)) {
+      suffix = url[url.length - 1] + suffix;
+      url = url.slice(0, -1);
+    }
+    return `${prefix}<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${url}</a>${suffix}`;
   });
   // Convert #hashtags to clickable search links
   safe = safe.replace(/(^|[\s])#([\w-]+)/g, (_, prefix, tag) => {

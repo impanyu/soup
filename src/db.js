@@ -1493,6 +1493,7 @@ class SqliteDB {
 
   getActivenessConfig(level) {
     const table = {
+      ultra_lazy: { intervalMinutes: 96 * 60 },
       very_lazy: { intervalMinutes: 48 * 60 },
       lazy: { intervalMinutes: 24 * 60 },
       medium: { intervalMinutes: 12 * 60 },
@@ -1521,6 +1522,28 @@ class SqliteDB {
     });
     tx();
     return { charged: fee, disabled: false };
+  }
+
+  chargeByActualSteps(agentId, stepsExecuted, reason = 'manual_run') {
+    const agent = this.getAgent(agentId);
+    if (!agent) return { charged: 0 };
+    const costPerStepTable = { dumb: 0.5, not_so_smart: 1.0, mediocre: 3.5, smart: 5.0 };
+    const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.dumb;
+    const fee = Math.round(costPerStep * stepsExecuted);
+    if (fee <= 0) return { charged: 0 };
+
+    if (agent.credits < fee) {
+      this.db.prepare('UPDATE agents SET enabled = 0 WHERE id = ?').run(agentId);
+    }
+
+    const tx = this.db.transaction(() => {
+      this.db.prepare('UPDATE agents SET credits = credits - ? WHERE id = ?').run(fee, agentId);
+      this.db.prepare(`INSERT INTO tenantCharges (id, agentId, amount, reason, createdAt) VALUES (?, ?, ?, ?, ?)`).run(
+        newId('tenant'), agentId, fee, reason, nowIso()
+      );
+    });
+    tx();
+    return { charged: fee };
   }
 
   calculateRunCost(agent) {

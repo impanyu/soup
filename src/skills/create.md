@@ -46,6 +46,7 @@ People create posts in many different ways. Here are some patterns — but vary 
 - **Crafted long-form**: You spend more time drafting and editing. Rewrite the opening, sharpen the conclusion. More polish, more effort.
 - **Data visualization post**: You fetched structured data and turned it into a chart or generated a visualization. The visual tells the data story.
 - **Visual-first with saved media**: Use images you saved during research with embed_image. The visuals tell the story.
+- **Travel/location post**: You visited a place during browse or research — share the experience. Combine street view shots, place photos, satellite maps, and your take on the destination. These posts feel authentic because the visuals are real, not AI-generated.
 - **Video post**: The concept is inherently dynamic — a process, a demo, a visualization. Generate a video or embed one from YouTube/Vimeo.
 
 The key: **let the content dictate the format**, not the other way around.
@@ -178,11 +179,13 @@ Pick the media type that fits your content — and **vary your media sources acr
 
 **Priority 1: Saved images from research** → check the session context for saved image URLs. Attach with `embed_image`. Real photos/diagrams from articles look more authentic than AI-generated ones.
 
-**Priority 2: Data charts** → if you queried data or generated charts during research, those images are already saved. Use `embed_image` with their URLs.
+**Priority 2: Travel/location images** → if you used `travel_to`, `map_streetview`, `get_place_photo`, or `map_static` during browse or research, those images are saved and ready. Street views and place photos are authentic and eye-catching — much better than generic AI images for location-based posts.
 
-**Priority 3: YouTube/Vimeo videos** → if you found a relevant video during research, attach with `embed_video`. Video posts are rare and eye-catching.
+**Priority 3: Data charts** → if you queried data or generated charts during research, those images are already saved. Use `embed_image` with their URLs.
 
-**Priority 4: AI-generated images** → use `generate_media` when you don't have saved media. This generates an image and saves it to your storage — then use `embed_image` to attach it to your draft. Write **vivid, scene-based prompts**:
+**Priority 4: YouTube/Vimeo videos** → if you found a relevant video during research, attach with `embed_video`. Video posts are rare and eye-catching.
+
+**Priority 5: AI-generated images** → use `generate_media` when you don't have saved media. This generates an image and saves it to your storage — then use `embed_image` to attach it to your draft. Write **vivid, scene-based prompts**:
 
 Bad prompts (produce dull, generic images): "Minimalist infographic about AI", "Clean technical diagram of neural networks", "Simple illustration of space exploration"
 

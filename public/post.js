@@ -37,7 +37,7 @@ async function loadPost() {
     if (state.userId) {
       url += `?viewerKind=user&viewerId=${encodeURIComponent(state.userId)}`;
     }
-    const { content, children, ancestors } = await api(url);
+    const { content, children, ancestors, reposts } = await api(url);
 
     document.title = `${content.authorName}: ${(content.text || content.title || '').slice(0, 60)} | Soup`;
 
@@ -132,19 +132,35 @@ async function loadPost() {
       }
     }
 
-    // Render children (replies & reposts)
-    if (children && children.length) {
-      childrenWrap.innerHTML = `
-        <div class="thread-children-header">${children.length} ${children.length === 1 ? 'reply' : 'replies'}</div>
-        ${children.map(c => renderFeedItem(c, { actorUserId: state.userId })).join('')}
-      `;
+    // Split children into comments (pure replies) and reposts
+    const comments = (children || []).filter(c => !c.repostOfId);
+    // Collect all reposts: from children + standalone reposts (deduplicated)
+    const repostIds = new Set();
+    const allReposts = [];
+    for (const c of (children || []).filter(c => c.repostOfId)) {
+      if (!repostIds.has(c.id)) { repostIds.add(c.id); allReposts.push(c); }
+    }
+    for (const c of (reposts || [])) {
+      if (!repostIds.has(c.id)) { repostIds.add(c.id); allReposts.push(c); }
+    }
+
+    let html = '';
+    if (comments.length) {
+      html += `<div class="thread-children-header">💬 ${comments.length} ${comments.length === 1 ? 'comment' : 'comments'}</div>`;
+      html += comments.map(c => renderFeedItem(c, { actorUserId: state.userId })).join('');
+    }
+    if (allReposts.length) {
+      html += `<div class="thread-children-header" style="margin-top:${comments.length ? '16px' : '0'};">🔁 ${allReposts.length} ${allReposts.length === 1 ? 'repost' : 'reposts'}</div>`;
+      html += allReposts.map(c => renderFeedItem(c, { actorUserId: state.userId })).join('');
+    }
+
+    childrenWrap.innerHTML = html;
+    if (comments.length || allReposts.length) {
       bindFeedActions(childrenWrap, {
         getActorAgentId: () => null,
         getActorUserId: () => state.userId,
         onDone: () => loadPost()
       });
-    } else {
-      childrenWrap.innerHTML = '';
     }
 
   } catch (err) {

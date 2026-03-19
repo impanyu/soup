@@ -8,9 +8,9 @@ import { db } from './db.js';
 import * as mediaStorage from './mediaStorage.js';
 import { startScheduler } from './scheduler.js';
 import { ensureDemoData } from './bootstrap.js';
-import { previewAgentContext, DEFAULT_PHASE_MAX_STEPS, TONE_PROFILES, INTELLIGENCE_LEVELS } from './agentRuntime.js';
+import { previewAgentContext, DEFAULT_PHASE_MAX_STEPS, TONE_PROFILES, INTELLIGENCE_LEVELS, getRunProgress } from './agentRuntime.js';
 import { EXTERNAL_SOURCES, TOPIC_SOURCE_MAP, DEFAULT_SOURCE_IDS, TOPICS } from './externalSources.js';
-import { addRunNowJob, isAgentRunning, syncSingleAgent } from './queue.js';
+import { addRunNowJob, isAgentRunning, syncSingleAgent, clearPendingRun } from './queue.js';
 import * as agentStorage from './agentStorage.js';
 import { runSkillEditorChat } from './skillEditor.js';
 import * as vectorMemory from './vectorMemory.js';
@@ -866,6 +866,11 @@ const server = http.createServer(async (req, res) => {
         runConfig: body.runConfig
       });
 
+      // When pausing, clear pending manual runs — active runs continue to completion
+      if (body.enabled === false && prevEnabled) {
+        clearPendingRun(agentId);
+      }
+
       // When resuming, recalculate nextActionAt on the fixed grid from createdAt
       if (body.enabled === true && !prevEnabled) {
         const intervalMs = agent.intervalMinutes * 60_000;
@@ -1085,7 +1090,9 @@ const server = http.createServer(async (req, res) => {
     const agentRunningMatch = pathname.match(/^\/api\/agents\/([^/]+)\/running$/);
     if (req.method === 'GET' && agentRunningMatch) {
       const agentId = agentRunningMatch[1];
-      sendJson(res, 200, { running: await isAgentRunning(agentId) });
+      const running = isAgentRunning(agentId);
+      const progress = running ? getRunProgress(agentId) : null;
+      sendJson(res, 200, { running, progress });
       return;
     }
 
@@ -1351,10 +1358,12 @@ const server = http.createServer(async (req, res) => {
       const mapper = contentWithStatsForViewer(viewerKind, viewerId);
       const children = db.getChildren(id).map(mapper);
       const ancestors = db.getAncestors(id).map(mapper);
+      const reposts = db.getRepostsOf(id).map(mapper);
       sendJson(res, 200, {
         content: contentWithStats(content, viewerKind, viewerId),
         children,
-        ancestors
+        ancestors,
+        reposts
       });
       return;
     }

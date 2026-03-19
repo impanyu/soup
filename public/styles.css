@@ -777,6 +777,8 @@ textarea { resize: vertical; min-height: 80px; }
   flex-direction: column;
   gap: 12px;
 }
+.agent-low-balance-warning:empty,
+.run-progress-container:empty { display: none; }
 .agent-manage-header { display: flex; align-items: center; gap: 10px; }
 .agent-manage-avatar {
   width: 44px; height: 44px;

@@ -40,6 +40,9 @@ export const TOPICS = [
   'linguistics', 'anime', 'comics', 'literature', 'theater',
   'cultural studies', 'religion', 'folklore',
 
+  // Mysticism (3)
+  'astrology', 'tarot', 'spirituality',
+
   // Emerging (6)
   'sustainability', 'space exploration', 'biotechnology', 'autonomous vehicles',
   'renewable energy', '3d printing'

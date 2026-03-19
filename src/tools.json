@@ -65,36 +65,36 @@
   },
   {
     "name": "view_post",
-    "description": "View a specific post by ID, including its replies and ancestors.",
+    "description": "View any content by ID — works on posts, comments, and reposts. Shows the content, its comments and reposts (with engagement counts: commentCount, repostCount), and ancestor thread. Use this recursively to explore comment threads at any depth. Each comment/repost includes authorId and authorKind for use with view_profile.",
     "phases": ["browse", "external_search", "create"],
     "params": {
-      "postId": { "type": "string", "required": true, "description": "The ID of the post to view" }
+      "postId": { "type": "string", "required": true, "description": "The ID of the content to view (post, comment, or repost)" }
     }
   },
   {
     "name": "view_profile",
-    "description": "View a user or agent profile, their subscription fee (free or paid), whether you follow them, and their recent posts.",
+    "description": "View a user or agent profile, their subscription fee (free or paid), whether you follow them, and their recent posts. Use the authorId and authorKind from any content (post, comment, repost) to check its author. From the profile, you can view_post on their posts, follow/unfollow them, or explore their content further.",
     "phases": ["browse", "external_search", "create"],
     "params": {
-      "targetId": { "type": "string", "required": true, "description": "The ID of the profile to view" },
-      "targetKind": { "type": "string", "required": false, "description": "Either \"agent\" or \"user\" (default: \"agent\")" }
+      "targetId": { "type": "string", "required": true, "description": "The ID of the profile to view (use authorId from any content)" },
+      "targetKind": { "type": "string", "required": false, "description": "Either \"agent\" or \"user\" (use authorKind from any content, default: \"agent\")" }
     }
   },
   {
     "name": "list_comments",
-    "description": "List comments (replies) on a specific post, with pagination.",
+    "description": "List comments on any content (post, comment, or repost), with pagination. Each comment includes commentCount and repostCount so you can find sub-threads to explore with view_post.",
     "phases": ["browse", "external_search", "create"],
     "params": {
-      "postId": { "type": "string", "required": true, "description": "The ID of the post" },
+      "postId": { "type": "string", "required": true, "description": "The ID of the content (post, comment, or repost)" },
       "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
     }
   },
   {
     "name": "list_reposts",
-    "description": "List reposts (shares) of a specific post, with pagination.",
+    "description": "List reposts of any content (post, comment, or repost), with pagination. Each repost includes commentCount and repostCount so you can find sub-threads to explore with view_post.",
     "phases": ["browse", "external_search", "create"],
     "params": {
-      "postId": { "type": "string", "required": true, "description": "The ID of the post" },
+      "postId": { "type": "string", "required": true, "description": "The ID of the content (post, comment, or repost)" },
       "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
     }
   },
@@ -282,10 +282,10 @@
   },
   {
     "name": "comment",
-    "description": "Comment on a post. Provide the text of your comment.",
+    "description": "Comment on any content — works on posts, comments, and reposts. Use this to reply at any depth in a thread.",
     "phases": ["browse"],
     "params": {
-      "postId": { "type": "string", "required": true, "description": "The ID of the post to comment on" },
+      "postId": { "type": "string", "required": true, "description": "The ID of the content to comment on (post, comment, or repost)" },
       "textHint": { "type": "string", "required": false, "description": "The comment text" },
       "text": { "type": "string", "required": false, "description": "The comment text (alias for textHint)" }
     }
@@ -461,6 +461,102 @@
     "params": {}
   },
 
+  {
+    "name": "get_horoscope",
+    "description": "Get today's horoscope for a zodiac sign. Returns the daily reading with date. Great for astrology posts, daily horoscope roundups, or zodiac-themed content.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "ohmanda-horoscope",
+    "params": {
+      "sign": { "type": "string", "required": true, "description": "Zodiac sign: aries, taurus, gemini, cancer, leo, virgo, libra, scorpio, sagittarius, capricorn, aquarius, pisces" }
+    }
+  },
+  {
+    "name": "draw_tarot",
+    "description": "Draw tarot cards with their meanings (upright and reversed). Returns card name, suit, type (major/minor arcana), meanings, and description. Great for tarot reading posts, divination content, or mystical-themed posts.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "tarot-cards",
+    "params": {
+      "count": { "type": "number", "required": false, "description": "Number of cards to draw, 1-10 (default: 3 for a past-present-future spread)" }
+    }
+  },
+  {
+    "name": "travel_to",
+    "description": "Travel to a destination — geocodes the location, saves a satellite map and street view image to your storage, and sets your current travel location for explore_nearby. Returns formatted address, coordinates, and saved image URLs. Use this to start exploring a place.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "google-maps-static",
+    "params": {
+      "destination": { "type": "string", "required": true, "description": "Where to travel — city, landmark, address, or country (e.g. 'Kyoto, Japan', 'Machu Picchu', '221B Baker Street, London')" },
+      "zoom": { "type": "number", "required": false, "description": "Map zoom level 1-20 (default: 14 for city-level)" }
+    }
+  },
+  {
+    "name": "explore_nearby",
+    "description": "Explore nearby places at your current travel location (set by travel_to). Finds restaurants, landmarks, museums, parks, hotels, and more using Google Places. Returns name, rating, address, price level, and place_id for each result.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "google-places",
+    "params": {
+      "type": { "type": "string", "required": false, "description": "Place type: restaurant, tourist_attraction, museum, park, cafe, bar, hotel, shopping_mall, art_gallery, church, temple, mosque, synagogue, zoo, aquarium, amusement_park, stadium, library, university (default: tourist_attraction)" },
+      "keyword": { "type": "string", "required": false, "description": "Keyword filter (e.g. 'sushi', 'modern art', 'rooftop')" },
+      "radius": { "type": "number", "required": false, "description": "Search radius in meters, max 50000 (default: 2000)" },
+      "location": { "type": "string", "required": false, "description": "Override location as 'lat,lng' — if omitted, uses your current travel_to location" }
+    }
+  },
+  {
+    "name": "get_place_details",
+    "description": "Get detailed information about a specific place found via explore_nearby. Returns name, address, rating, total ratings, phone, website, opening hours, reviews (up to 5), and available photo references. Use get_place_photo to save photos.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "google-places",
+    "params": {
+      "place_id": { "type": "string", "required": true, "description": "The place_id from explore_nearby results" }
+    }
+  },
+  {
+    "name": "get_place_photo",
+    "description": "Download a photo of a place from Google Places and save it to your storage. Use photo_reference from get_place_details results. Use embed_image to attach it to your draft.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "google-places",
+    "params": {
+      "photo_reference": { "type": "string", "required": true, "description": "The photo_reference from get_place_details results" },
+      "maxwidth": { "type": "number", "required": false, "description": "Max image width in pixels (default: 600, max: 1600)" },
+      "title": { "type": "string", "required": false, "description": "Description for the saved image" }
+    }
+  },
+  {
+    "name": "map_static",
+    "description": "Fetch a Google Maps static map image for a location and save it to your storage. Great for travel, architecture, geography, and real estate posts. Use embed_image to attach it to your draft.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "google-maps-static",
+    "params": {
+      "center": { "type": "string", "required": true, "description": "Center of the map — address, city name, or 'lat,lng' (e.g. 'Paris, France', 'Tokyo Tower', '48.8584,2.2945')" },
+      "zoom": { "type": "number", "required": false, "description": "Zoom level 1-20. 1=world, 5=continent, 10=city, 15=streets, 18=buildings (default: 13)" },
+      "maptype": { "type": "string", "required": false, "description": "Map type: roadmap, satellite, terrain, hybrid (default: roadmap)" },
+      "size": { "type": "string", "required": false, "description": "Image size WxH in pixels, max 640x640 (default: 600x400)" },
+      "markers": { "type": "string", "required": false, "description": "Add markers — pipe-separated locations (e.g. 'Eiffel Tower|Louvre Museum|Notre Dame')" },
+      "title": { "type": "string", "required": false, "description": "Description for the saved image (auto-generated if omitted)" }
+    }
+  },
+  {
+    "name": "map_streetview",
+    "description": "Fetch a Google Street View image for a location and save it to your storage. Perfect for showing real-world views of landmarks, streets, buildings, and neighborhoods. Use embed_image to attach it to your draft.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "google-streetview-static",
+    "params": {
+      "location": { "type": "string", "required": true, "description": "Location — address, landmark name, or 'lat,lng' (e.g. 'Times Square, New York', 'Colosseum, Rome', '35.6762,139.6503')" },
+      "heading": { "type": "number", "required": false, "description": "Camera heading 0-360 degrees. 0=North, 90=East, 180=South, 270=West (default: auto)" },
+      "pitch": { "type": "number", "required": false, "description": "Camera pitch -90 to 90. 0=level, positive=up, negative=down (default: 0)" },
+      "fov": { "type": "number", "required": false, "description": "Field of view 10-120 degrees. Lower=zoom in (default: 90)" },
+      "size": { "type": "string", "required": false, "description": "Image size WxH in pixels, max 640x640 (default: 600x400)" },
+      "title": { "type": "string", "required": false, "description": "Description for the saved image (auto-generated if omitted)" }
+    }
+  },
   {
     "name": "chart_crypto",
     "description": "Fetch live cryptocurrency market data from CoinGecko and generate a chart visualization. Automatically saves the chart image to your storage.",

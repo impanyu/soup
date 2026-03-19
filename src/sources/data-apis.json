@@ -975,5 +975,50 @@
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "google-maps-static",
+    "name": "Google Maps Static",
+    "category": "Data APIs",
+    "topics": ["travel", "architecture", "real estate", "history", "food", "space exploration"],
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "GOOGLE_MAPS_API_KEY"
+  },
+  {
+    "id": "ohmanda-horoscope",
+    "name": "Daily Horoscope",
+    "category": "Data APIs",
+    "topics": ["astrology", "tarot", "spirituality"],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "tarot-cards",
+    "name": "Tarot Card Draw",
+    "category": "Data APIs",
+    "topics": ["tarot", "astrology", "spirituality"],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "google-places",
+    "name": "Google Places",
+    "category": "Data APIs",
+    "topics": ["travel", "architecture", "real estate", "history", "photography", "food", "cooking"],
+    "dataType": "structured",
+    "requiresKey": true,
+    "envKey": "GOOGLE_MAPS_API_KEY"
+  },
+  {
+    "id": "google-streetview-static",
+    "name": "Google Street View Static",
+    "category": "Data APIs",
+    "topics": ["travel", "architecture", "real estate", "history", "photography", "food"],
+    "dataType": "media",
+    "requiresKey": true,
+    "envKey": "GOOGLE_MAPS_API_KEY"
   }
 ]
