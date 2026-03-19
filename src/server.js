@@ -744,15 +744,21 @@ const server = http.createServer(async (req, res) => {
       if (!files.length) throw new Error('No files uploaded.');
       if (files.length > 4) throw new Error('Max 4 files per upload.');
 
+      // Save to per-user folder: data/users/{userId}/files/
+      const userFilesDir = path.join(__dirname, '..', 'data', 'users', apiUser.id, 'files');
+      fs.mkdirSync(userFilesDir, { recursive: true });
+
       const results = [];
       for (const file of files) {
         if (!file.contentType.startsWith('image/') && !file.contentType.startsWith('video/')) {
           throw new Error(`Invalid file type: ${file.contentType}. Only image and video files are allowed.`);
         }
         const ext = file.filename.split('.').pop() || (file.contentType.startsWith('video/') ? 'mp4' : 'jpg');
-        const stored = mediaStorage.saveBuffer(file.buffer, ext);
+        const hash = crypto.createHash('sha256').update(file.buffer).digest('hex').slice(0, 16);
+        const storedFilename = `${hash}.${ext}`;
+        fs.writeFileSync(path.join(userFilesDir, storedFilename), file.buffer);
         results.push({
-          url: stored.localUrl,
+          url: `/users/${apiUser.id}/files/${storedFilename}`,
           type: file.contentType.startsWith('video/') ? 'video' : 'image',
           filename: file.filename
         });
@@ -773,17 +779,27 @@ const server = http.createServer(async (req, res) => {
       if (kind === 'user') {
         if (id !== apiUser.id) throw new Error('Can only update your own avatar.');
         const ext = file.filename.split('.').pop() || 'jpg';
-        const stored = mediaStorage.saveBuffer(file.buffer, ext);
-        db.updateUser(id, { avatarUrl: stored.localUrl });
-        sendJson(res, 200, { avatarUrl: stored.localUrl });
+        const userFilesDir = path.join(__dirname, '..', 'data', 'users', id, 'files');
+        fs.mkdirSync(userFilesDir, { recursive: true });
+        const hash = crypto.createHash('sha256').update(file.buffer).digest('hex').slice(0, 16);
+        const avatarFilename = `${hash}.${ext}`;
+        fs.writeFileSync(path.join(userFilesDir, avatarFilename), file.buffer);
+        const avatarUrl = `/users/${id}/files/${avatarFilename}`;
+        db.updateUser(id, { avatarUrl });
+        sendJson(res, 200, { avatarUrl });
       } else if (kind === 'agent') {
         const agent = db.getAgent(id);
         if (!agent) throw new Error('Agent not found.');
         if (agent.ownerUserId !== apiUser.id) throw new Error('Not the owner of this agent.');
         const ext = file.filename.split('.').pop() || 'jpg';
-        const stored = mediaStorage.saveBuffer(file.buffer, ext);
-        db.updateAgent(id, { avatarUrl: stored.localUrl });
-        sendJson(res, 200, { avatarUrl: stored.localUrl });
+        const agentFilesDir = path.join(__dirname, '..', 'data', 'agents', id, 'files');
+        fs.mkdirSync(agentFilesDir, { recursive: true });
+        const hash = crypto.createHash('sha256').update(file.buffer).digest('hex').slice(0, 16);
+        const avatarFilename = `${hash}.${ext}`;
+        fs.writeFileSync(path.join(agentFilesDir, avatarFilename), file.buffer);
+        const avatarUrl = `/agents/${id}/files/${avatarFilename}`;
+        db.updateAgent(id, { avatarUrl });
+        sendJson(res, 200, { avatarUrl });
       } else {
         throw new Error('Invalid kind. Must be "user" or "agent".');
       }
@@ -1866,6 +1882,16 @@ const server = http.createServer(async (req, res) => {
       const agentId = agentFileMatch[1];
       const filename = path.basename(agentFileMatch[2]); // sanitize
       const filePath = path.join(__dirname, '..', 'data', 'agents', agentId, 'files', filename);
+      sendFile(res, filePath);
+      return;
+    }
+
+    // Serve per-user files: /users/<userId>/files/<filename>
+    const userFileMatch = pathname.match(/^\/users\/([^/]+)\/files\/([^/]+)$/);
+    if (req.method === 'GET' && userFileMatch) {
+      const userId = userFileMatch[1];
+      const filename = path.basename(userFileMatch[2]); // sanitize
+      const filePath = path.join(__dirname, '..', 'data', 'users', userId, 'files', filename);
       sendFile(res, filePath);
       return;
     }
