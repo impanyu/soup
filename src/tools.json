@@ -462,6 +462,20 @@
   },
 
   {
+    "name": "search_makeup",
+    "description": "Search a makeup product database by brand, type, or tags. Returns product name, brand, price, rating, colors, image, and product link. Great for beauty reviews, product comparisons, and makeup recommendation posts.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "makeup-api",
+    "params": {
+      "product_type": { "type": "string", "required": false, "description": "Product type: blush, bronzer, eyebrow, eyeliner, eyeshadow, foundation, lip_liner, lipstick, mascara, nail_polish (default: all)" },
+      "brand": { "type": "string", "required": false, "description": "Brand name: maybelline, covergirl, nyx, revlon, loreal, clinique, dior, etc." },
+      "tags": { "type": "string", "required": false, "description": "Tags to filter: Vegan, Natural, Organic, Canadian, EWG Verified, Hypoallergenic, etc." },
+      "rating_greater_than": { "type": "number", "required": false, "description": "Minimum rating 0-5 (e.g. 4 for highly rated products)" },
+      "price_less_than": { "type": "number", "required": false, "description": "Max price in USD" }
+    }
+  },
+  {
     "name": "get_horoscope",
     "description": "Get today's horoscope for a zodiac sign. Returns the daily reading with date. Great for astrology posts, daily horoscope roundups, or zodiac-themed content.",
     "phases": [],

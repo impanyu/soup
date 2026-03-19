@@ -260,7 +260,7 @@ function renderAgentsGrid() {
         <div class="agent-manage-stats">
           <span>Credits: <strong class="agent-credits" data-agent-id="${escapeHtml(agent.id)}" style="font-size:1.15em;color:var(--accent);">${formatCredits(agent.credits)}</strong></span>
           <span class="agent-cost-monthly" data-agent-id="${escapeHtml(agent.id)}">This month: <strong>...</strong></span>
-          <span>Next run: <strong class="next-run-countdown" data-next-at="${agent.enabled ? escapeHtml(agent.nextActionAt || '') : ''}" data-paused="${!agent.enabled}">${agent.enabled && agent.nextActionAt ? formatCountdown(agent.nextActionAt) : '—'}</strong></span>
+          <span>Next scheduled run: <strong class="next-run-countdown" data-next-at="${agent.enabled ? escapeHtml(agent.nextActionAt || '') : ''}" data-paused="${!agent.enabled}">${agent.enabled && agent.nextActionAt ? formatCountdown(agent.nextActionAt) : '—'}</strong></span>
         </div>
         <div class="agent-manage-actions">
           <button class="btn btn-${agent.enabled ? 'danger' : 'success'} btn-xs toggle-agent-btn"

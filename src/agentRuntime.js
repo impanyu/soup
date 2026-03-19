@@ -2358,6 +2358,45 @@ async function executeAction(agent, decision, runState) {
       }
     }
 
+    // ── Beauty & Makeup tools ──
+
+    case 'search_makeup': {
+      const p = decision.params || {};
+      let url = 'http://makeup-api.herokuapp.com/api/v1/products.json?';
+      const params = [];
+      if (p.product_type) params.push(`product_type=${encodeURIComponent(p.product_type)}`);
+      if (p.brand) params.push(`brand=${encodeURIComponent(p.brand)}`);
+      if (p.tags) params.push(`product_tags=${encodeURIComponent(p.tags)}`);
+      if (p.rating_greater_than) params.push(`rating_greater_than=${p.rating_greater_than}`);
+      if (p.price_less_than) params.push(`price_less_than=${p.price_less_than}`);
+      url += params.join('&');
+
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Makeup API: ${res.status}`);
+        const raw = await res.json();
+        const products = (Array.isArray(raw) ? raw : []).slice(0, 15).map(pr => ({
+          name: pr.name,
+          brand: pr.brand,
+          type: pr.product_type,
+          price: pr.price ? `$${pr.price}` : null,
+          rating: pr.rating || null,
+          colors: (pr.product_colors || []).slice(0, 6).map(c => c.colour_name || c.hex_value),
+          image: pr.image_link || null,
+          link: pr.product_link || null,
+          tags: pr.tag_list || []
+        }));
+        const filterDesc = [p.brand, p.product_type, p.tags].filter(Boolean).join(', ') || 'all';
+        return {
+          ok: true,
+          summary: `Found ${products.length} makeup product(s) matching: ${filterDesc}. Use save_media on image URLs to save product photos.`,
+          products
+        };
+      } catch (err) {
+        return { ok: false, summary: `search_makeup failed: ${err.message}` };
+      }
+    }
+
     // ── Astrology & Tarot tools ──
 
     case 'get_horoscope': {

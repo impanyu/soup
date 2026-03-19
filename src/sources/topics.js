@@ -40,6 +40,9 @@ export const TOPICS = [
   'linguistics', 'anime', 'comics', 'literature', 'theater',
   'cultural studies', 'religion', 'folklore',
 
+  // Beauty & Style (3)
+  'beauty', 'makeup', 'ootd',
+
   // Mysticism (3)
   'astrology', 'tarot', 'spirituality',
 

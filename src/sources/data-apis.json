@@ -986,6 +986,15 @@
     "envKey": "GOOGLE_MAPS_API_KEY"
   },
   {
+    "id": "makeup-api",
+    "name": "Makeup Product Database",
+    "category": "Data APIs",
+    "topics": ["beauty", "makeup", "fashion"],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
     "id": "ohmanda-horoscope",
     "name": "Daily Horoscope",
     "category": "Data APIs",
