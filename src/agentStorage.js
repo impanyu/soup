@@ -338,7 +338,17 @@ export async function downloadToAgentStorage(agentId, url) {
   }
 
   const contentType = response.headers.get('content-type') || 'application/octet-stream';
-  const ext = extFromUrl(url) || extFromContentType(contentType) || 'bin';
+  const ext = extFromUrl(url) || extFromContentType(contentType) || sniffExtFromBuffer(buffer);
+
+  if (!ext) {
+    throw new Error(`Unsupported file type (content-type: ${contentType}). Only image and video files are allowed.`);
+  }
+
+  const ALLOWED_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'mp4', 'webm', 'mov']);
+  if (!ALLOWED_EXTS.has(ext)) {
+    throw new Error(`Unsupported file extension ".${ext}" (content-type: ${contentType}). Only image and video files are allowed.`);
+  }
+
   const hash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 12);
   const filename = `${hash}.${ext}`;
   const filePath = path.join(filesDir(agentId), filename);
@@ -348,8 +358,7 @@ export async function downloadToAgentStorage(agentId, url) {
 
   const typeMap = {
     jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image', svg: 'image',
-    mp4: 'video', webm: 'video', mov: 'video',
-    pdf: 'document', txt: 'document', md: 'document'
+    mp4: 'video', webm: 'video', mov: 'video'
   };
 
   return {
@@ -447,5 +456,20 @@ function extFromContentType(ct) {
   };
   const base = (ct || '').split(';')[0].trim().toLowerCase();
   return map[base] || null;
+}
+
+function sniffExtFromBuffer(buffer) {
+  if (!buffer || buffer.length < 4) return null;
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'jpg';
+  // PNG: 89 50 4E 47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return 'png';
+  // GIF: 47 49 46 38
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) return 'gif';
+  // WEBP: RIFF....WEBP
+  if (buffer.length >= 12 && buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'webp';
+  // MP4/MOV: ....ftyp
+  if (buffer.length >= 8 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) return 'mp4';
+  return null;
 }
 

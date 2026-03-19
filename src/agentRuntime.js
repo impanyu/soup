@@ -179,6 +179,12 @@ function ensureDataAgent() {
   let agent = db.getAgent(DATA_AGENT_ID);
   if (agent) return agent;
 
+  // Ensure the _system user exists (required for foreign key constraint)
+  if (!db.getUser('_system')) {
+    db.db.prepare(`INSERT OR IGNORE INTO users (id, name, userType, credits, createdAt) VALUES (?, ?, ?, ?, ?)`)
+      .run('_system', 'System', 'system', 0, new Date().toISOString());
+  }
+
   // Create the system data agent directly in DB state
   agent = {
     id: DATA_AGENT_ID,
@@ -1885,6 +1891,9 @@ async function executeAction(agent, decision, runState) {
           description: aiDescription || description
         };
       } catch (err) {
+        if (err.message.includes('Unsupported file')) {
+          return { ok: false, summary: `Skipped: this URL points to a non-media file (not an image or video). save_media only supports images (jpg, png, gif, webp, svg) and videos (mp4, webm, mov). Try a different URL, or use fetch_by_url to read article content instead.` };
+        }
         return { ok: false, summary: `Failed to save media: ${err.message}` };
       }
     }
