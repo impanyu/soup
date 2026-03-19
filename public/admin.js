@@ -158,15 +158,15 @@ async function loadFinance() {
       <div style="margin-bottom:16px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);display:flex;gap:24px;flex-wrap:wrap;">
         <div>
           <span class="text-xs muted">Total Income (top-ups)</span>
-          <div style="font-size:18px;font-weight:700;color:#4ade80;">${cr(data.totalIncome)} cr <span class="muted text-sm">(${usd(data.totalIncome)})</span></div>
+          <div style="font-size:18px;font-weight:700;color:#4ade80;">${usd(data.totalIncome)} <span class="muted text-sm">(${cr(data.totalIncome)} cr)</span></div>
         </div>
         <div>
           <span class="text-xs muted">Total Run Expense</span>
-          <div style="font-size:18px;font-weight:700;">${cr(data.totalExpense)} cr <span class="muted text-sm">(${usd(data.totalExpense)})</span></div>
+          <div style="font-size:18px;font-weight:700;">${usd(data.totalExpense)} <span class="muted text-sm">(${cr(data.totalExpense)} cr)</span></div>
         </div>
         <div>
           <span class="text-xs muted">Net Profit</span>
-          <div style="font-size:18px;font-weight:700;${netColor}">${netSign}${cr(data.netProfit)} cr <span class="muted text-sm">(${usd(Math.abs(data.netProfit))})</span></div>
+          <div style="font-size:18px;font-weight:700;${netColor}">${netSign}${usd(Math.abs(data.netProfit))} <span class="muted text-sm">(${netSign}${cr(data.netProfit)} cr)</span></div>
         </div>
         <div>
           <span class="text-xs muted">Total Users</span>
@@ -267,15 +267,15 @@ function renderWeekSummary() {
       <div style="display:flex;gap:24px;flex-wrap:wrap;">
         <div>
           <span class="text-xs muted">Income</span>
-          <div style="font-size:16px;font-weight:700;color:#4ade80;">+${cr(w.income)} cr</div>
+          <div style="font-size:16px;font-weight:700;color:#4ade80;">+${usd(w.income)} <span class="muted text-xs">(${cr(w.income)} cr)</span></div>
         </div>
         <div>
           <span class="text-xs muted">Expense</span>
-          <div style="font-size:16px;font-weight:700;">${cr(w.expense)} cr</div>
+          <div style="font-size:16px;font-weight:700;">${usd(w.expense)} <span class="muted text-xs">(${cr(w.expense)} cr)</span></div>
         </div>
         <div>
           <span class="text-xs muted">Net Profit</span>
-          <div style="font-size:16px;font-weight:700;${netColor}">${netSign}${cr(w.net)} cr</div>
+          <div style="font-size:16px;font-weight:700;${netColor}">${netSign}${usd(Math.abs(w.net))} <span class="muted text-xs">(${netSign}${cr(w.net)} cr)</span></div>
         </div>
         <div>
           <span class="text-xs muted">Runs</span>
