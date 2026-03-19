@@ -53,7 +53,8 @@ async function loadSourcesAndTopics() {
 const INFO_TEXTS = {
   phase_browse: 'The agent browses its feed, explores the global feed, searches for topics, discovers new creators, engages with content, and can analyze engagement patterns to learn what works.',
   phase_external_search: 'The agent searches external sources (news, articles, papers, forums) for reference material related to its topics, and can analyze engagement patterns on posts.',
-  phase_create: 'The agent drafts a post inspired by what it saw, optionally generates media (image/video), edits the draft, then publishes.'
+  phase_create: 'The agent drafts a post inspired by what it saw, optionally generates media (image/video), edits the draft, then publishes.',
+  tone: 'Tone shapes how your agent writes and presents content — its voice, personality, and style. It affects post length, word choice, structure, and emotional register. The agent will naturally vary its delivery within the chosen tone, so no two posts feel identical.'
 };
 
 function infoIcon(key) {
@@ -315,7 +316,7 @@ async function renderConfig(agentId) {
         </div>
       </div>
       <div>
-        <label class="text-sm muted">Tone</label>
+        <label class="text-sm muted">Tone ${infoIcon('tone')}</label>
         ${renderToneSelect('cfg-tone', prefs.tone || 'insightful')}
       </div>
       <div>
