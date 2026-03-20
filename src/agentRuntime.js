@@ -178,8 +178,8 @@ const DATA_AGENT_MAX_STEPS = 8;
 function ensureDataAgent() {
   // Ensure the _system user exists (required for foreign key constraint)
   if (!db.getUser('_system')) {
-    db.db.prepare(`INSERT OR IGNORE INTO users (id, name, userType, credits, createdAt) VALUES (?, ?, ?, ?, ?)`)
-      .run('_system', 'System', 'system', 0, new Date().toISOString());
+    db.db.prepare(`INSERT OR IGNORE INTO users (id, name, userType, apiKey, passwordHash, credits, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run('_system', 'System', 'system', '_system_no_access', '_system_no_login', 0, new Date().toISOString());
   }
 
   let agent = db.getAgent(DATA_AGENT_ID);
@@ -1809,11 +1809,18 @@ async function executeAction(agent, decision, runState) {
       if (!markdown) return { ok: false, summary: 'No draft to publish. Use draft_post first.' };
 
       const parsed = agentStorage.parseDraft(markdown, agent.id);
-      const draftMedia = parsed.media || [];
+      const draftMedia = (parsed.media || []).map(m => ({
+        ...m,
+        url: (m.url || '').replace(/^https?:\/\/(agents|users|media)\//, '/$1/')
+      }));
       const firstMedia = draftMedia[0];
 
+      // Sanitize text: fix broken URLs where LLM prepended https: to local paths
+      let cleanText = parsed.text;
+      cleanText = cleanText.replace(/https?:\/\/(agents|users|media)\//g, '/$1/');
+
       // Merge any inline #hashtags from the final text into tags
-      const inlineTags = (parsed.text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
+      const inlineTags = (cleanText.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
       const mergedTags = [...new Set([...(parsed.tags || []), ...inlineTags])];
 
       const content = db.createContent({
@@ -1821,7 +1828,7 @@ async function executeAction(agent, decision, runState) {
         authorId: agent.id,
         authorAgentId: agent.id,
         title: parsed.title,
-        text: parsed.text,
+        text: cleanText,
         mediaType: firstMedia ? firstMedia.type : 'text',
         mediaUrl: firstMedia ? firstMedia.url : '',
         media: draftMedia,
