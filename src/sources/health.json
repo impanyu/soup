@@ -46,7 +46,12 @@
       "biology",
       "science",
       "mental health",
-      "medical research"
+      "medical research",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.nih.gov",
     "rss": {
@@ -178,7 +183,12 @@
       "health",
       "medical research",
       "nutrition",
-      "mental health"
+      "mental health",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.health.harvard.edu",
     "rss": {
@@ -197,7 +207,12 @@
       "health",
       "medical research",
       "nutrition",
-      "fitness"
+      "fitness",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://health.clevelandclinic.org",
     "rss": {
@@ -216,7 +231,12 @@
       "health",
       "medical research",
       "public health",
-      "science"
+      "science",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.hopkinsmedicine.org",
     "rss": {
@@ -235,7 +255,12 @@
       "health",
       "medical research",
       "public health",
-      "neuroscience"
+      "neuroscience",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://health.mountsinai.org",
     "rss": {
@@ -273,7 +298,12 @@
       "health",
       "medical research",
       "nutrition",
-      "science"
+      "science",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.medicalnewstoday.com",
     "rss": {
@@ -482,7 +512,12 @@
       "health",
       "medical research",
       "public health",
-      "biotechnology"
+      "biotechnology",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.statnews.com",
     "rss": {
@@ -501,7 +536,12 @@
       "health",
       "medical research",
       "public health",
-      "science"
+      "science",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.medscape.com",
     "rss": {
@@ -558,7 +598,12 @@
       "public health",
       "health",
       "medical research",
-      "science"
+      "science",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.infectioncontroltoday.com",
     "rss": {
@@ -577,7 +622,12 @@
       "genetics",
       "biotechnology",
       "medical research",
-      "science"
+      "science",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.genengnews.com",
     "rss": {
@@ -596,7 +646,12 @@
       "health",
       "medical research",
       "nutrition",
-      "public health"
+      "public health",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.mayoclinic.org",
     "rss": {
@@ -615,7 +670,12 @@
       "public health",
       "health",
       "science",
-      "medical research"
+      "medical research",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.cdc.gov",
     "rss": {
@@ -653,7 +713,12 @@
       "health",
       "public health",
       "mental health",
-      "nutrition"
+      "nutrition",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology"
     ],
     "siteUrl": "https://www.nhs.uk",
     "rss": {

@@ -22,9 +22,10 @@ export const TOPICS = [
   'graphic design', 'architecture', 'creative writing', 'podcasts',
   'movie', 'cinema', 'tv shows', 'documentaries',
 
-  // Health (8)
+  // Health (13)
   'health', 'fitness', 'mental health', 'nutrition', 'yoga', 'meditation',
   'public health', 'medical research',
+  'cancer', 'diabetes', 'cardiology', 'rare diseases', 'immunology',
 
   // Sports (6)
   'sports', 'soccer', 'basketball', 'tennis', 'combat sports', 'olympics',

@@ -995,6 +995,24 @@
     "envKey": null
   },
   {
+    "id": "openfda-drug-events",
+    "name": "OpenFDA Drug Adverse Events",
+    "category": "Data APIs",
+    "topics": ["health", "medical research", "cancer", "diabetes", "cardiology", "rare diseases", "immunology", "public health"],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "clinicaltrials-gov",
+    "name": "ClinicalTrials.gov",
+    "category": "Data APIs",
+    "topics": ["medical research", "cancer", "diabetes", "cardiology", "rare diseases", "immunology", "health"],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
     "id": "makeup-api",
     "name": "Makeup Product Database",
     "category": "Data APIs",

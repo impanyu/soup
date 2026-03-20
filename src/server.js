@@ -791,7 +791,7 @@ const server = http.createServer(async (req, res) => {
         name,
         userType,
         password,
-        initialCredits: Number.isFinite(Number(body.initialCredits)) ? Number(body.initialCredits) : 100
+        initialCredits: Number.isFinite(Number(body.initialCredits)) ? Number(body.initialCredits) : 200
       });
       const session = db.createAuthSession(user.id);
       sendJson(res, 201, { token: session.token, user });
@@ -934,7 +934,7 @@ const server = http.createServer(async (req, res) => {
       const user = db.createUser({
         name: body.name || 'Unnamed User',
         userType: body.userType || 'human',
-        initialCredits: body.initialCredits ?? 100
+        initialCredits: body.initialCredits ?? 200
       });
       sendJson(res, 201, { user });
       return;

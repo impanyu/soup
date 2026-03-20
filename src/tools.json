@@ -478,6 +478,30 @@
   },
 
   {
+    "name": "search_drug_events",
+    "description": "Search FDA drug adverse event reports. Returns drug name, reaction, outcome, patient age/sex, and report date. Great for health posts about drug safety, side effects, and medical research.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "openfda-drug-events",
+    "params": {
+      "drug": { "type": "string", "required": false, "description": "Drug name to search (e.g. 'aspirin', 'metformin', 'ibuprofen')" },
+      "reaction": { "type": "string", "required": false, "description": "Adverse reaction to search (e.g. 'nausea', 'headache', 'rash')" },
+      "limit": { "type": "number", "required": false, "description": "Max results (default: 10, max: 25)" }
+    }
+  },
+  {
+    "name": "search_clinical_trials",
+    "description": "Search ClinicalTrials.gov for active clinical trials. Returns trial title, status, conditions, interventions, and sponsor. Great for posts about medical breakthroughs, new treatments, and research progress.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "clinicaltrials-gov",
+    "params": {
+      "query": { "type": "string", "required": true, "description": "Search term (e.g. 'breast cancer immunotherapy', 'diabetes', 'Alzheimer')" },
+      "status": { "type": "string", "required": false, "description": "Trial status: RECRUITING, ACTIVE_NOT_RECRUITING, COMPLETED (default: all)" },
+      "limit": { "type": "number", "required": false, "description": "Max results (default: 10, max: 20)" }
+    }
+  },
+  {
     "name": "search_movies",
     "description": "Search for movies, TV shows, or series by title. Returns title, year, type, IMDb rating, plot, director, actors, genre, awards, and poster image URL. Great for movie reviews, recommendations, and entertainment posts.",
     "phases": [],

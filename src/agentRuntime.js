@@ -2469,6 +2469,72 @@ async function executeAction(agent, decision, runState) {
       }
     }
 
+    // ── Medical & Health tools ──
+
+    case 'search_drug_events': {
+      const p = decision.params || {};
+      let url = 'https://api.fda.gov/drug/event.json?';
+      const parts = [];
+      if (p.drug) parts.push(`patient.drug.medicinalproduct:${encodeURIComponent(p.drug)}`);
+      if (p.reaction) parts.push(`patient.reaction.reactionmeddrapt:${encodeURIComponent(p.reaction)}`);
+      const search = parts.join('+AND+') || 'receivedate:[20240101+TO+20261231]';
+      const limit = Math.min(25, Math.max(1, p.limit || 10));
+      url += `search=${search}&limit=${limit}`;
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`OpenFDA API: ${res.status}`);
+        const data = await res.json();
+        const events = (data.results || []).map(r => ({
+          drug: (r.patient?.drug || []).map(d => d.medicinalproduct).filter(Boolean).join(', ') || 'unknown',
+          reactions: (r.patient?.reaction || []).map(rx => rx.reactionmeddrapt).filter(Boolean).slice(0, 5),
+          outcome: r.patient?.reaction?.[0]?.reactionoutcome || null,
+          patientAge: r.patient?.patientonsetage || null,
+          patientSex: r.patient?.patientsex === '1' ? 'male' : r.patient?.patientsex === '2' ? 'female' : null,
+          serious: r.serious === '1',
+          reportDate: r.receivedate || null,
+          country: r.occurcountry || null
+        }));
+        const filterDesc = [p.drug, p.reaction].filter(Boolean).join(', ') || 'recent';
+        return { ok: true, summary: `Found ${events.length} adverse event report(s) for: ${filterDesc}`, events };
+      } catch (err) {
+        return { ok: false, summary: `search_drug_events failed: ${err.message}` };
+      }
+    }
+
+    case 'search_clinical_trials': {
+      const p = decision.params || {};
+      const query = p.query;
+      if (!query) return { ok: false, summary: 'query is required.' };
+      const limit = Math.min(20, Math.max(1, p.limit || 10));
+      let url = `https://clinicaltrials.gov/api/v2/studies?query.term=${encodeURIComponent(query)}&pageSize=${limit}&format=json`;
+      if (p.status) url += `&filter.overallStatus=${encodeURIComponent(p.status)}`;
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`ClinicalTrials.gov API: ${res.status}`);
+        const data = await res.json();
+        const trials = (data.studies || []).map(s => {
+          const id = s.protocolSection?.identificationModule;
+          const status = s.protocolSection?.statusModule;
+          const design = s.protocolSection?.designModule;
+          const conditions = s.protocolSection?.conditionsModule?.conditions || [];
+          const interventions = (s.protocolSection?.armsInterventionsModule?.interventions || []).map(i => i.name).slice(0, 3);
+          return {
+            nctId: id?.nctId,
+            title: id?.briefTitle || id?.officialTitle || 'Untitled',
+            status: status?.overallStatus || 'unknown',
+            phases: design?.phases || [],
+            conditions: conditions.slice(0, 5),
+            interventions,
+            sponsor: id?.organization?.fullName || null,
+            startDate: status?.startDateStruct?.date || null
+          };
+        });
+        return { ok: true, summary: `Found ${trials.length} clinical trial(s) for "${query}"`, trials };
+      } catch (err) {
+        return { ok: false, summary: `search_clinical_trials failed: ${err.message}` };
+      }
+    }
+
     // ── Movie & TV tools ──
 
     case 'search_movies': {

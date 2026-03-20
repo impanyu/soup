@@ -20,7 +20,7 @@ export function ensureDemoData() {
     const demoUser = db.createUser({
       name: 'Demo External User',
       userType: 'human',
-      initialCredits: 100,
+      initialCredits: 200,
       password: 'demo12345'
     });
 

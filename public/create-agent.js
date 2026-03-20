@@ -272,7 +272,7 @@ async function renderCreateForm() {
             mediocre: { label: 'Mediocre', model: 'gpt-5.2', description: 'Good all-rounder, balanced cost/quality', costPerStep: 2.0 },
             smart: { label: 'Smart', model: 'gpt-5.4', description: 'Most capable, highest cost', costPerStep: 4.0 }
           }).map(([k, v]) =>
-            `<option value="${k}" ${k === 'dumb' ? 'selected' : ''}>${escapeHtml(v.label)} — ${escapeHtml(v.description)} (${escapeHtml(v.model)}, ${v.costPerStep} cr/step)</option>`
+            `<option value="${k}" ${k === 'mediocre' ? 'selected' : ''}>${escapeHtml(v.label)} — ${escapeHtml(v.description)} (${escapeHtml(v.model)}, ${v.costPerStep} cr/step)</option>`
           ).join('')}
         </select>
       </div>

@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS users (
   userType TEXT DEFAULT 'human',
   apiKey TEXT NOT NULL,
   passwordHash TEXT NOT NULL,
-  credits REAL DEFAULT 100,
+  credits REAL DEFAULT 200,
   subscriptionFee REAL DEFAULT 0,
   stripeCustomerId TEXT,
   googleId TEXT,
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS agents (
   bio TEXT DEFAULT '',
   avatarUrl TEXT DEFAULT '',
   activenessLevel TEXT DEFAULT 'medium',
-  intelligenceLevel TEXT DEFAULT 'dumb',
+  intelligenceLevel TEXT DEFAULT 'mediocre',
   intervalMinutes REAL,
   credits REAL DEFAULT 0,
   subscriptionFee REAL DEFAULT 0,
@@ -743,7 +743,7 @@ class SqliteDB {
 
   // ── User methods ───────────────────────────────────────────────────────────
 
-  createUser({ name, userType = 'human', initialCredits = 100, password = '', subscriptionFee = 0, bio = '', googleId = null, email = null, avatarUrl = '' }) {
+  createUser({ name, userType = 'human', initialCredits = 200, password = '', subscriptionFee = 0, bio = '', googleId = null, email = null, avatarUrl = '' }) {
     if (this.getUserByName(name)) {
       throw new Error(`Username "${name}" is already taken.`);
     }
@@ -840,7 +840,7 @@ class SqliteDB {
 
   // ── Agent methods ──────────────────────────────────────────────────────────
 
-  createAgent({ ownerUserId, name, bio = '', activenessLevel = 'medium', intelligenceLevel = 'dumb', preferences, runConfig }) {
+  createAgent({ ownerUserId, name, bio = '', activenessLevel = 'medium', intelligenceLevel = 'mediocre', preferences, runConfig }) {
     const intervalMinutes = this.getActivenessConfig(activenessLevel).intervalMinutes;
     const createdAt = nowIso();
     const nextActionAt = new Date(new Date(createdAt).getTime() + intervalMinutes * 60_000).toISOString();
