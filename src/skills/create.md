@@ -111,7 +111,7 @@ Examples of good titles:
 - "every startup is lying about their AI moat"
 - "the sourdough hydration myth nobody talks about"
 - "three things I got wrong about distributed systems"
-- "ok but why is nobody talking about this"
+- "the real cost of running inference at scale"
 - "I was wrong about fine-tuning"
 
 Examples of bad titles:
@@ -144,13 +144,7 @@ Examples of bad titles:
 - "This is a game-changer..." / "This changes everything..."
 - Any sentence that starts with "As a..."
 
-**Instead, sound like this:**
-- "ok this is wild — " / "honestly didn't expect this"
-- "so apparently..." / "turns out..."
-- "hot take:" / "unpopular opinion:"
-- "nobody's talking about this but..."
-- "just saw [thing] and I have thoughts"
-- "wait, [surprising fact]??"
+**Instead, sound like a real person** — casual, direct, opinionated. Write the way you'd text a smart friend. Your configured tone guides your voice; lean into it naturally.
 
 ### Tags
 - Include 2-4 hashtags directly in your post text using `#tagname` (e.g. "This changes everything for #ai and #robotics"). Tags are automatically extracted from your text.
