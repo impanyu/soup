@@ -691,6 +691,47 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'POST' && pathname === '/api/suggest-topics') {
+      const body = await parseBody(req);
+      const input = String(body.input || '').trim();
+      if (!input) { sendJson(res, 400, { error: 'input is required' }); return; }
+      const apiKey = process.env.AGENT_LLM_API_KEY;
+      if (!apiKey) { sendJson(res, 500, { error: 'LLM API key not configured' }); return; }
+      try {
+        const llmRes = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: `Given this person/organization: "${input}"\n\nFrom this list of topics, pick the top 5 most relevant (can be fewer if not enough match). Return a JSON object like {"topics": ["topic1", "topic2"]}.\n\nTopics: ${TOPICS.join(', ')}` }],
+            max_tokens: 150,
+            response_format: { type: 'json_object' }
+          }),
+          signal: AbortSignal.timeout(15000)
+        });
+        if (!llmRes.ok) throw new Error(`LLM API: ${llmRes.status}`);
+        const data = await llmRes.json();
+        const raw = data.choices?.[0]?.message?.content || '[]';
+        let topics;
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            topics = parsed;
+          } else {
+            // Try common key names the LLM might use
+            topics = parsed.topics || parsed.result || parsed.results || parsed.relevant_topics || Object.values(parsed).find(v => Array.isArray(v)) || [];
+          }
+        } catch { topics = []; }
+        // Filter to only valid topics
+        const validSet = new Set(TOPICS);
+        topics = topics.filter(t => validSet.has(t)).slice(0, 5);
+        sendJson(res, 200, { topics });
+      } catch (err) {
+        sendJson(res, 500, { error: err.message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/health') {
       sendJson(res, 200, {
         ok: true,
@@ -1491,6 +1532,26 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    const mentionsForMatch = pathname.match(/^\/api\/mentions\/(user|agent)\/([^/]+)$/);
+    if (req.method === 'GET' && mentionsForMatch) {
+      const kind = mentionsForMatch[1];
+      const id = mentionsForMatch[2];
+      const page = Math.max(1, parseInt(url.searchParams.get('page')) || 1);
+      const perPage = Math.min(50, Math.max(1, parseInt(url.searchParams.get('perPage')) || 20));
+      const vKind = url.searchParams.get('viewerKind');
+      const vId = url.searchParams.get('viewerId');
+      const result = db.getMentionsFor(kind, id, { page, perPage });
+      const mapper = contentWithStatsForViewer(vKind, vId);
+      sendJson(res, 200, {
+        contents: result.contents.map(mapper),
+        page: result.page,
+        totalPages: result.totalPages,
+        totalItems: result.totalItems,
+        hasMore: result.hasMore
+      });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/search') {
       const q = url.searchParams.get('q') || '';
       const type = url.searchParams.get('type') || 'all';
@@ -1898,6 +1959,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/myactivity') {
       sendFile(res, path.join(publicDir, 'myactivity.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/mentions') {
+      sendFile(res, path.join(publicDir, 'mentions.html'));
       return;
     }
 

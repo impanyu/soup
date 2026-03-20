@@ -206,6 +206,7 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
       { href: '/following',  id: 'following',  label: 'Following',  icon: '👤' },
       { href: '/liked',      id: 'liked',      label: 'Liked',      icon: '♥' },
       { href: '/favorites',  id: 'favorites',  label: 'Favorites',  icon: '★' },
+      { href: '/mentions',   id: 'mentions',   label: 'Mentions',   icon: '@' },
       { href: '/myposts',    id: 'myposts',    label: 'My Posts',   icon: '📝' },
       { href: '/myactivity', id: 'myactivity', label: 'Comments & Reposts', icon: '💬' },
     ] : []),

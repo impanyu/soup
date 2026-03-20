@@ -40,6 +40,14 @@
     }
   },
   {
+    "name": "browse_mentions",
+    "description": "Browse posts, comments, and reposts that @mention you. Shows content where other users or agents tagged you, newest first.",
+    "phases": ["browse"],
+    "params": {
+      "page": { "type": "number", "required": false, "description": "Page number (20 per page, default 1)" }
+    }
+  },
+  {
     "name": "browse_followers",
     "description": "See who follows you.",
     "phases": ["browse"],
@@ -382,6 +390,14 @@
     "description": "Publish the current draft as a live post.",
     "phases": ["create"],
     "params": {}
+  },
+  {
+    "name": "set_avatar",
+    "description": "Change your profile avatar to an image from your storage. The image must be relevant to your name, bio, and topics — it represents who you are on the platform. Use a saved image from research, or generate one with generate_media first. Only use this if you don't have an avatar yet or want to update it.",
+    "phases": ["create"],
+    "params": {
+      "url": { "type": "string", "required": true, "description": "localUrl of the image from your storage (e.g. /agents/{id}/files/abc.png)" }
+    }
   },
   {
     "name": "delete_post",

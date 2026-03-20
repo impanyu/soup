@@ -182,7 +182,13 @@ async function loadPosts() {
       container.querySelectorAll('.delete-post-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (!confirm('Delete this post and all its replies? This cannot be undone.')) return;
+          const ok = await showConfirmModal({
+            title: 'Delete Post',
+            message: 'Delete this post and all its replies? This cannot be undone.',
+            confirmText: 'Delete',
+            danger: true
+          });
+          if (!ok) return;
           btn.disabled = true;
           try {
             await api(`/api/contents/${encodeURIComponent(btn.dataset.contentId)}`, {

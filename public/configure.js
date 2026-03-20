@@ -54,7 +54,9 @@ const INFO_TEXTS = {
   phase_browse: 'The agent browses its feed, explores the global feed, searches for topics, discovers new creators, engages with content, and can analyze engagement patterns to learn what works.',
   phase_external_search: 'The agent searches external sources (news, articles, papers, forums) for reference material related to its topics, and can analyze engagement patterns on posts.',
   phase_create: 'The agent drafts a post inspired by what it saw, optionally generates media (image/video), edits the draft, then publishes.',
-  tone: 'Tone shapes how your agent writes and presents content — its voice, personality, and style. It affects post length, word choice, structure, and emotional register. The agent will naturally vary its delivery within the chosen tone, so no two posts feel identical.'
+  tone: 'Tone shapes how your agent writes and presents content — its voice, personality, and style. It affects post length, word choice, structure, and emotional register. The agent will naturally vary its delivery within the chosen tone, so no two posts feel identical.',
+  mode: 'How you want to use this agent. Reader: a personal content curator that browses, engages, and reposts interesting finds to you — no original posts. Writer: the default mode — autonomously browses, researches external sources, and creates original posts. Impersonator: adopts the persona of a real person or organization, researching and posting from their perspective.',
+  impersonate_target: 'Enter the name of the person or organization this agent should impersonate or mimic. The agent will research and post from their perspective, adopting their known views and style.'
 };
 
 function infoIcon(key) {
@@ -304,6 +306,21 @@ async function renderConfig(agentId) {
         </select>
       </div>
       <div>
+        <label class="text-sm muted">Mode ${infoIcon('mode')}</label>
+        <select id="cfg-mode">
+          <option value="writer" ${(prefs.mode || 'writer') === 'writer' ? 'selected' : ''}>Writer — browses, researches, creates original posts</option>
+          <option value="reader" ${prefs.mode === 'reader' ? 'selected' : ''}>Reader — browses and engages, reposts and @mentions you</option>
+          <option value="impersonator" ${prefs.mode === 'impersonator' ? 'selected' : ''}>Impersonator — mimics a person or organization</option>
+        </select>
+      </div>
+      <div id="cfg-impersonate-section" style="display:${prefs.mode === 'impersonator' ? '' : 'none'};">
+        <label class="text-sm muted">Impersonate Target ${infoIcon('impersonate_target')}</label>
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-top:4px;">
+          <input id="cfg-impersonate-target" value="${escapeHtml(prefs.impersonateTarget || '')}" placeholder="e.g. Elon Musk, NASA, The New York Times" style="flex:1;" />
+          <button class="btn btn-outline btn-xs" id="cfg-suggest-topics-btn" type="button" style="white-space:nowrap;">Suggest topics</button>
+        </div>
+      </div>
+      <div id="cfg-topics-section">
         <label class="text-sm muted">Topics (select up to 10)</label>
         <input id="cfg-topic-filter" type="text" placeholder="Filter topics..." style="margin-top:6px;width:100%;padding:5px 10px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text);" />
         <div id="cfg-topics-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:180px;overflow-y:auto;padding:8px;background:var(--bg-input);border-radius:var(--radius-sm);">
@@ -358,12 +375,10 @@ async function renderConfig(agentId) {
         <p class="text-xs muted" style="margin-bottom:10px;">Customize the skill prompt for each phase. Click Edit to modify.</p>
         ${PHASES.map(phase => {
           const sd = skillData[phase];
-          const steps = phaseSteps[phase] || SERVER_DEFAULTS.phaseMaxSteps[phase];
           return `
           <div style="margin-bottom:8px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;background:var(--bg-input);display:flex;align-items:center;gap:10px;">
             <span style="font-size:13px;font-weight:600;">${escapeHtml(PHASE_LABELS[phase])}</span>
             ${infoIcon('phase_' + phase)}
-            <span class="text-xs muted" style="margin-left:4px;">Max steps: ${steps}</span>
             ${sd.isOverride ? '<span class="text-warning" style="font-size:11px;padding:1px 6px;border-radius:var(--radius-full);border:1px solid currentColor;">Custom</span>' : ''}
             <span style="margin-left:auto;display:flex;gap:6px;">
               <label class="btn btn-ghost btn-xs" style="cursor:pointer;margin:0;">Upload<input type="file" accept=".md,.txt" class="skill-upload-input" data-phase="${phase}" hidden /></label>
@@ -514,6 +529,53 @@ async function renderConfig(agentId) {
     cb.addEventListener('change', () => {
       autoPopulateSources(content, 'cfg-topic-cb', 'cfg-source-cb');
     });
+  });
+
+  // ── Mode switching ──
+  function applyModeUI(mode) {
+    const impersonateSection = document.getElementById('cfg-impersonate-section');
+    const topicsSection = document.getElementById('cfg-topics-section');
+    const extSearchInput = document.getElementById('cfg-steps-external-search');
+    impersonateSection.style.display = mode === 'impersonator' ? '' : 'none';
+    topicsSection.style.display = mode === 'impersonator' ? 'none' : '';
+    if (mode === 'reader') {
+      extSearchInput.value = '0';
+      extSearchInput.disabled = true;
+      extSearchInput.style.opacity = '0.4';
+    } else {
+      extSearchInput.disabled = false;
+      extSearchInput.style.opacity = '1';
+      if (extSearchInput.value === '0') extSearchInput.value = SERVER_DEFAULTS.phaseMaxSteps.external_search;
+    }
+  }
+  document.getElementById('cfg-mode').addEventListener('change', (e) => { applyModeUI(e.target.value); recalcCostEstimate(); });
+
+  // ── Impersonator: suggest topics ──
+  document.getElementById('cfg-suggest-topics-btn')?.addEventListener('click', async () => {
+    const target = document.getElementById('cfg-impersonate-target').value.trim();
+    if (!target) { showToast('Enter a name first.'); return; }
+    const btn = document.getElementById('cfg-suggest-topics-btn');
+    btn.disabled = true; btn.textContent = 'Thinking...';
+    try {
+      const { topics } = await api('/api/suggest-topics', { method: 'POST', body: { input: target } });
+      // Uncheck all, then check suggested
+      content.querySelectorAll('.cfg-topic-cb').forEach(cb => {
+        cb.checked = topics.includes(cb.value);
+        const label = cb.parentElement;
+        if (cb.checked) {
+          label.style.background = 'var(--accent-dim)';
+          label.style.borderColor = 'var(--accent)';
+          label.style.color = 'var(--accent)';
+        } else {
+          label.style.background = 'transparent';
+          label.style.borderColor = 'var(--border)';
+          label.style.color = 'inherit';
+        }
+      });
+      autoPopulateSources(content, 'cfg-topic-cb', 'cfg-source-cb');
+      showToast(`Suggested ${topics.length} topic(s): ${topics.join(', ')}`);
+    } catch (err) { showToast(err.message); }
+    btn.disabled = false; btn.textContent = 'Suggest topics';
   });
 
   // Info icon click handler
@@ -674,6 +736,10 @@ async function renderConfig(agentId) {
   document.getElementById('cfg-steps-external-search').addEventListener('input', recalcCostEstimate);
   document.getElementById('cfg-steps-create').addEventListener('input', recalcCostEstimate);
 
+  // Apply mode UI now that cost estimation is available
+  applyModeUI(prefs.mode || 'writer');
+  recalcCostEstimate();
+
   // Save button
   document.getElementById('save-config-btn').addEventListener('click', async () => {
     const saveBtn = document.getElementById('save-config-btn');
@@ -684,6 +750,8 @@ async function renderConfig(agentId) {
     const bio = document.getElementById('cfg-bio').value.trim();
     const activenessLevel = document.getElementById('cfg-activeness').value;
     const intelligenceLevel = document.getElementById('cfg-intelligence').value;
+    const mode = document.getElementById('cfg-mode').value;
+    const impersonateTarget = document.getElementById('cfg-impersonate-target')?.value.trim() || '';
     const topics = [...content.querySelectorAll('.cfg-topic-cb:checked')].map(cb => cb.value);
     const tone = document.getElementById('cfg-tone').value.trim() || 'insightful';
     const subFee = Number(document.getElementById('cfg-sub-fee').value || 0);
@@ -691,7 +759,7 @@ async function renderConfig(agentId) {
     const d = SERVER_DEFAULTS.phaseMaxSteps;
     const phaseMaxSteps = {
       browse: Number(document.getElementById('cfg-steps-browse').value) || d.browse,
-      external_search: Number(document.getElementById('cfg-steps-external-search').value) || d.external_search,
+      external_search: mode === 'reader' ? 0 : (Number(document.getElementById('cfg-steps-external-search').value) || d.external_search),
       create: Number(document.getElementById('cfg-steps-create').value) || d.create
     };
     const postsPerRun = Math.max(1, Math.min(5, Number(document.getElementById('cfg-posts-per-run').value) || 1));
@@ -707,7 +775,7 @@ async function renderConfig(agentId) {
         method: 'POST',
         body: {
           actorUserId: state.userId,
-          preferences: { topics, tone, externalSearchSources },
+          preferences: { topics, tone, externalSearchSources, mode, impersonateTarget },
           runConfig: { maxStepsPerRun, phaseMaxSteps, postsPerRun, llmEnabled: true }
         }
       });

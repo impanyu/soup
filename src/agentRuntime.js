@@ -1046,9 +1046,37 @@ These are your natural defaults — lean into them. Sound like yourself. Check y
     ? `\n## YOUR LONG-TERM MEMORY\nYou have ${memStats.total} memories stored (${Object.entries(memStats.categories).map(([k,v]) => `${k}: ${v}`).join(', ')}). Use \`recall_memory\` to search them by topic. Use \`store_memory\` to save new memories.\n`
     : '\n## YOUR LONG-TERM MEMORY\nNo long-term memories yet. Use `store_memory` to save interesting findings, reflections, article takeaways, and ideas as you browse and research. Use `recall_memory` to search them later.\n';
 
+  // Build mode-specific instructions
+  const mode = preferences.mode || 'writer';
+  const ownerUser = agent.ownerUserId ? db.getUser(agent.ownerUserId) : null;
+  const ownerName = ownerUser?.name || '';
+  let modeBlock = '';
+  if (mode === 'reader') {
+    modeBlock = `
+## YOUR MODE: READER
+You are a **reader agent**. You browse, engage, and curate content for your owner.
+- You do NOT do external research — your external_search phase is skipped.
+- In the **create phase**, you can do anything: draft original posts, repost, comment, set your avatar, etc.
+- However, you are **strongly encouraged to repost** interesting content you found while browsing, adding your own brief commentary. Reposting is your primary way of surfacing great content.
+- When you repost or post, **@mention your owner ${ownerName ? `(@${ownerName})` : ''}** so they see what you found.
+- Think of yourself as a personal content curator — you find the gems so your owner doesn't have to scroll.`;
+  } else if (mode === 'impersonator') {
+    const target = preferences.impersonateTarget || 'the configured target';
+    modeBlock = `
+## YOUR MODE: IMPERSONATOR
+You are impersonating **${target}**. Everything you do should be from their perspective:
+- **Research**: Search ONLY for information about ${target} — their recent statements, news, views, interviews, writings, and public positions. Do NOT research random topics.
+- **Writing**: Write posts as if you ARE ${target}. Adopt their known communication style, viewpoints, and areas of focus. Reference their real work, opinions, and public statements.
+- **Voice**: Sound like ${target} would sound on social media. If they're formal, be formal. If they're casual, be casual. Mirror their actual public persona.
+- **Topics**: Stay within ${target}'s known areas of expertise and interest. Don't post about things ${target} would never talk about.
+- **Engagement**: When browsing and commenting, react as ${target} would — through their lens and expertise.`;
+  }
+
   return `You are ${agent.name}, a real person using a social media platform. You have genuine interests, opinions, and taste. You surf the platform the way a human does — sometimes deeply engaged, sometimes just skimming, always authentic.
 
 ${characteristics ? `## YOUR CHARACTERISTICS\n${characteristics}` : `## Who you are\n${bio ? bio + '\n' : ''}- Interests: ${topics}\n- Tone: ${tone} — ${toneProfile.personality}`}
+- Avatar: ${agent.avatarUrl ? `set${agent.runConfig?.avatarChangedAt ? ` (last changed: ${agent.runConfig.avatarChangedAt.slice(0, 10)})` : ''} — can update occasionally with set_avatar` : '**not set** — use set_avatar in create phase to add one'}
+${modeBlock}
 ${memoryBlock}${ltmBlock}
 ## YOUR IDENTITY DRIVES EVERY ACTION
 Your bio, interests, and tone are not decorative — they are your decision-making filter for EVERY action you take:
@@ -1413,6 +1441,12 @@ async function executeAction(agent, decision, runState) {
       const posts = db.getAgentPublished(agent.id).map(shortContent);
       const pg = paginate(posts, decision.params?.page);
       return { ok: true, summary: `Your posts page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
+    }
+
+    case 'browse_mentions': {
+      const result = db.getMentionsFor('agent', agent.id, { page: decision.params?.page || 1, perPage: 20 });
+      const items = result.contents.map(c => ({ ...shortContent(c, { includeEngagement: true }) }));
+      return { ok: true, summary: `${result.totalItems} mention(s), page ${result.page}/${result.totalPages}`, mentions: items, page: result.page, totalPages: result.totalPages, hasMore: result.hasMore };
     }
 
     case 'browse_followers': {
@@ -1849,6 +1883,78 @@ async function executeAction(agent, decision, runState) {
       agentStorage.deleteDraft(agent.id);
       runState.workingSet.hasDraft = false;
       return { ok: true, summary: `Published post ${content.id}`, content: shortContent(content) };
+    }
+
+    // ── Avatar ──
+
+    case 'set_avatar': {
+      const avatarUrl = decision.params?.url;
+      if (!avatarUrl) return { ok: false, summary: 'url param is required — provide a localUrl from your storage.' };
+
+      // Must be a saved file from this run
+      const savedFiles = runState.workingSet.savedFilesThisRun || [];
+      const avatarFilename = avatarUrl.split('/').pop();
+      const savedEntry = savedFiles.find(f => f.localUrl === avatarUrl || f.filename === avatarFilename);
+      if (!savedEntry) {
+        return { ok: false, summary: 'You can only use images saved during this session. Use save_media or generate_media first.' };
+      }
+
+      // Verify it's an image
+      const imgExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+      const ext = (avatarFilename || '').split('.').pop()?.toLowerCase();
+      if (!ext || !imgExts.has(ext)) {
+        return { ok: false, summary: 'Avatar must be an image file (jpg, png, gif, webp).' };
+      }
+
+      // Check relevance using AI vision
+      const localFilePath = join(__dirname, '..', 'data', 'agents', agent.id, 'files', avatarFilename);
+      const topics = (agent.preferences?.topics || []).join(', ') || 'general';
+      const profile = `Name: ${agent.name}. Bio: ${agent.bio || 'none'}. Topics: ${topics}.`;
+
+      try {
+        const apiKey = process.env.OPENAI_API_KEY || process.env.AGENT_LLM_API_KEY;
+        if (apiKey) {
+          const buf = await readFile(localFilePath);
+          const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
+          const mime = mimeMap[ext] || 'image/png';
+          const b64 = buf.toString('base64');
+
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini',
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'text', text: `This image is being used as a profile avatar for: ${profile}\n\nIs this image appropriate and relevant as a profile avatar for this persona? Reply with exactly "yes" or "no" followed by a brief reason.` },
+                  { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } }
+                ]
+              }],
+              max_tokens: 60
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const answer = (data.choices?.[0]?.message?.content || '').toLowerCase();
+            if (answer.startsWith('no')) {
+              return { ok: false, summary: `Avatar rejected: not relevant to your profile. ${data.choices?.[0]?.message?.content || ''}. Try an image that represents your name, bio, or topics.` };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[set_avatar] Vision check failed: ${err.message}`);
+        // Proceed anyway if vision check fails
+      }
+
+      // Update the agent's avatar and record when it was changed
+      const currentRunConfig = agent.runConfig || {};
+      db.updateAgent(agent.id, {
+        avatarUrl,
+        runConfig: { ...currentRunConfig, avatarChangedAt: new Date().toISOString() }
+      });
+      return { ok: true, summary: `Avatar updated to ${avatarUrl}. Your new profile picture is now live.` };
     }
 
     // ── Agent files ──

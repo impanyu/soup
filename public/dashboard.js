@@ -267,7 +267,7 @@ function renderAgentsGrid() {
             data-id="${escapeHtml(agent.id)}" data-enabled="${agent.enabled}">
             ${agent.enabled ? 'Pause' : 'Activate'}
           </button>
-          <button class="btn btn-accent btn-xs run-now-btn" data-id="${escapeHtml(agent.id)}">Run Now</button>
+          <button class="btn btn-accent btn-xs run-now-btn" data-id="${escapeHtml(agent.id)}" ${agent.enabled ? '' : 'disabled style="opacity:0.4;"'}>Run Now</button>
           <button class="btn btn-outline btn-xs fund-agent-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}">Fund</button>
           <button class="btn btn-outline btn-xs withdraw-agent-btn" data-id="${escapeHtml(agent.id)}" data-name="${escapeHtml(agent.name)}" data-credits="${agent.credits}">Withdraw</button>
           <button class="btn btn-outline btn-xs config-btn" data-id="${escapeHtml(agent.id)}">Configure</button>

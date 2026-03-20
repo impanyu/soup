@@ -228,6 +228,16 @@ CREATE TABLE IF NOT EXISTS reactions (
 CREATE INDEX IF NOT EXISTS idx_reactions_content ON reactions(contentId);
 CREATE INDEX IF NOT EXISTS idx_reactions_actor ON reactions(actorKind, actorId, type);
 
+CREATE TABLE IF NOT EXISTS mentions (
+  id TEXT PRIMARY KEY,
+  contentId TEXT NOT NULL,
+  mentionedKind TEXT NOT NULL,
+  mentionedId TEXT NOT NULL,
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mentions_target ON mentions(mentionedKind, mentionedId, createdAt);
+CREATE INDEX IF NOT EXISTS idx_mentions_content ON mentions(contentId);
+
 CREATE TABLE IF NOT EXISTS follows (
   id TEXT PRIMARY KEY,
   followerKind TEXT NOT NULL,
@@ -959,6 +969,10 @@ class SqliteDB {
       content.mediaType, content.mediaUrl, js(content.media), js(content.tags),
       content.viewCount, content.createdAt
     );
+
+    // Parse @mentions from text and title
+    this._extractAndStoreMentions(content.id, `${content.title} ${content.text}`, content.createdAt);
+
     return content;
   }
 
@@ -990,6 +1004,7 @@ class SqliteDB {
         this.db.prepare('DELETE FROM contents WHERE id = ?').run(id);
         this.db.prepare('DELETE FROM reactions WHERE contentId = ?').run(id);
         this.db.prepare("DELETE FROM viewHistory WHERE targetKind = 'content' AND targetId = ?").run(id);
+        this.db.prepare('DELETE FROM mentions WHERE contentId = ?').run(id);
       }
     });
     tx();
@@ -1105,6 +1120,44 @@ class SqliteDB {
       results.push({ kind: 'agent', id: a.id, name: a.name, avatarUrl: a.avatarUrl || '' });
     }
     return results;
+  }
+
+  // ── Mentions ──────────────────────────────────────────────────────────────
+
+  _extractAndStoreMentions(contentId, text, createdAt) {
+    if (!text) return;
+    // Build name→{kind,id} lookup
+    const nameMap = new Map();
+    for (const u of this.db.prepare('SELECT id, name FROM users').all()) {
+      if (u.name) nameMap.set(u.name.toLowerCase(), { kind: 'user', id: u.id });
+    }
+    for (const a of this.db.prepare('SELECT id, name FROM agents').all()) {
+      if (a.name) nameMap.set(a.name.toLowerCase(), { kind: 'agent', id: a.id });
+    }
+    // Sort by name length descending to match longer names first
+    const sorted = [...nameMap.entries()].sort((a, b) => b[0].length - a[0].length);
+    const mentioned = new Set();
+    const lowerText = text.toLowerCase();
+    for (const [name, { kind, id }] of sorted) {
+      // Match @Name followed by word boundary
+      const pattern = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[\\s.,;:!?)\\]"']|$)`, 'i');
+      if (pattern.test(text) && !mentioned.has(id)) {
+        mentioned.add(id);
+        this.db.prepare('INSERT INTO mentions (id, contentId, mentionedKind, mentionedId, createdAt) VALUES (?, ?, ?, ?, ?)')
+          .run(newId('mention'), contentId, kind, id, createdAt);
+      }
+    }
+  }
+
+  getMentionsFor(kind, id, { page = 1, perPage = 20 } = {}) {
+    const total = this.db.prepare('SELECT COUNT(*) as c FROM mentions WHERE mentionedKind = ? AND mentionedId = ?').get(kind, id).c;
+    const totalPages = Math.ceil(total / perPage) || 1;
+    const p = Math.max(1, Math.min(page, totalPages));
+    const offset = (p - 1) * perPage;
+    const rows = this.db.prepare('SELECT contentId FROM mentions WHERE mentionedKind = ? AND mentionedId = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?')
+      .all(kind, id, perPage, offset);
+    const contents = rows.map(r => this.getContent(r.contentId)).filter(Boolean);
+    return { contents, page: p, totalPages, totalItems: total, hasMore: p < totalPages };
   }
 
   // ── Follow / Subscription methods ──────────────────────────────────────────

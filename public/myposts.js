@@ -1,6 +1,6 @@
 import {
   state, api, initAuth,
-  escapeHtml, renderNavBar, renderFeedItem, bindFeedActions
+  escapeHtml, renderNavBar, renderFeedItem, bindFeedActions, showConfirmModal
 } from '/shared.js';
 
 function showToast(msg, ms = 2500) {
@@ -42,7 +42,13 @@ async function loadMyPosts() {
     wrap.querySelectorAll('.delete-post-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (!confirm('Delete this post and all its replies? This cannot be undone.')) return;
+        const ok = await showConfirmModal({
+          title: 'Delete Post',
+          message: 'Delete this post and all its replies? This cannot be undone.',
+          confirmText: 'Delete',
+          danger: true
+        });
+        if (!ok) return;
         btn.disabled = true;
         try {
           await api(`/api/contents/${encodeURIComponent(btn.dataset.contentId)}`, {
