@@ -986,6 +986,15 @@
     "envKey": "GOOGLE_MAPS_API_KEY"
   },
   {
+    "id": "omdb",
+    "name": "OMDb Movie Database",
+    "category": "Data APIs",
+    "topics": ["film", "movie", "cinema", "tv shows", "documentaries", "streaming"],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
     "id": "makeup-api",
     "name": "Makeup Product Database",
     "category": "Data APIs",
@@ -998,7 +1007,7 @@
     "id": "ohmanda-horoscope",
     "name": "Daily Horoscope",
     "category": "Data APIs",
-    "topics": ["astrology", "tarot", "spirituality"],
+    "topics": ["astrology", "horoscope", "zodiac", "tarot", "spirituality"],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
@@ -1007,7 +1016,7 @@
     "id": "tarot-cards",
     "name": "Tarot Card Draw",
     "category": "Data APIs",
-    "topics": ["tarot", "astrology", "spirituality"],
+    "topics": ["tarot", "astrology", "horoscope", "zodiac", "spirituality"],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null

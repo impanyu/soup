@@ -2354,6 +2354,73 @@ async function executeAction(agent, decision, runState) {
       }
     }
 
+    // ── Movie & TV tools ──
+
+    case 'search_movies': {
+      const p = decision.params || {};
+      const query = p.query;
+      if (!query) return { ok: false, summary: 'query is required.' };
+      let url = `https://www.omdbapi.com/?apikey=trilogy&s=${encodeURIComponent(query)}`;
+      if (p.type) url += `&type=${encodeURIComponent(p.type)}`;
+      if (p.year) url += `&y=${encodeURIComponent(p.year)}`;
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`OMDb API: ${res.status}`);
+        const data = await res.json();
+        if (data.Response === 'False') return { ok: false, summary: `No results for "${query}": ${data.Error || 'not found'}` };
+        const results = (data.Search || []).slice(0, 10).map(m => ({
+          title: m.Title,
+          year: m.Year,
+          imdbId: m.imdbID,
+          type: m.Type,
+          poster: m.Poster !== 'N/A' ? m.Poster : null
+        }));
+        return { ok: true, summary: `Found ${results.length} result(s) for "${query}". Use get_movie_details with imdbId for full info.`, results };
+      } catch (err) {
+        return { ok: false, summary: `search_movies failed: ${err.message}` };
+      }
+    }
+
+    case 'get_movie_details': {
+      const p = decision.params || {};
+      if (!p.id && !p.title) return { ok: false, summary: 'id (IMDb ID) or title is required.' };
+      let url = `https://www.omdbapi.com/?apikey=trilogy&plot=full`;
+      if (p.id) url += `&i=${encodeURIComponent(p.id)}`;
+      else url += `&t=${encodeURIComponent(p.title)}`;
+      if (p.year) url += `&y=${encodeURIComponent(p.year)}`;
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`OMDb API: ${res.status}`);
+        const data = await res.json();
+        if (data.Response === 'False') return { ok: false, summary: `Not found: ${data.Error || 'unknown error'}` };
+        const details = {
+          title: data.Title,
+          year: data.Year,
+          rated: data.Rated,
+          runtime: data.Runtime,
+          genre: data.Genre,
+          director: data.Director,
+          writers: data.Writer,
+          actors: data.Actors,
+          plot: data.Plot,
+          language: data.Language,
+          country: data.Country,
+          awards: data.Awards !== 'N/A' ? data.Awards : null,
+          poster: data.Poster !== 'N/A' ? data.Poster : null,
+          ratings: (data.Ratings || []).map(r => ({ source: r.Source, value: r.Value })),
+          imdbRating: data.imdbRating !== 'N/A' ? data.imdbRating : null,
+          imdbVotes: data.imdbVotes !== 'N/A' ? data.imdbVotes : null,
+          boxOffice: data.BoxOffice !== 'N/A' ? data.BoxOffice : null,
+          type: data.Type,
+          imdbId: data.imdbID
+        };
+        const ratingStr = details.ratings.map(r => `${r.source}: ${r.value}`).join(', ') || 'no ratings';
+        return { ok: true, summary: `${details.title} (${details.year}) — ${ratingStr}. ${details.poster ? 'Poster available — use save_media to save it.' : ''}`, details };
+      } catch (err) {
+        return { ok: false, summary: `get_movie_details failed: ${err.message}` };
+      }
+    }
+
     // ── Beauty & Makeup tools ──
 
     case 'search_makeup': {

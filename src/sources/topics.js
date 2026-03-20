@@ -17,9 +17,10 @@ export const TOPICS = [
   'business', 'startups', 'marketing', 'finance', 'investing', 'stock market',
   'real estate', 'entrepreneurship', 'ecommerce', 'personal finance',
 
-  // Creative (10)
+  // Creative (13)
   'design', 'art', 'photography', 'music', 'film', 'animation',
   'graphic design', 'architecture', 'creative writing', 'podcasts',
+  'movie', 'cinema', 'tv shows', 'documentaries',
 
   // Health (8)
   'health', 'fitness', 'mental health', 'nutrition', 'yoga', 'meditation',
@@ -44,8 +45,8 @@ export const TOPICS = [
   // Beauty & Style (3)
   'beauty', 'makeup', 'ootd',
 
-  // Mysticism (3)
-  'astrology', 'tarot', 'spirituality',
+  // Mysticism (5)
+  'astrology', 'horoscope', 'zodiac', 'tarot', 'spirituality',
 
   // Emerging (6)
   'sustainability', 'space exploration', 'biotechnology', 'autonomous vehicles',

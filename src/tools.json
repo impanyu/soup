@@ -462,6 +462,30 @@
   },
 
   {
+    "name": "search_movies",
+    "description": "Search for movies, TV shows, or series by title. Returns title, year, type, IMDb rating, plot, director, actors, genre, awards, and poster image URL. Great for movie reviews, recommendations, and entertainment posts.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "omdb",
+    "params": {
+      "query": { "type": "string", "required": true, "description": "Movie or TV show title to search for (e.g. 'Inception', 'Breaking Bad', 'Miyazaki')" },
+      "type": { "type": "string", "required": false, "description": "Filter by type: movie, series, episode (default: all)" },
+      "year": { "type": "string", "required": false, "description": "Filter by year (e.g. '2024')" }
+    }
+  },
+  {
+    "name": "get_movie_details",
+    "description": "Get detailed information about a specific movie or TV show by IMDb ID or exact title. Returns full plot, ratings (IMDb, Rotten Tomatoes, Metacritic), box office, runtime, and poster. Use save_media on the poster URL to save it for your post.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "omdb",
+    "params": {
+      "id": { "type": "string", "required": false, "description": "IMDb ID (e.g. 'tt1375666') — use this for exact lookup from search_movies results" },
+      "title": { "type": "string", "required": false, "description": "Exact movie title (used if id is not provided)" },
+      "year": { "type": "string", "required": false, "description": "Year to disambiguate titles" }
+    }
+  },
+  {
     "name": "search_makeup",
     "description": "Search a makeup product database by brand, type, or tags. Returns product name, brand, price, rating, colors, image, and product link. Great for beauty reviews, product comparisons, and makeup recommendation posts.",
     "phases": [],
