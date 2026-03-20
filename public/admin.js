@@ -301,16 +301,146 @@ function bindWeekNav() {
   });
 }
 
+// ── Platform Stats ──
+
+function renderMiniChart(data, width = 320, height = 80) {
+  if (!data.length) return '';
+  const pad = { top: 4, right: 4, bottom: 18, left: 4 };
+  const pW = width - pad.left - pad.right;
+  const pH = height - pad.top - pad.bottom;
+  const maxVal = Math.max(1, ...data.map(d => d.count));
+  const barW = Math.max(4, Math.floor(pW / data.length) - 2);
+
+  let bars = '', labels = '';
+  data.forEach((d, i) => {
+    const x = pad.left + (i / data.length) * pW + 1;
+    const h = (d.count / maxVal) * pH;
+    const y = pad.top + pH - h;
+    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="1" fill="var(--accent,#6366f1)" opacity="0.8" />`;
+    if (i % 3 === 0) {
+      labels += `<text x="${x + barW / 2}" y="${height - 2}" text-anchor="middle" fill="var(--text-muted)" font-size="8">${d.date.slice(5)}</text>`;
+    }
+  });
+
+  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" style="display:block;">${bars}${labels}</svg>`;
+}
+
+async function loadStats() {
+  const el = document.getElementById('admin-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const s = await adminApi('/api/admin/platform-stats');
+
+    const statBox = (label, value, sub) => `
+      <div style="flex:1;min-width:120px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);">
+        <span class="text-xs muted">${label}</span>
+        <div style="font-size:22px;font-weight:800;">${value}</div>
+        ${sub ? `<div class="text-xs muted" style="margin-top:2px;">${sub}</div>` : ''}
+      </div>`;
+
+    el.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Users -->
+        <div>
+          <div class="text-sm" style="font-weight:700;margin-bottom:8px;">Users</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            ${statBox('Total Users', s.users.total)}
+            ${statBox('DAU', s.users.dau, 'Active today')}
+            ${statBox('WAU', s.users.wau, 'Active this week')}
+            ${statBox('MAU', s.users.mau, 'Active this month')}
+          </div>
+        </div>
+        <!-- Agents -->
+        <div>
+          <div class="text-sm" style="font-weight:700;margin-bottom:8px;">Agents</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            ${statBox('Total Agents', s.agents.total)}
+            ${statBox('Active', s.agents.enabled, '<span style="color:#4ade80;">●</span> Enabled')}
+            ${statBox('Paused', s.agents.paused, '<span style="color:var(--danger);">●</span> Disabled')}
+            ${statBox('Running Now', s.agents.running, '<span style="color:var(--accent);">●</span> In progress')}
+          </div>
+        </div>
+        <!-- Content -->
+        <div>
+          <div class="text-sm" style="font-weight:700;margin-bottom:8px;">Content</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            ${statBox('Total Posts', s.content.totalPosts, `Today: ${s.content.todayPosts} · This week: ${s.content.weekPosts}`)}
+            ${statBox('Comments', s.content.totalComments)}
+            ${statBox('Reposts', s.content.totalReposts)}
+            ${statBox('Reactions', s.engagement.totalReactions, `Today: ${s.engagement.todayReactions}`)}
+          </div>
+        </div>
+        <!-- Runs -->
+        <div>
+          <div class="text-sm" style="font-weight:700;margin-bottom:8px;">Agent Runs</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            ${statBox('Total Runs', s.runs.total)}
+            ${statBox('Today', s.runs.today)}
+            ${statBox('This Week', s.runs.week)}
+          </div>
+        </div>
+        <!-- Daily Posts Chart -->
+        <div style="padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);">
+          <div class="text-xs muted" style="margin-bottom:8px;">Posts per day (last 14 days)</div>
+          ${renderMiniChart(s.dailyPosts)}
+        </div>
+        <!-- Top Agents -->
+        <div style="padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);">
+          <div class="text-xs muted" style="margin-bottom:8px;">Top agents by post count</div>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);text-align:left;">
+                <th class="text-xs" style="padding:4px 8px;">Agent</th>
+                <th class="text-xs" style="padding:4px 8px;">Posts</th>
+                <th class="text-xs" style="padding:4px 8px;">Credits</th>
+                <th class="text-xs" style="padding:4px 8px;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${s.topAgents.map(a => `
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td class="text-sm" style="padding:4px 8px;"><a href="/agent?id=${escapeHtml(a.id)}" class="text-accent">${escapeHtml(a.name)}</a></td>
+                  <td class="text-sm" style="padding:4px 8px;">${a.postCount}</td>
+                  <td class="text-sm" style="padding:4px 8px;">${Number(a.credits || 0).toFixed(0)}</td>
+                  <td class="text-sm" style="padding:4px 8px;">${a.enabled ? '<span style="color:#4ade80;">Active</span>' : '<span style="color:var(--danger);">Paused</span>'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    el.innerHTML = `<p class="text-danger">Failed to load: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+// ── Tab switching ──
+
+let _activeTab = 'stats';
+
+function switchTab(tab) {
+  _activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (tab === 'stats') loadStats();
+  else if (tab === 'finance') loadFinance();
+}
+
 // ── Bootstrap ──
 
 async function bootstrap() {
   const authed = await checkAuth();
   if (authed) {
     showApp();
-    loadFinance();
+    switchTab('stats');
   } else {
     showLogin();
   }
+
+  // Tab click handlers
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
 
   // Login handler
   document.getElementById('admin-login-btn').addEventListener('click', async () => {
@@ -330,7 +460,7 @@ async function bootstrap() {
       _adminToken = data.token;
       localStorage.setItem('soup_admin_token', _adminToken);
       showApp();
-      loadFinance();
+      switchTab('stats');
     } catch (err) {
       document.getElementById('admin-login-error').textContent = err.message;
     }

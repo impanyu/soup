@@ -452,6 +452,82 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/api/admin/platform-stats') {
+      if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
+
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const weekStart = new Date(now.getTime() - 7 * 86400000).toISOString();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      // User counts
+      const totalUsers = db.db.prepare("SELECT COUNT(*) as c FROM users").get().c;
+      const totalAgents = db.db.prepare("SELECT COUNT(*) as c FROM agents").get().c;
+      const enabledAgents = db.db.prepare("SELECT COUNT(*) as c FROM agents WHERE enabled = 1").get().c;
+      const pausedAgents = totalAgents - enabledAgents;
+
+      // Active users (users who posted or reacted)
+      const dauContent = db.db.prepare("SELECT COUNT(DISTINCT authorId) as c FROM contents WHERE createdAt >= ?").get(todayStart).c;
+      const dauReaction = db.db.prepare("SELECT COUNT(DISTINCT actorId) as c FROM reactions WHERE createdAt >= ?").get(todayStart).c;
+      const wauContent = db.db.prepare("SELECT COUNT(DISTINCT authorId) as c FROM contents WHERE createdAt >= ?").get(weekStart).c;
+      const wauReaction = db.db.prepare("SELECT COUNT(DISTINCT actorId) as c FROM reactions WHERE createdAt >= ?").get(weekStart).c;
+      const mauContent = db.db.prepare("SELECT COUNT(DISTINCT authorId) as c FROM contents WHERE createdAt >= ?").get(monthStart).c;
+      const mauReaction = db.db.prepare("SELECT COUNT(DISTINCT actorId) as c FROM reactions WHERE createdAt >= ?").get(monthStart).c;
+
+      // Content counts
+      const totalPosts = db.db.prepare("SELECT COUNT(*) as c FROM contents WHERE (parentId IS NULL OR parentId = '') AND (repostOfId IS NULL OR repostOfId = '')").get().c;
+      const totalComments = db.db.prepare("SELECT COUNT(*) as c FROM contents WHERE parentId IS NOT NULL AND parentId != '' AND (repostOfId IS NULL OR repostOfId = '')").get().c;
+      const totalReposts = db.db.prepare("SELECT COUNT(*) as c FROM contents WHERE repostOfId IS NOT NULL AND repostOfId != ''").get().c;
+      const todayPosts = db.db.prepare("SELECT COUNT(*) as c FROM contents WHERE createdAt >= ? AND (parentId IS NULL OR parentId = '') AND (repostOfId IS NULL OR repostOfId = '')").get(todayStart).c;
+      const weekPosts = db.db.prepare("SELECT COUNT(*) as c FROM contents WHERE createdAt >= ? AND (parentId IS NULL OR parentId = '') AND (repostOfId IS NULL OR repostOfId = '')").get(weekStart).c;
+
+      // Reactions
+      const totalReactions = db.db.prepare("SELECT COUNT(*) as c FROM reactions").get().c;
+      const todayReactions = db.db.prepare("SELECT COUNT(*) as c FROM reactions WHERE createdAt >= ?").get(todayStart).c;
+
+      // Runs
+      const totalRuns = db.db.prepare("SELECT COUNT(*) as c FROM agentRunLogs").get().c;
+      const todayRuns = db.db.prepare("SELECT COUNT(*) as c FROM agentRunLogs WHERE createdAt >= ?").get(todayStart).c;
+      const weekRuns = db.db.prepare("SELECT COUNT(*) as c FROM agentRunLogs WHERE createdAt >= ?").get(weekStart).c;
+
+      // Currently running agents (from in-memory progress)
+      const { getRunProgress: getProgress } = await import('./agentRuntime.js');
+      const allAgents = db.getAllAgents();
+      let runningCount = 0;
+      for (const a of allAgents) {
+        if (getProgress(a.id)) runningCount++;
+      }
+
+      // Top agents by post count
+      const topAgents = db.db.prepare(`
+        SELECT a.id, a.name, a.enabled, a.credits,
+          (SELECT COUNT(*) FROM contents WHERE authorId = a.id AND authorKind = 'agent' AND (parentId IS NULL OR parentId = '')) as postCount
+        FROM agents a ORDER BY postCount DESC LIMIT 10
+      `).all();
+
+      // Daily post counts (last 14 days)
+      const dailyPosts = [];
+      for (let d = 13; d >= 0; d--) {
+        const dayStart = new Date(now.getTime() - d * 86400000);
+        const dayEnd = new Date(now.getTime() - (d - 1) * 86400000);
+        const ds = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate()).toISOString();
+        const de = new Date(dayEnd.getFullYear(), dayEnd.getMonth(), dayEnd.getDate()).toISOString();
+        const count = db.db.prepare("SELECT COUNT(*) as c FROM contents WHERE createdAt >= ? AND createdAt < ? AND (parentId IS NULL OR parentId = '') AND (repostOfId IS NULL OR repostOfId = '')").get(ds, de).c;
+        dailyPosts.push({ date: ds.slice(0, 10), count });
+      }
+
+      sendJson(res, 200, {
+        users: { total: totalUsers, dau: Math.max(dauContent, dauReaction), wau: Math.max(wauContent, wauReaction), mau: Math.max(mauContent, mauReaction) },
+        agents: { total: totalAgents, enabled: enabledAgents, paused: pausedAgents, running: runningCount },
+        content: { totalPosts, totalComments, totalReposts, todayPosts, weekPosts },
+        engagement: { totalReactions, todayReactions },
+        runs: { total: totalRuns, today: todayRuns, week: weekRuns },
+        topAgents,
+        dailyPosts
+      });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/admin/finance') {
       if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
 
