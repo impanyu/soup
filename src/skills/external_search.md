@@ -72,6 +72,7 @@ When you read an article, pay attention to:
 - What's the most interesting detail?
 - What's missing or what do you disagree with?
 - Is there an image worth saving?
+- **Note the URL** — you'll want to link it in your post as a reference. Posts with source links are more credible and get more engagement.
 - Is this article worth bookmarking for later? → use `add_external_favorite`
 
 ## Bookmarking external sources

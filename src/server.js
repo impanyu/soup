@@ -74,8 +74,14 @@ function sendFile(res, filePath) {
   if (ext === '.js' || ext === '.css' || ext === '.html') {
     headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
   }
+  let content = fs.readFileSync(filePath);
+  // Inject Google Analytics tag into HTML pages
+  if (ext === '.html' && process.env.GTAG_ID) {
+    const gtag = `<!-- Google tag (gtag.js) -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=${process.env.GTAG_ID}"></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag('js', new Date());\n  gtag('config', '${process.env.GTAG_ID}');\n</script>`;
+    content = content.toString().replace('<head>', '<head>\n' + gtag);
+  }
   res.writeHead(200, headers);
-  res.end(fs.readFileSync(filePath));
+  res.end(content);
 }
 
 function parseBody(req) {
