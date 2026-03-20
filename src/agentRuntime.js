@@ -595,14 +595,8 @@ async function generateMedia(prompt, { generationMode = 'text-to-image', sourceI
       return await generateImageOpenAI(prompt, { sourceImageUrl });
     }
   } catch (err) {
-    console.log(`[media] OpenAI generation failed: ${err.message}`);
-    return {
-      url: `https://example.com/mock-media/${generationMode}?prompt=${encodeURIComponent(prompt || 'agent-generated')}`,
-      type: resultType,
-      prompt: prompt || '',
-      generationMode,
-      mock: true
-    };
+    console.error(`[media] OpenAI generation failed: ${err.message}`);
+    throw new Error(`Image generation failed: ${err.message}. Check that OPENAI_API_KEY is set and the Images API is enabled.`);
   }
 }
 
@@ -1065,7 +1059,7 @@ You are a **reader agent**. You browse, engage, and curate content for your owne
     modeBlock = `
 ## YOUR MODE: IMPERSONATOR
 You are impersonating **${target}**. Everything you do should be from their perspective:
-- **Research**: Search ONLY for information about ${target} — their recent statements, news, views, interviews, writings, and public positions. Do NOT research random topics.
+- **Research**: Search for information about ${target} — their recent statements, news, views, and public positions. Use SHORT search queries (1-4 words, e.g. "Starship update", "Tesla robot", not "SpaceX Starship orbital progress 2025 latest update"). When you find results, READ them with fetch_by_url — don't just search endlessly.
 - **Writing**: Write posts as if you ARE ${target}. Adopt their known communication style, viewpoints, and areas of focus. Reference their real work, opinions, and public statements.
 - **Voice**: Sound like ${target} would sound on social media. If they're formal, be formal. If they're casual, be casual. Mirror their actual public persona.
 - **Topics**: Stay within ${target}'s known areas of expertise and interest. Don't post about things ${target} would never talk about.
@@ -1744,21 +1738,16 @@ async function executeAction(agent, decision, runState) {
 
       if (!result.url) return { ok: false, summary: 'Media generation failed — no URL returned.' };
 
-      // Save to agent storage (same as save_media)
+      // Save to agent storage
       let localUrl = result.url;
       let filename = '';
-      if (!result.mock) {
-        try {
-          const stored = await agentStorage.downloadToAgentStorage(agent.id, result.url);
-          localUrl = stored.localUrl;
-          filename = stored.filename;
-          agentStorage.recordFileMetadata(agent.id, stored.filename, { caption: prompt, sourceUrl: result.url, origin: 'ai_generated' });
-        } catch (err) {
-          return { ok: false, summary: `Generated media but failed to save: ${err.message}` };
-        }
-      } else {
-        // Mock mode — still track in savedFilesThisRun
-        filename = localUrl.split('/').pop() || 'mock';
+      try {
+        const stored = await agentStorage.downloadToAgentStorage(agent.id, result.url);
+        localUrl = stored.localUrl;
+        filename = stored.filename;
+        agentStorage.recordFileMetadata(agent.id, stored.filename, { caption: prompt, sourceUrl: result.url, origin: 'ai_generated' });
+      } catch (err) {
+        return { ok: false, summary: `Generated media but failed to save: ${err.message}` };
       }
 
       runState.workingSet.savedFilesThisRun.push({ filename, localUrl, description: `AI-generated ${result.type}: ${prompt}` });

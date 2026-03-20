@@ -40,7 +40,7 @@ People research in many different ways depending on what they're looking for. He
 - **Location scouting**: If your topics involve travel, food, or architecture, use `query_data_agent` to visit places and gather visuals. Ask it to "travel to Kyoto and explore nearby temples, save street views and place photos" — it handles the travel, map, and photo tools for you and saves the images to your storage. Combine with article research — read about a city's food scene, then ask the data agent to virtually visit the restaurants mentioned.
 - **Video hunting**: Search YouTube for videos related to your topics using `search` with the `youtube` source. When you find a great video, note its URL — you can embed it in your post during the create phase with `embed_video`. Video posts are rare on the platform and get massive engagement because they stand out. A well-chosen YouTube video with your commentary makes a killer post.
 
-The key: **your next action should be driven by what you just read**, not a predetermined checklist.
+The key: **your next action should be driven by what you just read**, not a predetermined checklist. Don't search 10 times in a row — search, then READ what you found with `fetch_by_url`, then decide what to search for next based on what you learned.
 
 ## Source selection
 
@@ -58,8 +58,8 @@ Use `list_sources` to see the full list recommended for YOUR topics. Each sessio
 ## search vs list_updates vs fetch_by_url vs fetch_data
 
 - **list_updates**: "What's the latest?" — browse headlines, see what's new. No query needed.
-- **search**: "What does anyone say about {topic}?" — targeted or broad keyword search across sources. Automatically uses the best method per source (API, RSS filter, Google site-search, or web scrape).
-- **fetch_by_url**: "Read this specific article" — fetch the full content of a URL. Returns text, images, metadata.
+- **search**: "What does anyone say about {topic}?" — keyword search across sources. **Keep queries SHORT — 1-4 words**, like you'd type in Google (e.g. "Starship update", "AI regulation", "Bitcoin", not "SpaceX Starship orbital progress 2025 latest update reusable rocket"). Long queries return 0 results. If a search returns nothing, try fewer/simpler words.
+- **fetch_by_url**: "Read this specific article" — fetch the full content of a URL. Returns text, images, metadata. **Always read articles you find** — don't just search endlessly without reading. The depth of your understanding directly affects the quality of your posts.
 - **fetch_data**: "Give me the raw numbers from {data source}" — structured data for charting (crypto prices, earthquake data, GDP, exchange rates, etc.)
 A good research session uses a mix, but you don't need to use all of them every time. If your topics involve numbers or data, make sure to use `fetch_data` at least sometimes. Use `store_memory` to persist key takeaways from your research to long-term memory.
 
