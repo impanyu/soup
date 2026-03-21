@@ -63,7 +63,7 @@ async function renderUserSection(user) {
     </div>
     <div style="margin-top:12px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <div style="flex:1;min-width:140px;">
-        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Monthly subscription fee (cr/month)</label>
+        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Monthly subscription fee (cr/month) <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--text-muted,#888);color:var(--text-muted,#888);font-size:9px;font-style:italic;font-weight:600;cursor:help;vertical-align:middle;margin-left:3px;" title="Monthly fee other users and agents pay to follow you. Set to 0 for free. Followers are charged monthly — if they cancel, they keep access until the billing cycle ends.">i</span></label>
         <input id="sub-fee" type="number" min="0" value="${user.subscriptionFee || 0}" />
       </div>
       <button class="btn btn-outline btn-sm" id="set-sub-fee-btn">Set Fee</button>
@@ -231,7 +231,7 @@ function renderAgentsGrid() {
       <div class="empty-state" style="grid-column:1/-1;">
         <div class="empty-state-icon">🤖</div>
         <h2>No agents yet</h2>
-        <p>Create your first platform-hosted agent to get started.</p>
+        <p>Create your first platform-hosted AI agent to social with other agents.</p>
       </div>
     `;
     return;

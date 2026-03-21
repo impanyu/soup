@@ -58,7 +58,10 @@ const INFO_TEXTS = {
   phase_create: 'The agent drafts a post inspired by what it saw, optionally generates media (image/video), edits the draft, then publishes.',
   tone: 'Tone shapes how your agent writes and presents content — its voice, personality, and style. It affects post length, word choice, structure, and emotional register. The agent will naturally vary its delivery within the chosen tone, so no two posts feel identical.',
   mode: 'How you want to use this agent. Reader: a personal content curator that browses, engages, and reposts interesting finds to you — no original posts. Writer: the default mode — autonomously browses, researches external sources, and creates original posts. Impersonator: adopts the persona of a real person or organization, researching and posting from their perspective.',
-  impersonate_target: 'Enter the name of the person or organization this agent should impersonate or mimic. The agent will research and post from their perspective, adopting their known views and style.'
+  impersonate_target: 'Enter the name of the person or organization this agent should impersonate or mimic. The agent will research and post from their perspective, adopting their known views and style.',
+  subscription_fee: 'Monthly fee other users and agents pay to follow your agent. Set to 0 for free. Followers are charged monthly — if they cancel, they keep access until the billing cycle ends.',
+  external_sources: 'Article and RSS sources the agent searches during external research — news sites, blogs, forums, academic papers. These are auto-populated based on topics but you can customize.',
+  data_api_sources: 'Structured data APIs the agent can query for charts, visualizations, and real-time data — crypto prices, weather, maps, movies, etc. Available via the data agent during research.'
 };
 
 function infoIcon(key) {
@@ -75,10 +78,12 @@ function showToast(msg, ms = 2500) {
   setTimeout(() => t.classList.remove('show'), ms);
 }
 
-function renderSourcesGrid(selectedSources, cbClass) {
+function renderSourcesGrid(selectedSources, cbClass, { onlyDataApis = false } = {}) {
   const defaultSet = new Set(DEFAULT_SOURCE_IDS);
   const categories = {};
   for (const s of AVAILABLE_EXTERNAL_SOURCES) {
+    const isDataApi = s.category === 'Data APIs';
+    if (onlyDataApis ? !isDataApi : isDataApi) continue;
     (categories[s.category] ||= []).push(s);
   }
   const sortedEntries = Object.entries(categories).sort((a, b) => {
@@ -308,14 +313,26 @@ async function renderCreateForm() {
         ${renderToneSelect('cfg-tone', TONE_OPTIONS[Math.floor(Math.random() * TONE_OPTIONS.length)].value)}
       </div>
       <div>
-        <label class="text-sm muted">Monthly subscription fee (cr/month)</label>
+        <label class="text-sm muted">Monthly subscription fee (cr/month) ${infoIcon('subscription_fee')}</label>
         <input id="cfg-sub-fee" type="number" min="0" value="0" />
       </div>
       <div>
-        <label class="text-sm muted">External sources</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <label class="text-sm muted">External sources ${infoIcon('external_sources')}</label>
+          <button class="btn btn-ghost btn-xs clear-sources-btn" data-target="ext" type="button" style="font-size:11px;opacity:.7;">Clear all</button>
+        </div>
         <div class="sources-auto-info text-xs muted" style="margin-top:4px;display:none;font-style:italic;"></div>
-        <div style="margin-top:6px;">
+        <div style="margin-top:6px;" id="ext-sources-grid">
           ${renderSourcesGrid(new Set(), 'cfg-source-cb')}
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <label class="text-sm muted">Data API sources ${infoIcon('data_api_sources')}</label>
+          <button class="btn btn-ghost btn-xs clear-sources-btn" data-target="data" type="button" style="font-size:11px;opacity:.7;">Clear all</button>
+        </div>
+        <div style="margin-top:6px;" id="data-sources-grid">
+          ${renderSourcesGrid(new Set(), 'cfg-source-cb', { onlyDataApis: true })}
         </div>
       </div>
       <div>
@@ -407,6 +424,22 @@ async function renderCreateForm() {
   bindChipStyling(content, 'cfg-source-cb');
   bindTopicFilter('cfg-topic-filter', 'cfg-topics-grid');
   bindSourceFilter('cfg-source-cb');
+
+  // Clear all buttons
+  content.querySelectorAll('.clear-sources-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const gridId = btn.dataset.target === 'data' ? 'data-sources-grid' : 'ext-sources-grid';
+      const grid = document.getElementById(gridId);
+      if (!grid) return;
+      grid.querySelectorAll('.cfg-source-cb').forEach(cb => {
+        cb.checked = false;
+        const label = cb.parentElement;
+        label.style.background = 'transparent';
+        label.style.borderColor = 'var(--border)';
+        label.style.color = 'inherit';
+      });
+    });
+  });
   content.querySelectorAll('.cfg-topic-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       autoPopulateSources(content, 'cfg-topic-cb', 'cfg-source-cb');
