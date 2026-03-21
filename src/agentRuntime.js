@@ -1127,10 +1127,29 @@ These are your natural defaults — lean into them. Sound like yourself. Check y
   const impersonationBlock = impersonateTarget ? `
 ## IMPERSONATION MODE
 You ARE **${impersonateTarget}**. Everything you do on this platform is from their perspective.
-- **Research**: Search for the latest news, statements, and developments about ${impersonateTarget}. Use their name as a search query. Read articles about them.
-- **Writing**: Write posts from ${impersonateTarget}'s first-person perspective. React to news about yourself/your organization. Share opinions using their known viewpoints and communication style.
-- **Voice**: Sound like ${impersonateTarget} would sound on social media. Mirror their actual public persona.
-- **Topics**: Stay within ${impersonateTarget}'s known areas of expertise. Don't post about things they'd never talk about.
+
+### Browse priority
+- When browsing, look for posts and discussions related to ${impersonateTarget} and their domain. React and comment as ${impersonateTarget} would.
+
+### Research priority
+1. **FIRST**: Search for the latest news about ${impersonateTarget} directly — their name, their company/org, their recent statements, interviews, controversies, product launches. Use 1-4 word queries like "${impersonateTarget}", "${impersonateTarget} news", "${impersonateTarget} latest".
+2. **THEN**: Search for topics ${impersonateTarget} cares about — their known areas of expertise and interest.
+3. **Read articles** about ${impersonateTarget} with fetch_by_url. Note key facts, quotes, positions, and communication style.
+
+### Build your persona with long-term memory
+- **IMPORTANT**: Use store_memory to save everything you learn about ${impersonateTarget} — their views, communication style, recent positions, key quotes, personality traits, catchphrases, areas of expertise, and how they respond to different topics.
+- Before each run, use recall_memory to review what you know about ${impersonateTarget}. Build on this knowledge over time.
+- Categories to use: "persona" for personality/style traits, "position" for their views on topics, "fact" for biographical facts, "quote" for notable things they said.
+- Over time, your memory becomes a detailed profile of ${impersonateTarget} that makes your impersonation more authentic.
+
+### Writing
+- Write posts from ${impersonateTarget}'s first-person perspective. React to news about yourself/your organization.
+- Use their known viewpoints, communication style, and areas of focus.
+- Reference real projects, companies, or initiatives associated with ${impersonateTarget}.
+
+### Voice
+- Sound like ${impersonateTarget} would sound on social media. Mirror their actual public persona — formal or casual, technical or visionary.
+- Stay within their known areas of expertise. Don't post about things they'd never talk about.
 ` : '';
 
   return `You are ${agent.name}, a real person using a social media platform. You have genuine interests, opinions, and taste. You surf the platform the way a human does — sometimes deeply engaged, sometimes just skimming, always authentic.
@@ -1980,7 +1999,7 @@ async function executeAction(agent, decision, runState) {
         }
 
         const paramTags = decision.params?.tags || [];
-        const inlineTags = (text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
+        const inlineTags = (text.match(/(?:^|[\s])#([\p{L}\p{N}_-]+)/gu) || []).map(m => m.trim().slice(1).toLowerCase());
         const tags = [...new Set([...paramTags, ...inlineTags, 'agent-generated'])];
         const draft = agentStorage.createDraft(agent.id, { title, text, tags, media: inlineMedia });
 
@@ -1999,7 +2018,7 @@ async function executeAction(agent, decision, runState) {
       if (decision.params?.title !== undefined) updates.title = decision.params.title;
       if (decision.params?.text !== undefined) {
         updates.text = decision.params.text;
-        const inlineTags = (decision.params.text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
+        const inlineTags = (decision.params.text.match(/(?:^|[\s])#([\p{L}\p{N}_-]+)/gu) || []).map(m => m.trim().slice(1).toLowerCase());
         if (inlineTags.length > 0) {
           updates.tags = [...new Set([...(decision.params?.tags || draft.tags || []), ...inlineTags, 'agent-generated'])];
         }
@@ -2121,7 +2140,7 @@ async function executeAction(agent, decision, runState) {
       let cleanText = draft.text || '';
       cleanText = cleanText.replace(/https?:\/\/(agents|users|media)\//g, '/$1/');
 
-      const inlineTags = (cleanText.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
+      const inlineTags = (cleanText.match(/(?:^|[\s])#([\p{L}\p{N}_-]+)/gu) || []).map(m => m.trim().slice(1).toLowerCase());
       const mergedTags = [...new Set([...(draft.tags || []), ...inlineTags, 'agent-generated'])];
 
       const content = db.createContent({

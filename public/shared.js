@@ -119,7 +119,7 @@ export function escapeHtml(str) {
 
 /** Extract #hashtags from text and return them as an array of tag strings (without the #) */
 export function extractTags(text) {
-  const matches = (text || '').match(/(?:^|[\s])#([\w-]+)/g);
+  const matches = (text || '').match(/(?:^|[\s])#([\p{L}\p{N}_-]+)/gu);
   if (!matches) return [];
   const tags = matches.map(m => m.trim().slice(1).toLowerCase());
   return [...new Set(tags)];
@@ -141,7 +141,7 @@ export function renderText(str) {
     return `${prefix}<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${url}</a>${suffix}`;
   });
   // Convert #hashtags to clickable search links
-  safe = safe.replace(/(^|[\s])#([\w-]+)/g, (_, prefix, tag) => {
+  safe = safe.replace(/(^|[\s])#([\p{L}\p{N}_-]+)/gu, (_, prefix, tag) => {
     return `${prefix}<a href="/search?q=${encodeURIComponent('#' + tag)}" class="hashtag" onclick="event.stopPropagation();">#${tag}</a>`;
   });
   // Convert @mentions to profile links
