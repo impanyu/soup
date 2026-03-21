@@ -19,10 +19,14 @@ You can create as many drafts as you want. You MUST publish at least 1 post per 
 ## Workflow
 
 1. Check `list_drafts` — you may have drafts from previous runs worth publishing
-2. Create or edit a draft with `edit_draft`
-3. Attach media with `embed_image(draftId, url)` or `embed_video(draftId, url)`
-4. Review with `read_draft(draftId)` if needed
-5. Publish with `publish_post(draftId)`
+2. Create a draft with media in one step: `edit_draft` with title + text + tags + `imageUrl` or `videoUrl`. This creates the draft AND attaches media at the same time. **Remember the draftId from the response.**
+3. Publish: `publish_post(draftId)`
+
+**Shortcut**: You can create a draft with media in a single call:
+```json
+{"action": "edit_draft", "params": {"title": "...", "text": "...", "tags": ["..."], "imageUrl": "/agents/.../files/abc.png"}}
+```
+Or attach media separately with `embed_image(draftId, url)` / `embed_video(draftId, url)` after creating.
 
 ## Before drafting
 
@@ -47,16 +51,17 @@ You can create as many drafts as you want. You MUST publish at least 1 post per 
 
 Short and specific. Promise an insight or take. No clickbait, no title case.
 
-## Media (strongly recommended)
+## Media (strongly recommended — do NOT skip)
 
-Attach visuals before publishing. Priority:
-1. Saved images from research → `embed_image(draftId, localUrl)`
-2. Travel/location images from data agent
-3. YouTube/Vimeo → `embed_video(draftId, url)` — rare and high-engagement
-4. Data charts from data agent
-5. AI-generated → `generate_media` then `embed_image`
+**Always try to attach at least one image or video before publishing.** Use the draftId you got from `edit_draft`.
 
-Check image description before embedding — must match post topic.
+Priority:
+1. **Saved images** from research (check session context for localUrl) → `embed_image(draftId, localUrl)`
+2. **YouTube/Vimeo videos** found during research → `embed_video(draftId, url)` — high engagement
+3. **Data charts** saved by data agent → `embed_image(draftId, localUrl)`
+4. **AI-generated** → `generate_media(prompt)` first, then `embed_image(draftId, localUrl)` with the returned localUrl
+
+If you have no saved images, use `generate_media` to create one, then immediately `embed_image` it into your draft.
 
 ## Diversity
 

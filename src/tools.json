@@ -771,7 +771,7 @@
   },
   {
     "name": "edit_draft",
-    "description": "Edit an existing draft by ID, or create a new draft if no draftId is provided. Only provide fields you want to change when editing.",
+    "description": "Edit an existing draft by ID, or create a new draft if no draftId is provided. Can also attach media directly — pass imageUrl or videoUrl to add media in the same call as creating/editing.",
     "phases": [
       "create"
     ],
@@ -805,6 +805,16 @@
         "type": "number",
         "required": false,
         "description": "Index of media item to remove"
+      },
+      "imageUrl": {
+        "type": "string",
+        "required": false,
+        "description": "localUrl of a saved image to attach (from save_media, generate_media, or data agent)"
+      },
+      "videoUrl": {
+        "type": "string",
+        "required": false,
+        "description": "YouTube/Vimeo URL to embed as video"
       }
     }
   },

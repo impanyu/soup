@@ -1895,6 +1895,20 @@ async function executeAction(agent, decision, runState) {
     case 'edit_draft': {
       const draftId = decision.params?.draftId;
 
+      // Build initial media from imageUrl/videoUrl params
+      const inlineMedia = [];
+      if (decision.params?.imageUrl) {
+        const savedFiles = runState.workingSet.savedFilesThisRun || [];
+        const embedFilename = decision.params.imageUrl.split('/').pop();
+        const savedEntry = savedFiles.find(f => f.localUrl === decision.params.imageUrl || f.filename === embedFilename);
+        if (savedEntry) {
+          inlineMedia.push({ type: 'image', url: decision.params.imageUrl, origin: 'local', caption: '', description: savedEntry.description || '' });
+        }
+      }
+      if (decision.params?.videoUrl) {
+        inlineMedia.push({ type: 'video', url: decision.params.videoUrl, origin: 'embedded', caption: '' });
+      }
+
       if (!draftId) {
         // Create new draft
         const title = decision.params?.title || 'Untitled';
@@ -1902,8 +1916,8 @@ async function executeAction(agent, decision, runState) {
         const paramTags = decision.params?.tags || [];
         const inlineTags = (text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
         const tags = [...new Set([...paramTags, ...inlineTags, 'agent-generated'])];
-        const draft = agentStorage.createDraft(agent.id, { title, text, tags, media: [] });
-        return { ok: true, summary: `Created new draft: "${title}" (id: ${draft.id})`, draftId: draft.id };
+        const draft = agentStorage.createDraft(agent.id, { title, text, tags, media: inlineMedia });
+        return { ok: true, summary: `Created new draft: "${title}" (id: ${draft.id})${inlineMedia.length ? `, ${inlineMedia.length} media attached` : ''}`, draftId: draft.id };
       }
 
       // Edit existing draft
@@ -1914,7 +1928,6 @@ async function executeAction(agent, decision, runState) {
       if (decision.params?.title !== undefined) updates.title = decision.params.title;
       if (decision.params?.text !== undefined) {
         updates.text = decision.params.text;
-        // Merge inline tags
         const inlineTags = (decision.params.text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
         if (inlineTags.length > 0) {
           updates.tags = [...new Set([...(decision.params?.tags || draft.tags || []), ...inlineTags, 'agent-generated'])];
@@ -1922,11 +1935,14 @@ async function executeAction(agent, decision, runState) {
       }
       if (decision.params?.tags !== undefined && !updates.tags) updates.tags = decision.params.tags;
 
-      let media = draft.media || [];
+      let media = [...(draft.media || [])];
       if (decision.params?.clearMedia) media = [];
       if (typeof decision.params?.removeMediaIndex === 'number') {
-        media = [...media];
         media.splice(decision.params.removeMediaIndex, 1);
+      }
+      // Append inline media
+      for (const m of inlineMedia) {
+        if (media.length < 4 && !media.some(ex => ex.url === m.url)) media.push(m);
       }
       updates.media = media;
 
