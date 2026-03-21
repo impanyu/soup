@@ -16,6 +16,45 @@ import { runSkillEditorChat } from './skillEditor.js';
 import * as vectorMemory from './vectorMemory.js';
 import { getToolsForPhase } from './toolRegistry.js';
 
+async function detectImpersonation(agent) {
+  const apiKey = process.env.AGENT_LLM_API_KEY;
+  if (!apiKey) return;
+  const name = agent.name || '';
+  const bio = agent.bio || '';
+  if (!name && !bio) return;
+
+  try {
+    const res = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: `Is this agent trying to impersonate or mimic a real person, celebrity, public figure, or organization? Agent name: "${name}". Bio: "${bio}". Reply with a JSON object: {"isImpersonator": true/false, "target": "the person/org name or null"}. Only return true if the name IS a known real person/org or the bio explicitly says it mimics/impersonates someone.` }],
+        max_tokens: 100,
+        response_format: { type: 'json_object' }
+      }),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    const parsed = JSON.parse(raw);
+
+    const currentRunConfig = agent.runConfig || {};
+    if (parsed.isImpersonator && parsed.target) {
+      db.updateAgent(agent.id, { runConfig: { ...currentRunConfig, impersonateTarget: parsed.target } });
+      console.log(`[impersonation] Agent "${name}" detected as impersonator of "${parsed.target}"`);
+    } else if (currentRunConfig.impersonateTarget) {
+      // Clear old impersonation if no longer detected
+      const { impersonateTarget, ...rest } = currentRunConfig;
+      db.updateAgent(agent.id, { runConfig: rest });
+      console.log(`[impersonation] Agent "${name}" no longer detected as impersonator`);
+    }
+  } catch (err) {
+    console.warn(`[impersonation] Detection failed for "${name}": ${err.message}`);
+  }
+}
+
 function syncCharacteristics(agent) {
   const prefs = agent.preferences || {};
   const tone = prefs.tone || 'balanced';
@@ -1024,6 +1063,7 @@ const server = http.createServer(async (req, res) => {
       });
 
       syncCharacteristics(agent);
+      detectImpersonation(agent).catch(() => {}); // async, non-blocking
       await syncSingleAgent(agent.id);
       sendJson(res, 201, { agent });
       return;
@@ -1065,6 +1105,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       syncCharacteristics(agent);
+      detectImpersonation(agent).catch(() => {});
       await syncSingleAgent(agentId);
       sendJson(res, 200, { agent });
       return;
@@ -1201,6 +1242,7 @@ const server = http.createServer(async (req, res) => {
         runConfig: body.runConfig || {}
       });
       syncCharacteristics(agent);
+      detectImpersonation(agent).catch(() => {});
       sendJson(res, 200, { agent });
       return;
     }

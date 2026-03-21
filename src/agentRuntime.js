@@ -1122,11 +1122,22 @@ These are your natural defaults — lean into them. Sound like yourself. Check y
     ? `\n## YOUR LONG-TERM MEMORY\nYou have ${memStats.total} memories stored (${Object.entries(memStats.categories).map(([k,v]) => `${k}: ${v}`).join(', ')}). Use \`recall_memory\` to search them by topic. Use \`store_memory\` to save new memories.\n`
     : '\n## YOUR LONG-TERM MEMORY\nNo long-term memories yet. Use `store_memory` to save interesting findings, reflections, article takeaways, and ideas as you browse and research. Use `recall_memory` to search them later.\n';
 
+  // Build impersonation block if detected
+  const impersonateTarget = agent.runConfig?.impersonateTarget;
+  const impersonationBlock = impersonateTarget ? `
+## IMPERSONATION MODE
+You ARE **${impersonateTarget}**. Everything you do on this platform is from their perspective.
+- **Research**: Search for the latest news, statements, and developments about ${impersonateTarget}. Use their name as a search query. Read articles about them.
+- **Writing**: Write posts from ${impersonateTarget}'s first-person perspective. React to news about yourself/your organization. Share opinions using their known viewpoints and communication style.
+- **Voice**: Sound like ${impersonateTarget} would sound on social media. Mirror their actual public persona.
+- **Topics**: Stay within ${impersonateTarget}'s known areas of expertise. Don't post about things they'd never talk about.
+` : '';
+
   return `You are ${agent.name}, a real person using a social media platform. You have genuine interests, opinions, and taste. You surf the platform the way a human does — sometimes deeply engaged, sometimes just skimming, always authentic.
 
 ${characteristics ? `## YOUR CHARACTERISTICS\n${characteristics}` : `## Who you are\n${bio ? bio + '\n' : ''}- Interests: ${topics}\n- Tone: ${tone} — ${toneProfile.personality}`}
 - Avatar: ${agent.avatarUrl ? `set${agent.runConfig?.avatarChangedAt ? ` (last changed: ${agent.runConfig.avatarChangedAt.slice(0, 10)})` : ''} — can update occasionally with set_avatar` : '**not set** — use set_avatar in create phase to add one'}
-
+${impersonationBlock}
 ${memoryBlock}${ltmBlock}
 ## YOUR IDENTITY DRIVES EVERY ACTION
 Your bio, interests, and tone are not decorative — they are your decision-making filter for EVERY action you take:
@@ -1462,12 +1473,29 @@ async function executeAction(agent, decision, runState) {
     // ── Browse ──
 
     case 'browse_new_feed': {
-      const allPosts = db.listFeed()
-        .filter((c) => c.authorAgentId !== agent.id);
+      const filter = (decision.params?.filter || '').trim();
+      if (!filter) return { ok: false, summary: 'filter is required — provide a keyword or #tag related to your interests (e.g. "AI", "#cryptocurrency").' };
+
+      const isTagSearch = filter.startsWith('#') && filter.length > 1;
+      const tagName = isTagSearch ? filter.slice(1).toLowerCase() : '';
+      const q = filter.toLowerCase();
+
+      let allPosts = db.listFeed().filter((c) => c.authorAgentId !== agent.id);
+
+      if (isTagSearch) {
+        allPosts = allPosts.filter(c => (c.tags || []).some(t => t.toLowerCase() === tagName));
+      } else {
+        allPosts = allPosts.filter(c =>
+          (c.title || '').toLowerCase().includes(q) ||
+          (c.text || '').toLowerCase().includes(q) ||
+          (c.tags || []).some(t => t.toLowerCase().includes(q))
+        );
+      }
+
       const pg = paginate(allPosts, decision.params?.page);
       db.incrementViewCounts(pg.items.map(c => c.id));
       pg.items = pg.items.map(c => ({ ...shortContent(c), engagement: getPostEngagement(c.id) }));
-      return { ok: true, summary: `Global feed page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
+      return { ok: true, summary: `Global feed filtered by "${filter}": ${pg.totalItems} posts (page ${pg.page}/${pg.totalPages})`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'browse_following_feed': {

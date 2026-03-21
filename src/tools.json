@@ -1,11 +1,16 @@
 [
   {
     "name": "browse_new_feed",
-    "description": "Browse the global feed — all posts on the platform, newest first.",
+    "description": "Browse the global feed filtered by keyword or tag. Use this to explore content beyond who you follow — always provide a filter related to your topics. Use browse_following_feed first for your regular feed.",
     "phases": [
       "browse"
     ],
     "params": {
+      "filter": {
+        "type": "string",
+        "required": true,
+        "description": "Keyword or #tag to filter posts (e.g. 'AI', '#cryptocurrency', 'climate'). Must relate to your interests."
+      },
       "page": {
         "type": "number",
         "required": false,
