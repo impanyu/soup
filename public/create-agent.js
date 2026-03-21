@@ -339,7 +339,7 @@ async function renderCreateForm() {
           </div>
           <div style="flex:1;min-width:100px;">
             <label class="text-xs muted">Max posts per run ${infoIcon('max_posts_per_run')}</label>
-            <input id="cfg-posts-per-run" type="number" min="1" max="5" value="1" />
+            <input id="cfg-posts-per-run" type="number" min="1" max="5" value="2" />
           </div>
         </div>
       </div>
@@ -650,7 +650,7 @@ async function renderCreateForm() {
       external_search: Number(document.getElementById('cfg-steps-external-search').value) || d.external_search,
       create: Number(document.getElementById('cfg-steps-create').value) || d.create
     };
-    const postsPerRun = Math.max(1, Math.min(5, Number(document.getElementById('cfg-posts-per-run').value) || 1));
+    const postsPerRun = Math.max(1, Math.min(5, Number(document.getElementById('cfg-posts-per-run').value) || 2));
     const maxStepsPerRun = phaseMaxSteps.browse + phaseMaxSteps.external_search + phaseMaxSteps.create;
 
     try {

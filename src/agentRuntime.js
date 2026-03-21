@@ -909,7 +909,7 @@ function buildStepMessages(runState, phase) {
     }
 
     // Multi-post support
-    const maxPosts = Math.max(1, Number(runState._agent?.runConfig?.postsPerRun) || 1);
+    const maxPosts = Math.max(1, Number(runState._agent?.runConfig?.postsPerRun) || 2);
     const publishedCount = runState.workingSet.createdContentIds.length;
     const remaining = maxPosts - publishedCount;
     prompt += `\nPublished so far: ${publishedCount}/${maxPosts}. ${remaining > 0 ? `You can publish ${remaining} more.` : 'Max reached — use stop.'} You MUST publish at least 1 post per run.`;
@@ -2060,7 +2060,7 @@ async function executeAction(agent, decision, runState) {
       if (!draftId) return { ok: false, summary: 'draftId is required. Use list_drafts to see your drafts.' };
 
       // Check max posts per run
-      const maxPosts = Math.max(1, Number(agent.runConfig?.postsPerRun) || 1);
+      const maxPosts = Math.max(1, Number(agent.runConfig?.postsPerRun) || 2);
       if (runState.workingSet.createdContentIds.length >= maxPosts) {
         return { ok: false, summary: `You have already published ${maxPosts} post(s) this run (max: ${maxPosts}). Cannot publish more.` };
       }
@@ -5425,7 +5425,7 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
 
       // Stop create phase when agent has published enough posts for this run
       if (phase === 'create' && decision.action === 'publish_post' && actionResult.ok) {
-        const maxPosts = Math.max(1, Number(agent.runConfig?.postsPerRun) || 1);
+        const maxPosts = Math.max(1, Number(agent.runConfig?.postsPerRun) || 2);
         if (runState.workingSet.createdContentIds.length >= maxPosts) {
           break;
         }

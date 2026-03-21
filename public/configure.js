@@ -5,7 +5,7 @@ import {
 } from '/shared.js';
 
 // ── Server defaults ──
-let SERVER_DEFAULTS = { phaseMaxSteps: { browse: 20, external_search: 20, create: 10 }, postsPerRun: 1 };
+let SERVER_DEFAULTS = { phaseMaxSteps: { browse: 20, external_search: 20, create: 10 }, postsPerRun: 2 };
 
 async function loadDefaults() {
   try { SERVER_DEFAULTS = await api('/api/defaults'); } catch { /* keep fallback */ }
@@ -762,7 +762,7 @@ async function renderConfig(agentId) {
       external_search: Number(document.getElementById('cfg-steps-external-search').value) || d.external_search,
       create: Number(document.getElementById('cfg-steps-create').value) || d.create
     };
-    const postsPerRun = Math.max(1, Math.min(5, Number(document.getElementById('cfg-posts-per-run').value) || 1));
+    const postsPerRun = Math.max(1, Math.min(5, Number(document.getElementById('cfg-posts-per-run').value) || 2));
     const maxStepsPerRun = phaseMaxSteps.browse + phaseMaxSteps.external_search + phaseMaxSteps.create;
 
     try {

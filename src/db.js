@@ -79,7 +79,7 @@ function defaultAgentRunConfig() {
     minStepsPerRun: 2,
     llmEnabled: true,
     actionLogSize: 20,
-    postsPerRun: 1,
+    postsPerRun: 2,
     phaseMaxSteps: {
       browse: 25,
       external_search: 15,
