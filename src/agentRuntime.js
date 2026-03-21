@@ -729,68 +729,17 @@ async function compressMemorySection(text, targetWords) {
 
 // ─── Action/Result Memory ───────────────────────────────────────────────────────
 
-async function generatePhaseSummary(agent, phase, runState) {
-  const phaseSteps = runState.steps.filter(s => s.phase === phase);
-  if (phaseSteps.length === 0) return '';
-
-  // Build a compact representation of what happened
-  const lines = [];
-  for (const step of phaseSteps) {
-    const summary = step.result?.summary || 'ok';
-    lines.push(`${step.action}: ${summary}`);
-    // Include key details for important actions
-    if (step.result?.article?.url) lines.push(`  read: ${step.result.article.url}`);
-    if (step.result?.viewed?.title) lines.push(`  post: "${step.result.viewed.title}" by ${step.result.viewed.authorName}`);
-    if (step.result?.profile?.name) lines.push(`  profile: ${step.result.profile.name}`);
-  }
-  const stepsText = lines.join('\n');
-
-  // Use a cheap model to compress
-  const apiKey = process.env.AGENT_LLM_API_KEY;
-  if (!apiKey) return stepsText.slice(0, 1500); // fallback: truncated raw
-
-  try {
-    const res = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{
-          role: 'user',
-          content: `Summarize what this agent did during the "${phase}" phase in 3-8 bullet points. Focus on: key content discovered, opinions formed, people/profiles found interesting, articles read (include URLs), images saved, decisions made. Skip failed actions and boring details.\n\nAgent: ${agent.name}\nSteps:\n${stepsText}`
-        }],
-        max_tokens: 400,
-        temperature: 0
-      }),
-      signal: AbortSignal.timeout(15000)
-    });
-    if (!res.ok) return stepsText.slice(0, 1500);
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || stepsText.slice(0, 1500);
-  } catch {
-    return stepsText.slice(0, 1500); // fallback: truncated raw
-  }
-}
 
 function buildStepMessages(runState, phase) {
+  // Full action/result history across all phases
   const steps = runState.steps;
   const historyLines = [];
-
-  // Include compressed summaries from prior phases
-  const phaseOrder = ['browse', 'external_search', 'create'];
-  for (const priorPhase of phaseOrder) {
-    if (priorPhase === phase) break;
-    const summary = runState.workingSet.phaseSummaries[priorPhase];
-    if (summary) {
-      historyLines.push(`\n=== ${priorPhase} phase summary ===\n${summary}`);
+  let lastPhase = null;
+  for (const step of steps) {
+    if (step.phase !== lastPhase) {
+      historyLines.push(`\n=== Phase: ${step.phase} ===`);
+      lastPhase = step.phase;
     }
-  }
-
-  // Full detail only for current phase steps
-  const currentSteps = steps.filter(s => s.phase === phase);
-  if (currentSteps.length > 0) {
-    historyLines.push(`\n=== Current phase: ${phase} ===`);
-    for (const step of currentSteps) {
       const params = Object.entries(step.params || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ');
       historyLines.push(`> Action: ${step.action}(${params})`);
       if (step.reason) historyLines.push(`  Reason: ${step.reason}`);
@@ -842,11 +791,10 @@ function buildStepMessages(runState, phase) {
           historyLines.push(`    - ${u.name} [${u.id}]`);
         }
       }
-    }
   }
 
   const historyBlock = historyLines.length > 0
-    ? `Here is your session context:\n${historyLines.join('\n')}`
+    ? `Here is everything you did so far this session:\n${historyLines.join('\n')}`
     : '';
 
   // Current phase prompt
@@ -1769,6 +1717,18 @@ async function executeAction(agent, decision, runState) {
     }
 
     // ── Draft workflow (disk-based) ──
+
+    case 'read_draft': {
+      const markdown = agentStorage.readDraft(agent.id);
+      if (!markdown) return { ok: false, summary: 'No draft exists. Use draft_post first.' };
+      const parsed = agentStorage.parseDraft(markdown, agent.id);
+      const mediaList = (parsed.media || []).map((m, i) => `  [${i}] ${m.type}: ${m.url || ''}${m.caption ? ` — "${m.caption}"` : ''}`).join('\n');
+      return {
+        ok: true,
+        summary: `Draft: "${parsed.title}" (${parsed.media.length}/4 media)`,
+        fullText: `Title: ${parsed.title}\nTags: ${(parsed.tags || []).join(', ')}\n\nText:\n${parsed.text}\n\nMedia (${parsed.media.length}/4):\n${mediaList || '  (none)'}`
+      };
+    }
 
     case 'draft_post': {
       const title = decision.params?.title || 'Untitled';
@@ -4578,8 +4538,7 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
       travelLocation: null,
       lastActionResult: null,
       phase: 'browse',
-      hasDraft: false,
-      phaseSummaries: {}
+      hasDraft: false
     }
   };
 
@@ -4732,17 +4691,6 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
     }
 
     console.log(`[${agent.name}] Phase ${phase} totals: tokens in=${phaseTokens.input} out=${phaseTokens.output}`);
-
-    // Generate compressed summary for this phase (used by next phase instead of full history)
-    if (phase !== 'create') {
-      try {
-        const summary = await generatePhaseSummary(agent, phase, runState);
-        runState.workingSet.phaseSummaries[phase] = summary;
-        console.log(`[${agent.name}] Phase ${phase} summary: ${summary.slice(0, 150)}...`);
-      } catch (err) {
-        console.warn(`[${agent.name}] Failed to generate phase summary: ${err.message}`);
-      }
-    }
 
     // Auto-publish if create phase ended with an unpublished draft
     if (phase === 'create' && runState.workingSet.hasDraft) {
