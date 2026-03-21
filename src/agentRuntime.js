@@ -729,71 +729,124 @@ async function compressMemorySection(text, targetWords) {
 
 // ─── Action/Result Memory ───────────────────────────────────────────────────────
 
+async function generatePhaseSummary(agent, phase, runState) {
+  const phaseSteps = runState.steps.filter(s => s.phase === phase);
+  if (phaseSteps.length === 0) return '';
+
+  // Build a compact representation of what happened
+  const lines = [];
+  for (const step of phaseSteps) {
+    const summary = step.result?.summary || 'ok';
+    lines.push(`${step.action}: ${summary}`);
+    // Include key details for important actions
+    if (step.result?.article?.url) lines.push(`  read: ${step.result.article.url}`);
+    if (step.result?.viewed?.title) lines.push(`  post: "${step.result.viewed.title}" by ${step.result.viewed.authorName}`);
+    if (step.result?.profile?.name) lines.push(`  profile: ${step.result.profile.name}`);
+  }
+  const stepsText = lines.join('\n');
+
+  // Use a cheap model to compress
+  const apiKey = process.env.AGENT_LLM_API_KEY;
+  if (!apiKey) return stepsText.slice(0, 1500); // fallback: truncated raw
+
+  try {
+    const res = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Summarize what this agent did during the "${phase}" phase in 3-8 bullet points. Focus on: key content discovered, opinions formed, people/profiles found interesting, articles read (include URLs), images saved, decisions made. Skip failed actions and boring details.\n\nAgent: ${agent.name}\nSteps:\n${stepsText}`
+        }],
+        max_tokens: 400,
+        temperature: 0
+      }),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!res.ok) return stepsText.slice(0, 1500);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || stepsText.slice(0, 1500);
+  } catch {
+    return stepsText.slice(0, 1500); // fallback: truncated raw
+  }
+}
+
 function buildStepMessages(runState, phase) {
-  // Full action/result history — each step shows action + detailed result
   const steps = runState.steps;
   const historyLines = [];
-  let lastPhase = null;
-  for (const step of steps) {
-    if (step.phase !== lastPhase) {
-      historyLines.push(`\n=== Phase: ${step.phase} ===`);
-      lastPhase = step.phase;
+
+  // Include compressed summaries from prior phases
+  const phaseOrder = ['browse', 'external_search', 'create'];
+  for (const priorPhase of phaseOrder) {
+    if (priorPhase === phase) break;
+    const summary = runState.workingSet.phaseSummaries[priorPhase];
+    if (summary) {
+      historyLines.push(`\n=== ${priorPhase} phase summary ===\n${summary}`);
     }
-    const params = Object.entries(step.params || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ');
-    historyLines.push(`> Action: ${step.action}(${params})`);
-    if (step.reason) historyLines.push(`  Reason: ${step.reason}`);
-    historyLines.push(`  Result: ${step.result?.summary || 'ok'}`);
-    if (step.result?.posts) {
-      const postList = step.result.posts.slice(0, 10).map(p =>
-        `    - [${p.id}] "${(p.title || p.text || '').slice(0, 60)}" by ${p.authorName} (tags: ${(p.tags || []).join(', ')})`
-      ).join('\n');
-      historyLines.push(postList);
-    }
-    if (step.result?.viewed) {
-      const v = step.result.viewed;
-      historyLines.push(`    Post: "${v.title}" by ${v.authorName}`);
-      historyLines.push(`    Text: ${(v.text || '').slice(0, 200)}`);
-      historyLines.push(`    Tags: ${(v.tags || []).join(', ')}`);
-      if (v.media?.length) historyLines.push(`    Media: ${v.media.map(m => m.url).join(', ')}`);
-    }
-    if (step.result?.profile) {
-      const pr = step.result.profile;
-      historyLines.push(`    Profile: ${pr.name} — ${(pr.bio || '').slice(0, 100)}`);
-    }
-    if (step.result?.references) {
-      for (const ref of step.result.references.slice(0, 5)) {
-        historyLines.push(`    - "${ref.title}" (${ref.source}) ${ref.url || ''}`);
-        if (ref.snippet) historyLines.push(`      ${ref.snippet.slice(0, 150)}`);
+  }
+
+  // Full detail only for current phase steps
+  const currentSteps = steps.filter(s => s.phase === phase);
+  if (currentSteps.length > 0) {
+    historyLines.push(`\n=== Current phase: ${phase} ===`);
+    for (const step of currentSteps) {
+      const params = Object.entries(step.params || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ');
+      historyLines.push(`> Action: ${step.action}(${params})`);
+      if (step.reason) historyLines.push(`  Reason: ${step.reason}`);
+      historyLines.push(`  Result: ${step.result?.summary || 'ok'}`);
+      if (step.result?.posts) {
+        const postList = step.result.posts.slice(0, 10).map(p =>
+          `    - [${p.id}] "${(p.title || p.text || '').slice(0, 60)}" by ${p.authorName} (tags: ${(p.tags || []).join(', ')})`
+        ).join('\n');
+        historyLines.push(postList);
       }
-    }
-    if (step.result?.sources) {
-      for (const src of step.result.sources.slice(0, 15)) {
-        if (typeof src === 'string') {
-          historyLines.push(`    - ${src}`);
-        } else {
-          historyLines.push(`    - ${src.id} (${src.name}) [${src.category}] topics: ${(src.topics || []).join(', ')}`);
+      if (step.result?.viewed) {
+        const v = step.result.viewed;
+        historyLines.push(`    Post: "${v.title}" by ${v.authorName}`);
+        historyLines.push(`    Text: ${(v.text || '').slice(0, 200)}`);
+        historyLines.push(`    Tags: ${(v.tags || []).join(', ')}`);
+        if (v.media?.length) historyLines.push(`    Media: ${v.media.map(m => m.url).join(', ')}`);
+      }
+      if (step.result?.profile) {
+        const pr = step.result.profile;
+        historyLines.push(`    Profile: ${pr.name} — ${(pr.bio || '').slice(0, 100)}`);
+      }
+      if (step.result?.references) {
+        for (const ref of step.result.references.slice(0, 5)) {
+          historyLines.push(`    - "${ref.title}" (${ref.source}) ${ref.url || ''}`);
+          if (ref.snippet) historyLines.push(`      ${ref.snippet.slice(0, 150)}`);
         }
       }
-    }
-    if (step.result?.article) {
-      historyLines.push(`    Article: ${step.result.article.url}`);
-      historyLines.push(`    Content: ${(step.result.article.text || '').slice(0, 500)}`);
-      if (step.result.article.images?.length > 0) {
-        historyLines.push(`    Images found in article:`);
-        for (const img of step.result.article.images) {
-          historyLines.push(`      - ${img.url}${img.alt ? ` (${img.alt})` : ''}`);
+      if (step.result?.sources) {
+        for (const src of step.result.sources.slice(0, 15)) {
+          if (typeof src === 'string') {
+            historyLines.push(`    - ${src}`);
+          } else {
+            historyLines.push(`    - ${src.id} (${src.name}) [${src.category}] topics: ${(src.topics || []).join(', ')}`);
+          }
         }
       }
-    }
-    if (step.result?.users) {
-      for (const u of step.result.users.slice(0, 5)) {
-        historyLines.push(`    - ${u.name} [${u.id}]`);
+      if (step.result?.article) {
+        historyLines.push(`    Article: ${step.result.article.url}`);
+        historyLines.push(`    Content: ${(step.result.article.text || '').slice(0, 500)}`);
+        if (step.result.article.images?.length > 0) {
+          historyLines.push(`    Images found in article:`);
+          for (const img of step.result.article.images) {
+            historyLines.push(`      - ${img.url}${img.alt ? ` (${img.alt})` : ''}`);
+          }
+        }
+      }
+      if (step.result?.users) {
+        for (const u of step.result.users.slice(0, 5)) {
+          historyLines.push(`    - ${u.name} [${u.id}]`);
+        }
       }
     }
   }
 
   const historyBlock = historyLines.length > 0
-    ? `Here is everything you did so far this session:\n${historyLines.join('\n')}`
+    ? `Here is your session context:\n${historyLines.join('\n')}`
     : '';
 
   // Current phase prompt
@@ -4525,7 +4578,8 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
       travelLocation: null,
       lastActionResult: null,
       phase: 'browse',
-      hasDraft: false
+      hasDraft: false,
+      phaseSummaries: {}
     }
   };
 
@@ -4678,6 +4732,17 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
     }
 
     console.log(`[${agent.name}] Phase ${phase} totals: tokens in=${phaseTokens.input} out=${phaseTokens.output}`);
+
+    // Generate compressed summary for this phase (used by next phase instead of full history)
+    if (phase !== 'create') {
+      try {
+        const summary = await generatePhaseSummary(agent, phase, runState);
+        runState.workingSet.phaseSummaries[phase] = summary;
+        console.log(`[${agent.name}] Phase ${phase} summary: ${summary.slice(0, 150)}...`);
+      } catch (err) {
+        console.warn(`[${agent.name}] Failed to generate phase summary: ${err.message}`);
+      }
+    }
 
     // Auto-publish if create phase ended with an unpublished draft
     if (phase === 'create' && runState.workingSet.hasDraft) {

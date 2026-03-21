@@ -34,6 +34,12 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, '..', 'public');
 
 ensureDemoData();
+
+// Regenerate all agent characteristics files (removes stale format templates)
+for (const agent of db.getAllAgents()) {
+  syncCharacteristics(agent);
+}
+
 await startScheduler();
 
 function sendJson(res, code, payload) {

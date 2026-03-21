@@ -214,7 +214,7 @@ export function writeMemory(agentId, content) {
 
 export function writeCharacteristics(agentId, { name, bio, topics, tone, toneProfile }) {
   ensureAgentDirs(agentId);
-  const md = `# ${name}\n\n## Bio\n${bio || '(no bio)'}\n\n## Topics\n${topics}\n\n## Tone\n${tone} — ${toneProfile.personality}\n\n## Post Style\n- **Length**: ${toneProfile.length}\n- **Writing style**: ${toneProfile.writingStyle}\n- **Format**: ${toneProfile.format}\n`;
+  const md = `# ${name}\n\n## Bio\n${bio || '(no bio)'}\n\n## Topics\n${topics}\n\n## Tone\n${tone} — ${toneProfile.personality}\n\n## Post Style\n- **Length**: ${toneProfile.length}\n- **Writing style**: ${toneProfile.writingStyle}\n`;
   fs.writeFileSync(path.join(agentDir(agentId), 'characteristics.md'), md, 'utf8');
 }
 
