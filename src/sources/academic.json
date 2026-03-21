@@ -3,15 +3,30 @@
     "id": "arxiv",
     "name": "ArXiv",
     "category": "Academic & Research",
-    "topics": ["artificial intelligence", "machine learning", "physics", "science", "mathematics"],
+    "topics": [
+      "artificial intelligence",
+      "machine learning",
+      "physics",
+      "science",
+      "mathematics",
+      "computer vision",
+      "materials science",
+      "nuclear physics",
+      "synthetic biology",
+      "fusion energy"
+    ],
     "siteUrl": "https://arxiv.org",
-    "rss": { "feedUrl": "https://rss.arxiv.org/rss/cs" },
+    "rss": {
+      "feedUrl": "https://rss.arxiv.org/rss/cs"
+    },
     "search": {
       "endpoint": "https://export.arxiv.org/api/query",
       "searchParam": "search_query",
       "resultPath": "feed",
       "limitParam": "max_results",
-      "extraParams": { "start": "0" }
+      "extraParams": {
+        "start": "0"
+      }
     },
     "responseFormat": "xml",
     "dataType": "article",
@@ -22,14 +37,23 @@
     "id": "pubmed",
     "name": "PubMed",
     "category": "Academic & Research",
-    "topics": ["biology", "health", "nutrition", "science", "medical research"],
+    "topics": [
+      "biology",
+      "health",
+      "nutrition",
+      "science",
+      "medical research"
+    ],
     "siteUrl": "https://pubmed.ncbi.nlm.nih.gov",
     "search": {
       "endpoint": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
       "searchParam": "term",
       "resultPath": "esearchresult.idlist",
       "limitParam": "retmax",
-      "extraParams": { "db": "pubmed", "retmode": "json" }
+      "extraParams": {
+        "db": "pubmed",
+        "retmode": "json"
+      }
     },
     "normalize": {
       "titleTemplate": "PubMed article {_item}",
@@ -45,14 +69,25 @@
     "id": "wikipedia",
     "name": "Wikipedia",
     "category": "Academic & Research",
-    "topics": ["education", "history", "science", "philosophy", "linguistics"],
+    "topics": [
+      "education",
+      "history",
+      "science",
+      "philosophy",
+      "linguistics"
+    ],
     "siteUrl": "https://en.wikipedia.org",
     "search": {
       "endpoint": "https://en.wikipedia.org/w/api.php",
       "searchParam": "srsearch",
       "resultPath": "query.search",
       "limitParam": "srlimit",
-      "extraParams": { "action": "query", "list": "search", "format": "json", "origin": "*" }
+      "extraParams": {
+        "action": "query",
+        "list": "search",
+        "format": "json",
+        "origin": "*"
+      }
     },
     "normalize": {
       "titlePath": "title",
@@ -68,7 +103,13 @@
     "id": "open-library",
     "name": "Open Library",
     "category": "Academic & Research",
-    "topics": ["books", "history", "education", "philosophy", "literature"],
+    "topics": [
+      "books",
+      "history",
+      "education",
+      "philosophy",
+      "literature"
+    ],
     "siteUrl": "https://openlibrary.org",
     "search": {
       "endpoint": "https://openlibrary.org/search.json",
@@ -90,7 +131,13 @@
     "id": "semantic-scholar",
     "name": "Semantic Scholar",
     "category": "Academic & Research",
-    "topics": ["artificial intelligence", "machine learning", "science", "biology", "neuroscience"],
+    "topics": [
+      "artificial intelligence",
+      "machine learning",
+      "science",
+      "biology",
+      "neuroscience"
+    ],
     "siteUrl": "https://www.semanticscholar.org",
     "search": {
       "endpoint": "https://api.semanticscholar.org/graph/v1/paper/search",
@@ -112,7 +159,12 @@
     "id": "crossref",
     "name": "Crossref",
     "category": "Academic & Research",
-    "topics": ["science", "education", "biology", "chemistry"],
+    "topics": [
+      "science",
+      "education",
+      "biology",
+      "chemistry"
+    ],
     "siteUrl": "https://www.crossref.org",
     "search": {
       "endpoint": "https://api.crossref.org/works",
@@ -134,9 +186,16 @@
     "id": "core-ac",
     "name": "CORE",
     "category": "Academic & Research",
-    "topics": ["science", "education", "mathematics", "philosophy"],
+    "topics": [
+      "science",
+      "education",
+      "mathematics",
+      "philosophy"
+    ],
     "siteUrl": "https://core.ac.uk",
-    "rss": { "feedUrl": "https://core.ac.uk/rss/repositories/all" },
+    "rss": {
+      "feedUrl": "https://core.ac.uk/rss/repositories/all"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -146,7 +205,12 @@
     "id": "doaj",
     "name": "DOAJ",
     "category": "Academic & Research",
-    "topics": ["science", "education", "biology", "chemistry"],
+    "topics": [
+      "science",
+      "education",
+      "biology",
+      "chemistry"
+    ],
     "siteUrl": "https://doaj.org",
     "search": {
       "endpoint": "https://doaj.org/api/search/articles",
@@ -168,9 +232,16 @@
     "id": "mit-news",
     "name": "MIT News",
     "category": "Academic & Research",
-    "topics": ["technology", "science", "artificial intelligence", "robotics"],
+    "topics": [
+      "technology",
+      "science",
+      "artificial intelligence",
+      "robotics"
+    ],
     "siteUrl": "https://news.mit.edu",
-    "rss": { "feedUrl": "https://news.mit.edu/rss/feed" },
+    "rss": {
+      "feedUrl": "https://news.mit.edu/rss/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -180,9 +251,16 @@
     "id": "stanford-news",
     "name": "Stanford News",
     "category": "Academic & Research",
-    "topics": ["technology", "science", "education", "artificial intelligence"],
+    "topics": [
+      "technology",
+      "science",
+      "education",
+      "artificial intelligence"
+    ],
     "siteUrl": "https://news.stanford.edu",
-    "rss": { "feedUrl": "https://news.stanford.edu/feed/" },
+    "rss": {
+      "feedUrl": "https://news.stanford.edu/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -192,9 +270,15 @@
     "id": "phd-comics",
     "name": "PhD Comics",
     "category": "Academic & Research",
-    "topics": ["education", "science", "comics"],
+    "topics": [
+      "education",
+      "science",
+      "comics"
+    ],
     "siteUrl": "https://phdcomics.com",
-    "rss": { "feedUrl": "https://phdcomics.com/gradfeed.php" },
+    "rss": {
+      "feedUrl": "https://phdcomics.com/gradfeed.php"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -204,9 +288,16 @@
     "id": "gutenberg",
     "name": "Project Gutenberg",
     "category": "Academic & Research",
-    "topics": ["books", "literature", "history", "philosophy"],
+    "topics": [
+      "books",
+      "literature",
+      "history",
+      "philosophy"
+    ],
     "siteUrl": "https://www.gutenberg.org",
-    "rss": { "feedUrl": "https://www.gutenberg.org/cache/epub/feeds/today.rss" },
+    "rss": {
+      "feedUrl": "https://www.gutenberg.org/cache/epub/feeds/today.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -216,9 +307,16 @@
     "id": "jstor-daily",
     "name": "JSTOR Daily",
     "category": "Academic & Research",
-    "topics": ["history", "science", "philosophy", "cultural studies"],
+    "topics": [
+      "history",
+      "science",
+      "philosophy",
+      "cultural studies"
+    ],
     "siteUrl": "https://daily.jstor.org",
-    "rss": { "feedUrl": "https://daily.jstor.org/feed/" },
+    "rss": {
+      "feedUrl": "https://daily.jstor.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -228,9 +326,16 @@
     "id": "philpapers",
     "name": "PhilPapers",
     "category": "Academic & Research",
-    "topics": ["philosophy", "education", "sociology", "linguistics"],
+    "topics": [
+      "philosophy",
+      "education",
+      "sociology",
+      "linguistics"
+    ],
     "siteUrl": "https://philpapers.org",
-    "rss": { "feedUrl": "https://philpapers.org/recent.rss" },
+    "rss": {
+      "feedUrl": "https://philpapers.org/recent.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -240,7 +345,12 @@
     "id": "ssrn",
     "name": "SSRN",
     "category": "Academic & Research",
-    "topics": ["economics", "law", "finance", "sociology"],
+    "topics": [
+      "economics",
+      "law",
+      "finance",
+      "sociology"
+    ],
     "siteUrl": "https://www.ssrn.com",
     "responseFormat": "xml",
     "dataType": "article",
@@ -251,7 +361,12 @@
     "id": "researchgate",
     "name": "ResearchGate",
     "category": "Academic & Research",
-    "topics": ["science", "biology", "education", "mathematics"],
+    "topics": [
+      "science",
+      "biology",
+      "education",
+      "mathematics"
+    ],
     "siteUrl": "https://www.researchgate.net",
     "responseFormat": "xml",
     "dataType": "article",
@@ -262,7 +377,12 @@
     "id": "academia-edu",
     "name": "Academia.edu",
     "category": "Academic & Research",
-    "topics": ["education", "philosophy", "sociology", "history"],
+    "topics": [
+      "education",
+      "philosophy",
+      "sociology",
+      "history"
+    ],
     "siteUrl": "https://www.academia.edu",
     "responseFormat": "xml",
     "dataType": "article",
@@ -273,9 +393,16 @@
     "id": "harvard-business-review",
     "name": "Harvard Business Review",
     "category": "Academic & Research",
-    "topics": ["business", "economics", "marketing", "entrepreneurship"],
+    "topics": [
+      "business",
+      "economics",
+      "marketing",
+      "entrepreneurship"
+    ],
     "siteUrl": "https://hbr.org",
-    "rss": { "feedUrl": "https://hbr.org/feed" },
+    "rss": {
+      "feedUrl": "https://hbr.org/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -285,9 +412,16 @@
     "id": "mckinsey-insights",
     "name": "McKinsey Insights",
     "category": "Academic & Research",
-    "topics": ["business", "economics", "finance", "technology"],
+    "topics": [
+      "business",
+      "economics",
+      "finance",
+      "technology"
+    ],
     "siteUrl": "https://www.mckinsey.com/insights",
-    "rss": { "feedUrl": "https://www.mckinsey.com/insights/rss" },
+    "rss": {
+      "feedUrl": "https://www.mckinsey.com/insights/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -297,9 +431,16 @@
     "id": "brookings",
     "name": "Brookings Institution",
     "category": "Academic & Research",
-    "topics": ["politics", "economics", "education", "world news"],
+    "topics": [
+      "politics",
+      "economics",
+      "education",
+      "world news"
+    ],
     "siteUrl": "https://www.brookings.edu",
-    "rss": { "feedUrl": "https://www.brookings.edu/feed/" },
+    "rss": {
+      "feedUrl": "https://www.brookings.edu/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -309,9 +450,16 @@
     "id": "rand-corp",
     "name": "RAND Corporation",
     "category": "Academic & Research",
-    "topics": ["politics", "economics", "public health", "education"],
+    "topics": [
+      "politics",
+      "economics",
+      "public health",
+      "education"
+    ],
     "siteUrl": "https://www.rand.org",
-    "rss": { "feedUrl": "https://www.rand.org/pubs/feed.xml" },
+    "rss": {
+      "feedUrl": "https://www.rand.org/pubs/feed.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -321,9 +469,16 @@
     "id": "council-foreign-relations",
     "name": "Council on Foreign Relations",
     "category": "Academic & Research",
-    "topics": ["world news", "politics", "economics", "human rights"],
+    "topics": [
+      "world news",
+      "politics",
+      "economics",
+      "human rights"
+    ],
     "siteUrl": "https://www.cfr.org",
-    "rss": { "feedUrl": "https://www.cfr.org/rss" },
+    "rss": {
+      "feedUrl": "https://www.cfr.org/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -333,9 +488,16 @@
     "id": "chatham-house",
     "name": "Chatham House",
     "category": "Academic & Research",
-    "topics": ["world news", "politics", "economics", "law"],
+    "topics": [
+      "world news",
+      "politics",
+      "economics",
+      "law"
+    ],
     "siteUrl": "https://www.chathamhouse.org",
-    "rss": { "feedUrl": "https://www.chathamhouse.org/rss" },
+    "rss": {
+      "feedUrl": "https://www.chathamhouse.org/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -345,9 +507,16 @@
     "id": "carnegie-endowment",
     "name": "Carnegie Endowment",
     "category": "Academic & Research",
-    "topics": ["politics", "world news", "economics", "human rights"],
+    "topics": [
+      "politics",
+      "world news",
+      "economics",
+      "human rights"
+    ],
     "siteUrl": "https://carnegieendowment.org",
-    "rss": { "feedUrl": "https://carnegieendowment.org/rss/solr" },
+    "rss": {
+      "feedUrl": "https://carnegieendowment.org/rss/solr"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -357,9 +526,16 @@
     "id": "pew-research",
     "name": "Pew Research Center",
     "category": "Academic & Research",
-    "topics": ["sociology", "politics", "economics", "media criticism"],
+    "topics": [
+      "sociology",
+      "politics",
+      "economics",
+      "media criticism"
+    ],
     "siteUrl": "https://www.pewresearch.org",
-    "rss": { "feedUrl": "https://www.pewresearch.org/feed/" },
+    "rss": {
+      "feedUrl": "https://www.pewresearch.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -369,9 +545,16 @@
     "id": "gallup",
     "name": "Gallup",
     "category": "Academic & Research",
-    "topics": ["sociology", "politics", "economics", "public health"],
+    "topics": [
+      "sociology",
+      "politics",
+      "economics",
+      "public health"
+    ],
     "siteUrl": "https://news.gallup.com",
-    "rss": { "feedUrl": "https://news.gallup.com/rss/default.aspx" },
+    "rss": {
+      "feedUrl": "https://news.gallup.com/rss/default.aspx"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -381,9 +564,16 @@
     "id": "oecd",
     "name": "OECD",
     "category": "Academic & Research",
-    "topics": ["economics", "education", "environment", "politics"],
+    "topics": [
+      "economics",
+      "education",
+      "environment",
+      "politics"
+    ],
     "siteUrl": "https://www.oecd.org",
-    "rss": { "feedUrl": "https://www.oecd.org/newsroom/index.xml" },
+    "rss": {
+      "feedUrl": "https://www.oecd.org/newsroom/index.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -393,9 +583,16 @@
     "id": "imf-blog",
     "name": "IMF Blog",
     "category": "Academic & Research",
-    "topics": ["economics", "finance", "world news", "politics"],
+    "topics": [
+      "economics",
+      "finance",
+      "world news",
+      "politics"
+    ],
     "siteUrl": "https://www.imf.org/en/Blogs",
-    "rss": { "feedUrl": "https://www.imf.org/en/News/Rss?type=blog" },
+    "rss": {
+      "feedUrl": "https://www.imf.org/en/News/Rss?type=blog"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -405,9 +602,16 @@
     "id": "world-economic-forum",
     "name": "World Economic Forum",
     "category": "Academic & Research",
-    "topics": ["economics", "technology", "sustainability", "world news"],
+    "topics": [
+      "economics",
+      "technology",
+      "sustainability",
+      "world news"
+    ],
     "siteUrl": "https://www.weforum.org",
-    "rss": { "feedUrl": "https://www.weforum.org/feed/" },
+    "rss": {
+      "feedUrl": "https://www.weforum.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -417,9 +621,16 @@
     "id": "ted-ideas",
     "name": "TED Ideas",
     "category": "Academic & Research",
-    "topics": ["education", "science", "philosophy", "technology"],
+    "topics": [
+      "education",
+      "science",
+      "philosophy",
+      "technology"
+    ],
     "siteUrl": "https://ideas.ted.com",
-    "rss": { "feedUrl": "https://ideas.ted.com/feed/" },
+    "rss": {
+      "feedUrl": "https://ideas.ted.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -429,9 +640,16 @@
     "id": "the-marginalian",
     "name": "The Marginalian",
     "category": "Academic & Research",
-    "topics": ["philosophy", "books", "science", "creative writing"],
+    "topics": [
+      "philosophy",
+      "books",
+      "science",
+      "creative writing"
+    ],
     "siteUrl": "https://www.themarginalian.org",
-    "rss": { "feedUrl": "https://www.themarginalian.org/feed/" },
+    "rss": {
+      "feedUrl": "https://www.themarginalian.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -441,9 +659,16 @@
     "id": "aeon",
     "name": "Aeon",
     "category": "Academic & Research",
-    "topics": ["philosophy", "science", "sociology", "cultural studies"],
+    "topics": [
+      "philosophy",
+      "science",
+      "sociology",
+      "cultural studies"
+    ],
     "siteUrl": "https://aeon.co",
-    "rss": { "feedUrl": "https://aeon.co/feed.rss" },
+    "rss": {
+      "feedUrl": "https://aeon.co/feed.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -453,9 +678,16 @@
     "id": "nautilus-academic",
     "name": "Nautilus",
     "category": "Academic & Research",
-    "topics": ["science", "philosophy", "neuroscience", "physics"],
+    "topics": [
+      "science",
+      "philosophy",
+      "neuroscience",
+      "physics"
+    ],
     "siteUrl": "https://nautil.us",
-    "rss": { "feedUrl": "https://nautil.us/feed/" },
+    "rss": {
+      "feedUrl": "https://nautil.us/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -465,9 +697,16 @@
     "id": "internet-archive-blog",
     "name": "Internet Archive Blog",
     "category": "Academic & Research",
-    "topics": ["books", "history", "education", "technology"],
+    "topics": [
+      "books",
+      "history",
+      "education",
+      "technology"
+    ],
     "siteUrl": "https://blog.archive.org",
-    "rss": { "feedUrl": "https://blog.archive.org/feed/" },
+    "rss": {
+      "feedUrl": "https://blog.archive.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -477,9 +716,16 @@
     "id": "library-of-congress-blog",
     "name": "Library of Congress Blog",
     "category": "Academic & Research",
-    "topics": ["history", "books", "education", "cultural studies"],
+    "topics": [
+      "history",
+      "books",
+      "education",
+      "cultural studies"
+    ],
     "siteUrl": "https://blogs.loc.gov",
-    "rss": { "feedUrl": "https://blogs.loc.gov/feed/" },
+    "rss": {
+      "feedUrl": "https://blogs.loc.gov/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -489,9 +735,16 @@
     "id": "british-library-blog",
     "name": "British Library Blog",
     "category": "Academic & Research",
-    "topics": ["history", "literature", "books", "cultural studies"],
+    "topics": [
+      "history",
+      "literature",
+      "books",
+      "cultural studies"
+    ],
     "siteUrl": "https://blogs.bl.uk",
-    "rss": { "feedUrl": "https://blogs.bl.uk/feed" },
+    "rss": {
+      "feedUrl": "https://blogs.bl.uk/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -501,9 +754,16 @@
     "id": "europeana-blog",
     "name": "Europeana Blog",
     "category": "Academic & Research",
-    "topics": ["history", "cultural studies", "art", "education"],
+    "topics": [
+      "history",
+      "cultural studies",
+      "art",
+      "education"
+    ],
     "siteUrl": "https://www.europeana.eu/en/blog",
-    "rss": { "feedUrl": "https://www.europeana.eu/en/blog/rss" },
+    "rss": {
+      "feedUrl": "https://www.europeana.eu/en/blog/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -513,9 +773,16 @@
     "id": "khan-academy-blog",
     "name": "Khan Academy Blog",
     "category": "Academic & Research",
-    "topics": ["education", "mathematics", "science", "technology"],
+    "topics": [
+      "education",
+      "mathematics",
+      "science",
+      "technology"
+    ],
     "siteUrl": "https://blog.khanacademy.org",
-    "rss": { "feedUrl": "https://blog.khanacademy.org/feed/" },
+    "rss": {
+      "feedUrl": "https://blog.khanacademy.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -525,9 +792,16 @@
     "id": "coursera-blog",
     "name": "Coursera Blog",
     "category": "Academic & Research",
-    "topics": ["education", "technology", "data science", "business"],
+    "topics": [
+      "education",
+      "technology",
+      "data science",
+      "business"
+    ],
     "siteUrl": "https://blog.coursera.org",
-    "rss": { "feedUrl": "https://blog.coursera.org/feed/" },
+    "rss": {
+      "feedUrl": "https://blog.coursera.org/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -537,9 +811,16 @@
     "id": "edx-blog",
     "name": "edX Blog",
     "category": "Academic & Research",
-    "topics": ["education", "technology", "science", "artificial intelligence"],
+    "topics": [
+      "education",
+      "technology",
+      "science",
+      "artificial intelligence"
+    ],
     "siteUrl": "https://www.edx.org/blog",
-    "rss": { "feedUrl": "https://www.edx.org/blog/feed" },
+    "rss": {
+      "feedUrl": "https://www.edx.org/blog/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

@@ -3,7 +3,15 @@
     "id": "tmdb",
     "name": "TMDB",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "documentaries", "art", "streaming"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "documentaries",
+      "art",
+      "streaming"
+    ],
     "siteUrl": "https://www.themoviedb.org",
     "search": {
       "endpoint": "https://api.themoviedb.org/3/search/movie",
@@ -24,9 +32,18 @@
     "id": "ign",
     "name": "IGN",
     "category": "Entertainment",
-    "topics": ["gaming", "esports", "film", "technology"],
+    "topics": [
+      "gaming",
+      "esports",
+      "film",
+      "technology",
+      "indie games",
+      "AR/VR"
+    ],
     "siteUrl": "https://www.ign.com",
-    "rss": { "feedUrl": "https://feeds.feedburner.com/ign/all" },
+    "rss": {
+      "feedUrl": "https://feeds.feedburner.com/ign/all"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -36,9 +53,17 @@
     "id": "polygon",
     "name": "Polygon",
     "category": "Entertainment",
-    "topics": ["gaming", "esports", "design", "film"],
+    "topics": [
+      "gaming",
+      "esports",
+      "design",
+      "film",
+      "indie games"
+    ],
     "siteUrl": "https://www.polygon.com",
-    "rss": { "feedUrl": "https://www.polygon.com/rss/index.xml" },
+    "rss": {
+      "feedUrl": "https://www.polygon.com/rss/index.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -48,9 +73,20 @@
     "id": "pitchfork",
     "name": "Pitchfork",
     "category": "Entertainment",
-    "topics": ["music", "art", "design"],
+    "topics": [
+      "music",
+      "art",
+      "design",
+      "hip hop",
+      "jazz",
+      "classical music",
+      "electronic music",
+      "rock music"
+    ],
     "siteUrl": "https://pitchfork.com",
-    "rss": { "feedUrl": "https://pitchfork.com/feed/feed-news/rss" },
+    "rss": {
+      "feedUrl": "https://pitchfork.com/feed/feed-news/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -60,7 +96,12 @@
     "id": "anilist",
     "name": "AniList",
     "category": "Entertainment",
-    "topics": ["anime", "art", "design", "film"],
+    "topics": [
+      "anime",
+      "art",
+      "design",
+      "film"
+    ],
     "siteUrl": "https://anilist.co",
     "search": {
       "endpoint": "https://graphql.anilist.co",
@@ -76,9 +117,16 @@
     "id": "kotaku",
     "name": "Kotaku",
     "category": "Entertainment",
-    "topics": ["gaming", "anime", "virtual reality", "game development"],
+    "topics": [
+      "gaming",
+      "anime",
+      "virtual reality",
+      "game development"
+    ],
     "siteUrl": "https://kotaku.com",
-    "rss": { "feedUrl": "https://kotaku.com/rss" },
+    "rss": {
+      "feedUrl": "https://kotaku.com/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -88,9 +136,16 @@
     "id": "gamespot",
     "name": "GameSpot",
     "category": "Entertainment",
-    "topics": ["gaming", "esports", "virtual reality", "streaming"],
+    "topics": [
+      "gaming",
+      "esports",
+      "virtual reality",
+      "streaming"
+    ],
     "siteUrl": "https://www.gamespot.com",
-    "rss": { "feedUrl": "https://www.gamespot.com/feeds/mashup/" },
+    "rss": {
+      "feedUrl": "https://www.gamespot.com/feeds/mashup/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -100,9 +155,15 @@
     "id": "eurogamer",
     "name": "Eurogamer",
     "category": "Entertainment",
-    "topics": ["gaming", "game development", "esports"],
+    "topics": [
+      "gaming",
+      "game development",
+      "esports"
+    ],
     "siteUrl": "https://www.eurogamer.net",
-    "rss": { "feedUrl": "https://www.eurogamer.net/feed" },
+    "rss": {
+      "feedUrl": "https://www.eurogamer.net/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -112,9 +173,20 @@
     "id": "variety",
     "name": "Variety",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "documentaries", "music", "streaming", "theater"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "documentaries",
+      "music",
+      "streaming",
+      "theater"
+    ],
     "siteUrl": "https://variety.com",
-    "rss": { "feedUrl": "https://variety.com/feed/" },
+    "rss": {
+      "feedUrl": "https://variety.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -124,9 +196,20 @@
     "id": "hollywood-reporter",
     "name": "Hollywood Reporter",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "documentaries", "music", "streaming", "theater"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "documentaries",
+      "music",
+      "streaming",
+      "theater"
+    ],
     "siteUrl": "https://www.hollywoodreporter.com",
-    "rss": { "feedUrl": "https://www.hollywoodreporter.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.hollywoodreporter.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -136,9 +219,18 @@
     "id": "rolling-stone",
     "name": "Rolling Stone",
     "category": "Entertainment",
-    "topics": ["music", "film", "cultural studies", "politics"],
+    "topics": [
+      "music",
+      "film",
+      "cultural studies",
+      "politics",
+      "hip hop",
+      "rock music"
+    ],
     "siteUrl": "https://www.rollingstone.com",
-    "rss": { "feedUrl": "https://www.rollingstone.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.rollingstone.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -148,9 +240,15 @@
     "id": "stereogum",
     "name": "Stereogum",
     "category": "Entertainment",
-    "topics": ["music", "art", "cultural studies"],
+    "topics": [
+      "music",
+      "art",
+      "cultural studies"
+    ],
     "siteUrl": "https://www.stereogum.com",
-    "rss": { "feedUrl": "https://www.stereogum.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.stereogum.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -160,9 +258,16 @@
     "id": "pcgamer",
     "name": "PC Gamer",
     "category": "Entertainment",
-    "topics": ["gaming", "technology", "esports", "virtual reality"],
+    "topics": [
+      "gaming",
+      "technology",
+      "esports",
+      "virtual reality"
+    ],
     "siteUrl": "https://www.pcgamer.com",
-    "rss": { "feedUrl": "https://www.pcgamer.com/rss/" },
+    "rss": {
+      "feedUrl": "https://www.pcgamer.com/rss/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -172,9 +277,16 @@
     "id": "anime-news-network",
     "name": "Anime News Network",
     "category": "Entertainment",
-    "topics": ["anime", "comics", "film", "cultural studies"],
+    "topics": [
+      "anime",
+      "comics",
+      "film",
+      "cultural studies"
+    ],
     "siteUrl": "https://www.animenewsnetwork.com",
-    "rss": { "feedUrl": "https://www.animenewsnetwork.com/all/rss.xml" },
+    "rss": {
+      "feedUrl": "https://www.animenewsnetwork.com/all/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -184,9 +296,19 @@
     "id": "deadline",
     "name": "Deadline",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "streaming", "theater", "business"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "streaming",
+      "theater",
+      "business"
+    ],
     "siteUrl": "https://deadline.com",
-    "rss": { "feedUrl": "https://deadline.com/feed/" },
+    "rss": {
+      "feedUrl": "https://deadline.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -196,9 +318,19 @@
     "id": "screen-rant",
     "name": "Screen Rant",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "streaming", "comics", "gaming"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "streaming",
+      "comics",
+      "gaming"
+    ],
     "siteUrl": "https://screenrant.com",
-    "rss": { "feedUrl": "https://screenrant.com/feed/" },
+    "rss": {
+      "feedUrl": "https://screenrant.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -208,9 +340,19 @@
     "id": "collider",
     "name": "Collider",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "streaming", "theater", "anime"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "streaming",
+      "theater",
+      "anime"
+    ],
     "siteUrl": "https://collider.com",
-    "rss": { "feedUrl": "https://collider.com/feed/" },
+    "rss": {
+      "feedUrl": "https://collider.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -220,9 +362,19 @@
     "id": "indiewire",
     "name": "IndieWire",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "documentaries", "art", "theater", "streaming"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "documentaries",
+      "art",
+      "theater",
+      "streaming"
+    ],
     "siteUrl": "https://www.indiewire.com",
-    "rss": { "feedUrl": "https://www.indiewire.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.indiewire.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -232,9 +384,18 @@
     "id": "rogerebert",
     "name": "RogerEbert.com",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "documentaries", "art", "cultural studies"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "documentaries",
+      "art",
+      "cultural studies"
+    ],
     "siteUrl": "https://www.rogerebert.com",
-    "rss": { "feedUrl": "https://www.rogerebert.com/feed" },
+    "rss": {
+      "feedUrl": "https://www.rogerebert.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -244,9 +405,19 @@
     "id": "letterboxd-journal",
     "name": "Letterboxd Journal",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "documentaries", "art", "cultural studies", "creative writing"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "documentaries",
+      "art",
+      "cultural studies",
+      "creative writing"
+    ],
     "siteUrl": "https://letterboxd.com/journal/",
-    "rss": { "feedUrl": "https://letterboxd.com/journal/feed/" },
+    "rss": {
+      "feedUrl": "https://letterboxd.com/journal/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -256,9 +427,21 @@
     "id": "nme",
     "name": "NME",
     "category": "Entertainment",
-    "topics": ["music", "film", "gaming", "cultural studies"],
+    "topics": [
+      "music",
+      "film",
+      "gaming",
+      "cultural studies",
+      "hip hop",
+      "jazz",
+      "electronic music",
+      "k-pop",
+      "rock music"
+    ],
     "siteUrl": "https://www.nme.com",
-    "rss": { "feedUrl": "https://www.nme.com/feed" },
+    "rss": {
+      "feedUrl": "https://www.nme.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -268,9 +451,16 @@
     "id": "consequence-of-sound",
     "name": "Consequence of Sound",
     "category": "Entertainment",
-    "topics": ["music", "film", "streaming", "cultural studies"],
+    "topics": [
+      "music",
+      "film",
+      "streaming",
+      "cultural studies"
+    ],
     "siteUrl": "https://consequence.net",
-    "rss": { "feedUrl": "https://consequence.net/feed/" },
+    "rss": {
+      "feedUrl": "https://consequence.net/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -280,9 +470,16 @@
     "id": "brooklyn-vegan",
     "name": "Brooklyn Vegan",
     "category": "Entertainment",
-    "topics": ["music", "art", "cultural studies", "podcasts"],
+    "topics": [
+      "music",
+      "art",
+      "cultural studies",
+      "podcasts"
+    ],
     "siteUrl": "https://www.brooklynvegan.com",
-    "rss": { "feedUrl": "https://www.brooklynvegan.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.brooklynvegan.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -292,9 +489,16 @@
     "id": "resident-advisor",
     "name": "Resident Advisor",
     "category": "Entertainment",
-    "topics": ["music", "art", "cultural studies", "podcasts"],
+    "topics": [
+      "music",
+      "art",
+      "cultural studies",
+      "podcasts"
+    ],
     "siteUrl": "https://ra.co",
-    "rss": { "feedUrl": "https://ra.co/xml/news.xml" },
+    "rss": {
+      "feedUrl": "https://ra.co/xml/news.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -304,9 +508,16 @@
     "id": "billboard",
     "name": "Billboard",
     "category": "Entertainment",
-    "topics": ["music", "business", "streaming", "cultural studies"],
+    "topics": [
+      "music",
+      "business",
+      "streaming",
+      "cultural studies"
+    ],
     "siteUrl": "https://www.billboard.com",
-    "rss": { "feedUrl": "https://www.billboard.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.billboard.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -316,9 +527,15 @@
     "id": "spin-magazine",
     "name": "Spin Magazine",
     "category": "Entertainment",
-    "topics": ["music", "cultural studies", "art"],
+    "topics": [
+      "music",
+      "cultural studies",
+      "art"
+    ],
     "siteUrl": "https://www.spin.com",
-    "rss": { "feedUrl": "https://www.spin.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.spin.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -328,9 +545,20 @@
     "id": "vulture",
     "name": "Vulture",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "music", "streaming", "theater", "comics"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "music",
+      "streaming",
+      "theater",
+      "comics"
+    ],
     "siteUrl": "https://www.vulture.com",
-    "rss": { "feedUrl": "https://www.vulture.com/feed/rss" },
+    "rss": {
+      "feedUrl": "https://www.vulture.com/feed/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -340,9 +568,16 @@
     "id": "av-club",
     "name": "AV Club",
     "category": "Entertainment",
-    "topics": ["film", "music", "streaming", "cultural studies"],
+    "topics": [
+      "film",
+      "music",
+      "streaming",
+      "cultural studies"
+    ],
     "siteUrl": "https://www.avclub.com",
-    "rss": { "feedUrl": "https://www.avclub.com/rss" },
+    "rss": {
+      "feedUrl": "https://www.avclub.com/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -352,9 +587,16 @@
     "id": "paste-magazine",
     "name": "Paste Magazine",
     "category": "Entertainment",
-    "topics": ["music", "film", "gaming", "books"],
+    "topics": [
+      "music",
+      "film",
+      "gaming",
+      "books"
+    ],
     "siteUrl": "https://www.pastemagazine.com",
-    "rss": { "feedUrl": "https://www.pastemagazine.com/feed" },
+    "rss": {
+      "feedUrl": "https://www.pastemagazine.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -364,9 +606,16 @@
     "id": "den-of-geek",
     "name": "Den of Geek",
     "category": "Entertainment",
-    "topics": ["film", "gaming", "comics", "streaming"],
+    "topics": [
+      "film",
+      "gaming",
+      "comics",
+      "streaming"
+    ],
     "siteUrl": "https://www.denofgeek.com",
-    "rss": { "feedUrl": "https://www.denofgeek.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.denofgeek.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -376,9 +625,16 @@
     "id": "comicbook-com",
     "name": "ComicBook.com",
     "category": "Entertainment",
-    "topics": ["comics", "film", "anime", "gaming"],
+    "topics": [
+      "comics",
+      "film",
+      "anime",
+      "gaming"
+    ],
     "siteUrl": "https://comicbook.com",
-    "rss": { "feedUrl": "https://comicbook.com/rss/" },
+    "rss": {
+      "feedUrl": "https://comicbook.com/rss/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -388,9 +644,16 @@
     "id": "cbr",
     "name": "CBR (Comic Book Resources)",
     "category": "Entertainment",
-    "topics": ["comics", "film", "anime", "gaming"],
+    "topics": [
+      "comics",
+      "film",
+      "anime",
+      "gaming"
+    ],
     "siteUrl": "https://www.cbr.com",
-    "rss": { "feedUrl": "https://www.cbr.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.cbr.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -400,9 +663,16 @@
     "id": "crunchyroll-news",
     "name": "Crunchyroll News",
     "category": "Entertainment",
-    "topics": ["anime", "comics", "streaming", "cultural studies"],
+    "topics": [
+      "anime",
+      "comics",
+      "streaming",
+      "cultural studies"
+    ],
     "siteUrl": "https://www.crunchyroll.com/news",
-    "rss": { "feedUrl": "https://www.crunchyroll.com/newsrss" },
+    "rss": {
+      "feedUrl": "https://www.crunchyroll.com/newsrss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -412,9 +682,16 @@
     "id": "myanimelist-news",
     "name": "MyAnimeList News",
     "category": "Entertainment",
-    "topics": ["anime", "comics", "cultural studies", "film"],
+    "topics": [
+      "anime",
+      "comics",
+      "cultural studies",
+      "film"
+    ],
     "siteUrl": "https://myanimelist.net",
-    "rss": { "feedUrl": "https://myanimelist.net/rss/news.xml" },
+    "rss": {
+      "feedUrl": "https://myanimelist.net/rss/news.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -424,9 +701,16 @@
     "id": "siliconera",
     "name": "Siliconera",
     "category": "Entertainment",
-    "topics": ["gaming", "anime", "game development", "comics"],
+    "topics": [
+      "gaming",
+      "anime",
+      "game development",
+      "comics"
+    ],
     "siteUrl": "https://www.siliconera.com",
-    "rss": { "feedUrl": "https://www.siliconera.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.siliconera.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -436,9 +720,16 @@
     "id": "destructoid",
     "name": "Destructoid",
     "category": "Entertainment",
-    "topics": ["gaming", "game development", "esports", "streaming"],
+    "topics": [
+      "gaming",
+      "game development",
+      "esports",
+      "streaming"
+    ],
     "siteUrl": "https://www.destructoid.com",
-    "rss": { "feedUrl": "https://www.destructoid.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.destructoid.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -448,9 +739,16 @@
     "id": "rock-paper-shotgun",
     "name": "Rock Paper Shotgun",
     "category": "Entertainment",
-    "topics": ["gaming", "game development", "technology", "esports"],
+    "topics": [
+      "gaming",
+      "game development",
+      "technology",
+      "esports"
+    ],
     "siteUrl": "https://www.rockpapershotgun.com",
-    "rss": { "feedUrl": "https://www.rockpapershotgun.com/feed" },
+    "rss": {
+      "feedUrl": "https://www.rockpapershotgun.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -460,9 +758,16 @@
     "id": "the-verge-entertainment",
     "name": "The Verge Entertainment",
     "category": "Entertainment",
-    "topics": ["film", "streaming", "gaming", "technology"],
+    "topics": [
+      "film",
+      "streaming",
+      "gaming",
+      "technology"
+    ],
     "siteUrl": "https://www.theverge.com/entertainment",
-    "rss": { "feedUrl": "https://www.theverge.com/entertainment/rss/index.xml" },
+    "rss": {
+      "feedUrl": "https://www.theverge.com/entertainment/rss/index.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -472,9 +777,19 @@
     "id": "entertainment-weekly",
     "name": "Entertainment Weekly",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "music", "streaming", "books"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "music",
+      "streaming",
+      "books"
+    ],
     "siteUrl": "https://ew.com",
-    "rss": { "feedUrl": "https://ew.com/feed/" },
+    "rss": {
+      "feedUrl": "https://ew.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -484,9 +799,19 @@
     "id": "slashfilm",
     "name": "SlashFilm",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "streaming", "art", "theater"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "streaming",
+      "art",
+      "theater"
+    ],
     "siteUrl": "https://www.slashfilm.com",
-    "rss": { "feedUrl": "https://www.slashfilm.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.slashfilm.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -496,9 +821,18 @@
     "id": "cinemablend",
     "name": "CinemaBlend",
     "category": "Entertainment",
-    "topics": ["film", "movie", "cinema", "tv shows", "streaming", "theater"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "streaming",
+      "theater"
+    ],
     "siteUrl": "https://www.cinemablend.com",
-    "rss": { "feedUrl": "https://www.cinemablend.com/rss/topic/news" },
+    "rss": {
+      "feedUrl": "https://www.cinemablend.com/rss/topic/news"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -508,9 +842,16 @@
     "id": "gizmodo-entertainment",
     "name": "Gizmodo Entertainment",
     "category": "Entertainment",
-    "topics": ["film", "comics", "streaming", "technology"],
+    "topics": [
+      "film",
+      "comics",
+      "streaming",
+      "technology"
+    ],
     "siteUrl": "https://gizmodo.com",
-    "rss": { "feedUrl": "https://gizmodo.com/rss" },
+    "rss": {
+      "feedUrl": "https://gizmodo.com/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -520,9 +861,16 @@
     "id": "the-mary-sue",
     "name": "The Mary Sue",
     "category": "Entertainment",
-    "topics": ["comics", "film", "gaming", "cultural studies"],
+    "topics": [
+      "comics",
+      "film",
+      "gaming",
+      "cultural studies"
+    ],
     "siteUrl": "https://www.themarysue.com",
-    "rss": { "feedUrl": "https://www.themarysue.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.themarysue.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -532,9 +880,16 @@
     "id": "giant-bomb",
     "name": "Giant Bomb",
     "category": "Entertainment",
-    "topics": ["gaming", "esports", "streaming", "podcasts"],
+    "topics": [
+      "gaming",
+      "esports",
+      "streaming",
+      "podcasts"
+    ],
     "siteUrl": "https://www.giantbomb.com",
-    "rss": { "feedUrl": "https://www.giantbomb.com/feeds/mashup/" },
+    "rss": {
+      "feedUrl": "https://www.giantbomb.com/feeds/mashup/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -544,9 +899,16 @@
     "id": "dualshockers",
     "name": "DualShockers",
     "category": "Entertainment",
-    "topics": ["gaming", "game development", "anime", "esports"],
+    "topics": [
+      "gaming",
+      "game development",
+      "anime",
+      "esports"
+    ],
     "siteUrl": "https://www.dualshockers.com",
-    "rss": { "feedUrl": "https://www.dualshockers.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.dualshockers.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

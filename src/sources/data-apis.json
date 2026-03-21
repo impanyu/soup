@@ -61,7 +61,8 @@
     "topics": [
       "geology",
       "science",
-      "data science"
+      "data science",
+      "nuclear physics"
     ],
     "search": {
       "endpoint": "https://earthquake.usgs.gov/fdsnws/event/1/query",
@@ -263,7 +264,13 @@
       "food",
       "nutrition",
       "health",
-      "data science"
+      "data science",
+      "baking",
+      "vegan",
+      "tea",
+      "chocolate",
+      "wine",
+      "coffee"
     ],
     "search": {
       "endpoint": "https://world.openfoodfacts.org/cgi/search.pl",
@@ -604,7 +611,9 @@
       "energy",
       "carbon",
       "environment",
-      "UK"
+      "UK",
+      "fusion energy",
+      "carbon capture"
     ],
     "search": {
       "endpoint": "https://api.carbonintensity.org.uk/intensity/date",
@@ -628,7 +637,8 @@
       "energy",
       "renewables",
       "electricity",
-      "UK"
+      "UK",
+      "fusion energy"
     ],
     "search": {
       "endpoint": "https://api.carbonintensity.org.uk/generation",
@@ -678,7 +688,9 @@
       "environment",
       "ocean",
       "marine",
-      "waves"
+      "waves",
+      "surfing",
+      "marine biology"
     ],
     "search": {
       "endpoint": "https://marine-api.open-meteo.com/v1/marine",
@@ -705,7 +717,8 @@
       "environment",
       "water",
       "hydrology",
-      "USA"
+      "USA",
+      "marine biology"
     ],
     "search": {
       "endpoint": "https://waterservices.usgs.gov/nwis/iv/",
@@ -830,7 +843,8 @@
       "transport",
       "bikes",
       "urban",
-      "sharing"
+      "sharing",
+      "cycling"
     ],
     "search": {
       "endpoint": "https://api.citybik.es/v2/networks",
@@ -853,7 +867,9 @@
     "topics": [
       "sports",
       "F1",
-      "motorsport"
+      "motorsport",
+      "formula 1",
+      "auto racing"
     ],
     "search": {
       "endpoint": "https://api.jolpi.ca/ergast/f1/current/driverStandings.json",
@@ -876,7 +892,9 @@
     "topics": [
       "technology",
       "open-source",
-      "developer"
+      "developer",
+      "open source",
+      "programming"
     ],
     "search": {
       "endpoint": "https://api.github.com/events",
@@ -952,7 +970,13 @@
       "media",
       "music",
       "apps",
-      "entertainment"
+      "entertainment",
+      "k-pop",
+      "electronic music",
+      "rock music",
+      "jazz",
+      "classical music",
+      "hip hop"
     ],
     "search": {
       "endpoint": "https://itunes.apple.com/search",
@@ -999,7 +1023,9 @@
     "topics": [
       "food",
       "recipes",
-      "cooking"
+      "cooking",
+      "baking",
+      "barbecue"
     ],
     "search": {
       "endpoint": "https://www.themealdb.com/api/json/v1/1/categories.php",
@@ -1244,7 +1270,14 @@
       "space exploration",
       "city life",
       "citywalk",
-      "urban exploration"
+      "urban exploration",
+      "hiking",
+      "camping",
+      "national parks",
+      "scuba diving",
+      "bird watching",
+      "wildlife",
+      "rock climbing"
     ],
     "dataType": "media",
     "requiresKey": true,
@@ -1278,7 +1311,9 @@
       "cardiology",
       "rare diseases",
       "immunology",
-      "public health"
+      "public health",
+      "sleep science",
+      "synthetic biology"
     ],
     "dataType": "structured",
     "requiresKey": false,
@@ -1295,7 +1330,10 @@
       "cardiology",
       "rare diseases",
       "immunology",
-      "health"
+      "health",
+      "longevity",
+      "physical therapy",
+      "synthetic biology"
     ],
     "dataType": "structured",
     "requiresKey": false,
@@ -1308,7 +1346,9 @@
     "topics": [
       "beauty",
       "makeup",
-      "fashion"
+      "fashion",
+      "skincare",
+      "haircare"
     ],
     "dataType": "structured",
     "requiresKey": false,
@@ -1323,7 +1363,9 @@
       "horoscope",
       "zodiac",
       "tarot",
-      "spirituality"
+      "spirituality",
+      "psychology",
+      "mindfulness"
     ],
     "dataType": "structured",
     "requiresKey": false,
@@ -1358,7 +1400,13 @@
       "cooking",
       "city life",
       "citywalk",
-      "urban exploration"
+      "urban exploration",
+      "hiking",
+      "camping",
+      "national parks",
+      "street food",
+      "bird watching",
+      "rock climbing"
     ],
     "dataType": "structured",
     "requiresKey": true,
@@ -1377,7 +1425,9 @@
       "food",
       "city life",
       "citywalk",
-      "urban exploration"
+      "urban exploration",
+      "hiking",
+      "national parks"
     ],
     "dataType": "media",
     "requiresKey": true,
@@ -1654,7 +1704,9 @@
     "topics": [
       "art",
       "history",
-      "cultural studies"
+      "cultural studies",
+      "sculpture",
+      "calligraphy"
     ],
     "dataType": "structured",
     "category": "Data APIs",
@@ -1730,7 +1782,13 @@
     "name": "Deezer Music Search",
     "topics": [
       "music",
-      "streaming"
+      "streaming",
+      "k-pop",
+      "electronic music",
+      "rock music",
+      "jazz",
+      "classical music",
+      "hip hop"
     ],
     "dataType": "structured",
     "category": "Data APIs",
@@ -1743,7 +1801,9 @@
     "topics": [
       "gaming",
       "game development",
-      "streaming"
+      "streaming",
+      "indie games",
+      "board games"
     ],
     "dataType": "structured",
     "category": "Data APIs",
@@ -1842,7 +1902,9 @@
     "topics": [
       "autonomous vehicles",
       "sustainability",
-      "travel"
+      "travel",
+      "electric vehicles",
+      "smart cities"
     ],
     "dataType": "structured",
     "category": "Data APIs",

@@ -113,7 +113,15 @@
       "world news",
       "politics",
       "economics",
-      "business"
+      "business",
+      "geopolitics",
+      "immigration",
+      "labor rights",
+      "cricket",
+      "swimming",
+      "golf",
+      "auto racing",
+      "wildlife"
     ],
     "siteUrl": "https://www.bbc.com/news",
     "rss": {
@@ -132,7 +140,11 @@
       "world news",
       "politics",
       "business",
-      "finance"
+      "finance",
+      "geopolitics",
+      "immigration",
+      "labor rights",
+      "supply chain"
     ],
     "siteUrl": "https://www.reuters.com",
     "rss": {

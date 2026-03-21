@@ -7,7 +7,11 @@
       "food",
       "nutrition",
       "travel",
-      "cooking"
+      "cooking",
+      "baking",
+      "barbecue",
+      "chocolate",
+      "street food"
     ],
     "siteUrl": "https://www.foodnetwork.com",
     "rss": {
@@ -27,7 +31,11 @@
       "food",
       "photography",
       "city life",
-      "citywalk"
+      "citywalk",
+      "national parks",
+      "scuba diving",
+      "hiking",
+      "street food"
     ],
     "siteUrl": "https://www.lonelyplanet.com",
     "rss": {
@@ -49,7 +57,10 @@
       "ootd",
       "design",
       "photography",
-      "art"
+      "art",
+      "skincare",
+      "haircare",
+      "luxury"
     ],
     "siteUrl": "https://www.vogue.com",
     "rss": {
@@ -144,7 +155,9 @@
       "sustainability",
       "environment",
       "gardening",
-      "renewable energy"
+      "renewable energy",
+      "electric vehicles",
+      "carbon capture"
     ],
     "siteUrl": "https://www.treehugger.com",
     "rss": {
@@ -162,7 +175,15 @@
     "topics": [
       "food",
       "cooking",
-      "travel"
+      "travel",
+      "baking",
+      "fermentation",
+      "tea",
+      "chocolate",
+      "coffee",
+      "cocktails",
+      "wine",
+      "barbecue"
     ],
     "siteUrl": "https://www.bonappetit.com",
     "rss": {
@@ -183,7 +204,13 @@
       "science",
       "ecology",
       "city life",
-      "urban exploration"
+      "urban exploration",
+      "wildlife",
+      "bird watching",
+      "national parks",
+      "marine biology",
+      "paleontology",
+      "scuba diving"
     ],
     "siteUrl": "https://www.nationalgeographic.com",
     "rss": {
@@ -205,7 +232,9 @@
       "food",
       "city life",
       "citywalk",
-      "urban exploration"
+      "urban exploration",
+      "mythology",
+      "street food"
     ],
     "siteUrl": "https://www.atlasobscura.com",
     "rss": {
@@ -226,7 +255,8 @@
       "design",
       "real estate",
       "city life",
-      "urban exploration"
+      "urban exploration",
+      "smart cities"
     ],
     "siteUrl": "https://www.curbed.com",
     "rss": {
@@ -262,7 +292,11 @@
     "topics": [
       "food",
       "cooking",
-      "nutrition"
+      "nutrition",
+      "fermentation",
+      "barbecue",
+      "tea",
+      "coffee"
     ],
     "siteUrl": "https://www.seriouseats.com",
     "rss": {
@@ -300,7 +334,8 @@
       "architecture",
       "design",
       "art",
-      "sustainability"
+      "sustainability",
+      "smart cities"
     ],
     "siteUrl": "https://www.dezeen.com",
     "rss": {
@@ -397,7 +432,8 @@
       "travel",
       "business",
       "city life",
-      "citywalk"
+      "citywalk",
+      "street food"
     ],
     "siteUrl": "https://www.eater.com",
     "rss": {
@@ -415,7 +451,9 @@
     "topics": [
       "food",
       "cooking",
-      "home improvement"
+      "home improvement",
+      "baking",
+      "vegan"
     ],
     "siteUrl": "https://food52.com",
     "rss": {
@@ -434,7 +472,10 @@
       "food",
       "cooking",
       "travel",
-      "cultural studies"
+      "cultural studies",
+      "fermentation",
+      "chocolate",
+      "tea"
     ],
     "siteUrl": "https://www.saveur.com",
     "rss": {
@@ -452,7 +493,8 @@
     "topics": [
       "food",
       "travel",
-      "cooking"
+      "cooking",
+      "wine"
     ],
     "siteUrl": "https://www.winemag.com",
     "rss": {
@@ -473,7 +515,9 @@
       "photography",
       "fashion",
       "city life",
-      "citywalk"
+      "citywalk",
+      "luxury",
+      "national parks"
     ],
     "siteUrl": "https://www.cntraveler.com",
     "rss": {
@@ -513,7 +557,10 @@
       "food",
       "history",
       "citywalk",
-      "urban exploration"
+      "urban exploration",
+      "hiking",
+      "camping",
+      "national parks"
     ],
     "siteUrl": "https://www.roadtrippers.com",
     "responseFormat": "xml",
@@ -529,7 +576,8 @@
       "fashion",
       "design",
       "fitness",
-      "food"
+      "food",
+      "luxury"
     ],
     "siteUrl": "https://www.gq.com",
     "rss": {
@@ -570,7 +618,9 @@
       "ootd",
       "design",
       "photography",
-      "art"
+      "art",
+      "skincare",
+      "haircare"
     ],
     "siteUrl": "https://www.elle.com",
     "rss": {
@@ -613,7 +663,10 @@
       "makeup",
       "health",
       "fitness",
-      "food"
+      "food",
+      "skincare",
+      "haircare",
+      "nail art"
     ],
     "siteUrl": "https://www.cosmopolitan.com",
     "rss": {
@@ -635,7 +688,9 @@
       "ootd",
       "health",
       "design",
-      "film"
+      "film",
+      "skincare",
+      "nail art"
     ],
     "siteUrl": "https://www.refinery29.com",
     "rss": {
@@ -736,7 +791,8 @@
       "cooking",
       "gardening",
       "home improvement",
-      "food"
+      "food",
+      "baking"
     ],
     "siteUrl": "https://www.marthastewart.com",
     "rss": {
@@ -755,7 +811,8 @@
       "home improvement",
       "food",
       "health",
-      "fashion"
+      "fashion",
+      "minimalism"
     ],
     "siteUrl": "https://www.realsimple.com",
     "rss": {
@@ -774,7 +831,9 @@
       "architecture",
       "sustainability",
       "design",
-      "renewable energy"
+      "renewable energy",
+      "carbon capture",
+      "smart cities"
     ],
     "siteUrl": "https://inhabitat.com",
     "rss": {
@@ -830,7 +889,8 @@
       "food",
       "cooking",
       "nutrition",
-      "home improvement"
+      "home improvement",
+      "baking"
     ],
     "siteUrl": "https://www.thekitchn.com",
     "rss": {
@@ -849,7 +909,10 @@
       "travel",
       "food",
       "gardening",
-      "home improvement"
+      "home improvement",
+      "hiking",
+      "camping",
+      "barbecue"
     ],
     "siteUrl": "https://www.sunset.com",
     "rss": {

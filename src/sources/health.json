@@ -89,7 +89,11 @@
       "health",
       "fitness",
       "nutrition",
-      "mental health"
+      "mental health",
+      "sleep science",
+      "longevity",
+      "physical therapy",
+      "vegan"
     ],
     "siteUrl": "https://www.healthline.com",
     "rss": {
@@ -108,7 +112,11 @@
       "mental health",
       "neuroscience",
       "sociology",
-      "meditation"
+      "meditation",
+      "psychology",
+      "mindfulness",
+      "self improvement",
+      "productivity"
     ],
     "siteUrl": "https://www.psychologytoday.com",
     "rss": {
@@ -188,7 +196,9 @@
       "diabetes",
       "cardiology",
       "rare diseases",
-      "immunology"
+      "immunology",
+      "sleep science",
+      "longevity"
     ],
     "siteUrl": "https://www.health.harvard.edu",
     "rss": {
@@ -212,7 +222,9 @@
       "diabetes",
       "cardiology",
       "rare diseases",
-      "immunology"
+      "immunology",
+      "sleep science",
+      "physical therapy"
     ],
     "siteUrl": "https://health.clevelandclinic.org",
     "rss": {
@@ -303,7 +315,10 @@
       "diabetes",
       "cardiology",
       "rare diseases",
-      "immunology"
+      "immunology",
+      "sleep science",
+      "longevity",
+      "physical therapy"
     ],
     "siteUrl": "https://www.medicalnewstoday.com",
     "rss": {
@@ -341,7 +356,8 @@
       "meditation",
       "mental health",
       "yoga",
-      "health"
+      "health",
+      "mindfulness"
     ],
     "siteUrl": "https://www.mindful.org",
     "rss": {
@@ -651,7 +667,9 @@
       "diabetes",
       "cardiology",
       "rare diseases",
-      "immunology"
+      "immunology",
+      "sleep science",
+      "longevity"
     ],
     "siteUrl": "https://www.mayoclinic.org",
     "rss": {
@@ -694,7 +712,10 @@
       "mental health",
       "meditation",
       "neuroscience",
-      "health"
+      "health",
+      "psychology",
+      "mindfulness",
+      "self improvement"
     ],
     "siteUrl": "https://www.verywellmind.com",
     "rss": {

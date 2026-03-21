@@ -3,15 +3,36 @@
     "id": "reddit",
     "name": "Reddit",
     "category": "Social & Discussion",
-    "topics": ["technology", "gaming", "fitness", "politics"],
+    "topics": [
+      "technology",
+      "gaming",
+      "fitness",
+      "politics",
+      "board games",
+      "woodworking",
+      "knitting",
+      "pottery",
+      "leathercraft",
+      "origami",
+      "motorcycles",
+      "car restoration",
+      "k-pop",
+      "stoicism",
+      "minimalism",
+      "electronics diy"
+    ],
     "siteUrl": "https://www.reddit.com",
-    "rss": { "feedUrl": "https://www.reddit.com/.rss" },
+    "rss": {
+      "feedUrl": "https://www.reddit.com/.rss"
+    },
     "search": {
       "endpoint": "https://www.reddit.com/search.json",
       "searchParam": "q",
       "resultPath": "data.children",
       "limitParam": "limit",
-      "extraParams": { "sort": "relevance" }
+      "extraParams": {
+        "sort": "relevance"
+      }
     },
     "normalize": {
       "titlePath": "data.title",
@@ -27,9 +48,15 @@
     "id": "lobsters",
     "name": "Lobste.rs",
     "category": "Social & Discussion",
-    "topics": ["technology", "web development", "cybersecurity"],
+    "topics": [
+      "technology",
+      "web development",
+      "cybersecurity"
+    ],
     "siteUrl": "https://lobste.rs",
-    "rss": { "feedUrl": "https://lobste.rs/rss" },
+    "rss": {
+      "feedUrl": "https://lobste.rs/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -39,9 +66,16 @@
     "id": "producthunt",
     "name": "Product Hunt",
     "category": "Social & Discussion",
-    "topics": ["technology", "startups", "design", "mobile apps"],
+    "topics": [
+      "technology",
+      "startups",
+      "design",
+      "mobile apps"
+    ],
     "siteUrl": "https://www.producthunt.com",
-    "rss": { "feedUrl": "https://www.producthunt.com/feed" },
+    "rss": {
+      "feedUrl": "https://www.producthunt.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -51,14 +85,21 @@
     "id": "mastodon",
     "name": "Mastodon",
     "category": "Social & Discussion",
-    "topics": ["technology", "art", "politics", "philosophy"],
+    "topics": [
+      "technology",
+      "art",
+      "politics",
+      "philosophy"
+    ],
     "siteUrl": "https://mastodon.social",
     "search": {
       "endpoint": "https://mastodon.social/api/v2/search",
       "searchParam": "q",
       "resultPath": "statuses",
       "limitParam": "limit",
-      "extraParams": { "type": "statuses" }
+      "extraParams": {
+        "type": "statuses"
+      }
     },
     "normalize": {
       "titleTemplate": "@{account.username}",
@@ -74,15 +115,24 @@
     "id": "lemmy",
     "name": "Lemmy",
     "category": "Social & Discussion",
-    "topics": ["technology", "gaming", "politics", "science"],
+    "topics": [
+      "technology",
+      "gaming",
+      "politics",
+      "science"
+    ],
     "siteUrl": "https://lemmy.world",
-    "rss": { "feedUrl": "https://lemmy.world/feeds/all.xml" },
+    "rss": {
+      "feedUrl": "https://lemmy.world/feeds/all.xml"
+    },
     "search": {
       "endpoint": "https://lemmy.world/api/v3/search",
       "searchParam": "q",
       "resultPath": "posts",
       "limitParam": "limit",
-      "extraParams": { "type_": "Posts" }
+      "extraParams": {
+        "type_": "Posts"
+      }
     },
     "normalize": {
       "titlePath": "post.name",
@@ -98,9 +148,16 @@
     "id": "tildes",
     "name": "Tildes",
     "category": "Social & Discussion",
-    "topics": ["technology", "philosophy", "science", "books"],
+    "topics": [
+      "technology",
+      "philosophy",
+      "science",
+      "books"
+    ],
     "siteUrl": "https://tildes.net",
-    "rss": { "feedUrl": "https://tildes.net/topics.rss" },
+    "rss": {
+      "feedUrl": "https://tildes.net/topics.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -110,9 +167,16 @@
     "id": "slashdot",
     "name": "Slashdot",
     "category": "Social & Discussion",
-    "topics": ["technology", "science", "cybersecurity", "politics"],
+    "topics": [
+      "technology",
+      "science",
+      "cybersecurity",
+      "politics"
+    ],
     "siteUrl": "https://slashdot.org",
-    "rss": { "feedUrl": "https://rss.slashdot.org/Slashdot/slashdotMain" },
+    "rss": {
+      "feedUrl": "https://rss.slashdot.org/Slashdot/slashdotMain"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -122,9 +186,15 @@
     "id": "hackernews-new",
     "name": "HN New",
     "category": "Social & Discussion",
-    "topics": ["technology", "startups", "web development"],
+    "topics": [
+      "technology",
+      "startups",
+      "web development"
+    ],
     "siteUrl": "https://news.ycombinator.com",
-    "rss": { "feedUrl": "https://hnrss.org/newest" },
+    "rss": {
+      "feedUrl": "https://hnrss.org/newest"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -134,9 +204,15 @@
     "id": "hackernews-ask",
     "name": "HN Ask",
     "category": "Social & Discussion",
-    "topics": ["technology", "startups", "education"],
+    "topics": [
+      "technology",
+      "startups",
+      "education"
+    ],
     "siteUrl": "https://news.ycombinator.com",
-    "rss": { "feedUrl": "https://hnrss.org/ask" },
+    "rss": {
+      "feedUrl": "https://hnrss.org/ask"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -146,9 +222,15 @@
     "id": "hackernews-show",
     "name": "HN Show",
     "category": "Social & Discussion",
-    "topics": ["technology", "startups", "design"],
+    "topics": [
+      "technology",
+      "startups",
+      "design"
+    ],
     "siteUrl": "https://news.ycombinator.com",
-    "rss": { "feedUrl": "https://hnrss.org/show" },
+    "rss": {
+      "feedUrl": "https://hnrss.org/show"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -158,9 +240,16 @@
     "id": "indie-hackers",
     "name": "Indie Hackers",
     "category": "Social & Discussion",
-    "topics": ["startups", "entrepreneurship", "ecommerce", "marketing"],
+    "topics": [
+      "startups",
+      "entrepreneurship",
+      "ecommerce",
+      "marketing"
+    ],
     "siteUrl": "https://www.indiehackers.com",
-    "rss": { "feedUrl": "https://www.indiehackers.com/feed.xml" },
+    "rss": {
+      "feedUrl": "https://www.indiehackers.com/feed.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -170,9 +259,15 @@
     "id": "discourse-meta",
     "name": "Discourse Meta",
     "category": "Social & Discussion",
-    "topics": ["technology", "web development", "education"],
+    "topics": [
+      "technology",
+      "web development",
+      "education"
+    ],
     "siteUrl": "https://meta.discourse.org",
-    "rss": { "feedUrl": "https://meta.discourse.org/latest.rss" },
+    "rss": {
+      "feedUrl": "https://meta.discourse.org/latest.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -182,7 +277,11 @@
     "id": "fediverse-observer",
     "name": "Fediverse Observer",
     "category": "Social & Discussion",
-    "topics": ["technology", "web development", "philosophy"],
+    "topics": [
+      "technology",
+      "web development",
+      "philosophy"
+    ],
     "siteUrl": "https://fediverse.observer",
     "responseFormat": "xml",
     "dataType": "article",
@@ -193,7 +292,12 @@
     "id": "cohost",
     "name": "Cohost",
     "category": "Social & Discussion",
-    "topics": ["art", "technology", "creative writing", "gaming"],
+    "topics": [
+      "art",
+      "technology",
+      "creative writing",
+      "gaming"
+    ],
     "siteUrl": "https://cohost.org",
     "responseFormat": "xml",
     "dataType": "article",
@@ -204,9 +308,15 @@
     "id": "bluesky-blog",
     "name": "Bluesky Blog",
     "category": "Social & Discussion",
-    "topics": ["technology", "web development", "philosophy"],
+    "topics": [
+      "technology",
+      "web development",
+      "philosophy"
+    ],
     "siteUrl": "https://bsky.social",
-    "rss": { "feedUrl": "https://bsky.social/blog/feed.xml" },
+    "rss": {
+      "feedUrl": "https://bsky.social/blog/feed.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -216,7 +326,11 @@
     "id": "threads-meta",
     "name": "Threads Meta",
     "category": "Social & Discussion",
-    "topics": ["technology", "design", "photography"],
+    "topics": [
+      "technology",
+      "design",
+      "photography"
+    ],
     "siteUrl": "https://www.threads.net",
     "responseFormat": "xml",
     "dataType": "article",
@@ -227,9 +341,16 @@
     "id": "discord-blog",
     "name": "Discord Blog",
     "category": "Social & Discussion",
-    "topics": ["technology", "gaming", "design", "streaming"],
+    "topics": [
+      "technology",
+      "gaming",
+      "design",
+      "streaming"
+    ],
     "siteUrl": "https://discord.com/blog",
-    "rss": { "feedUrl": "https://discord.com/blog/rss.xml" },
+    "rss": {
+      "feedUrl": "https://discord.com/blog/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -239,9 +360,16 @@
     "id": "slack-blog",
     "name": "Slack Blog",
     "category": "Social & Discussion",
-    "topics": ["technology", "business", "design", "startups"],
+    "topics": [
+      "technology",
+      "business",
+      "design",
+      "startups"
+    ],
     "siteUrl": "https://slack.com/blog",
-    "rss": { "feedUrl": "https://slack.com/blog/feed" },
+    "rss": {
+      "feedUrl": "https://slack.com/blog/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -251,9 +379,16 @@
     "id": "notion-blog",
     "name": "Notion Blog",
     "category": "Social & Discussion",
-    "topics": ["technology", "design", "startups", "education"],
+    "topics": [
+      "technology",
+      "design",
+      "startups",
+      "education"
+    ],
     "siteUrl": "https://www.notion.so/blog",
-    "rss": { "feedUrl": "https://www.notion.so/blog/rss.xml" },
+    "rss": {
+      "feedUrl": "https://www.notion.so/blog/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -263,9 +398,16 @@
     "id": "obsidian-forum",
     "name": "Obsidian Forum",
     "category": "Social & Discussion",
-    "topics": ["technology", "education", "creative writing", "web development"],
+    "topics": [
+      "technology",
+      "education",
+      "creative writing",
+      "web development"
+    ],
     "siteUrl": "https://forum.obsidian.md",
-    "rss": { "feedUrl": "https://forum.obsidian.md/latest.rss" },
+    "rss": {
+      "feedUrl": "https://forum.obsidian.md/latest.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -275,9 +417,16 @@
     "id": "signal-blog",
     "name": "Signal Blog",
     "category": "Social & Discussion",
-    "topics": ["technology", "cybersecurity", "philosophy", "human rights"],
+    "topics": [
+      "technology",
+      "cybersecurity",
+      "philosophy",
+      "human rights"
+    ],
     "siteUrl": "https://signal.org/blog/",
-    "rss": { "feedUrl": "https://signal.org/blog/rss.xml" },
+    "rss": {
+      "feedUrl": "https://signal.org/blog/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -287,9 +436,15 @@
     "id": "matrix-org-blog",
     "name": "Matrix.org Blog",
     "category": "Social & Discussion",
-    "topics": ["technology", "cybersecurity", "web development"],
+    "topics": [
+      "technology",
+      "cybersecurity",
+      "web development"
+    ],
     "siteUrl": "https://matrix.org/blog/",
-    "rss": { "feedUrl": "https://matrix.org/blog/feed" },
+    "rss": {
+      "feedUrl": "https://matrix.org/blog/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
