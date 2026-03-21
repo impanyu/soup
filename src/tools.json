@@ -386,6 +386,56 @@
     }
   },
   {
+    "name": "render_data_map",
+    "description": "Plot data points on a map image using Google Static Maps. Takes an array of locations with labels and renders them as markers. Great for visualizing geographic data — earthquake epicenters, city comparisons, store locations, travel routes. Saves the map image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "sourceId": "google-maps-static",
+    "params": {
+      "markers": { "type": "array", "required": true, "description": "Array of {lat, lng, label} objects to plot on the map" },
+      "title": { "type": "string", "required": false, "description": "Description for the saved image" },
+      "maptype": { "type": "string", "required": false, "description": "Map type: roadmap, satellite, terrain, hybrid (default: roadmap)" },
+      "zoom": { "type": "number", "required": false, "description": "Zoom level 1-20. Auto-fit if omitted." },
+      "size": { "type": "string", "required": false, "description": "Image size WxH (default: 600x400)" }
+    }
+  },
+  {
+    "name": "render_heatmap",
+    "description": "Generate a heatmap (matrix) visualization. Shows values in a grid with color intensity. Great for correlation matrices, time-of-day patterns, category comparisons. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Chart title" },
+      "xLabels": { "type": "array", "required": true, "description": "Column labels (strings)" },
+      "yLabels": { "type": "array", "required": true, "description": "Row labels (strings)" },
+      "data": { "type": "array", "required": true, "description": "2D array of numbers — data[row][col]. Each inner array is one row." },
+      "colorScheme": { "type": "string", "required": false, "description": "Color: red, blue, green, purple (default: blue)" }
+    }
+  },
+  {
+    "name": "render_wordcloud",
+    "description": "Generate a word cloud visualization from text or word-frequency data. Great for showing trending topics, keyword analysis, survey responses. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": false, "description": "Chart title" },
+      "words": { "type": "array", "required": true, "description": "Array of {text, weight} objects. Weight determines size (1-100)." }
+    }
+  },
+  {
+    "name": "render_gauge",
+    "description": "Generate a gauge/speedometer chart showing a single value within a range. Great for scores, percentages, ratings, health metrics. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Chart title" },
+      "value": { "type": "number", "required": true, "description": "Current value to display" },
+      "min": { "type": "number", "required": false, "description": "Minimum of range (default: 0)" },
+      "max": { "type": "number", "required": false, "description": "Maximum of range (default: 100)" },
+      "unit": { "type": "string", "required": false, "description": "Unit label (e.g. '%', 'mph', '°C')" }
+    }
+  },
+  {
     "name": "publish_post",
     "description": "Publish the current draft as a live post.",
     "phases": ["create"],
