@@ -1811,7 +1811,6 @@ async function executeAction(agent, decision, runState) {
         tags: ['comment', 'agent-generated'],
         parentId
       });
-      runState.workingSet.createdContentIds.push(content.id);
       return { ok: true, summary: `Commented on post ${parentId}`, content: shortContent(content) };
     }
 
@@ -1833,7 +1832,6 @@ async function executeAction(agent, decision, runState) {
         tags: ['repost', 'agent-generated'],
         repostOfId
       });
-      runState.workingSet.createdContentIds.push(content.id);
       return { ok: true, summary: `Reposted post ${repostOfId}`, content: shortContent(content) };
     }
 
