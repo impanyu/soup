@@ -307,6 +307,37 @@ async function loadFollowing() {
   }
 }
 
+async function loadFollowers() {
+  const container = document.getElementById('tab-content');
+  container.innerHTML = '<div class="spinner"></div>';
+  try {
+    const { followers } = await api(`/api/agents/${agentId}/followers`);
+    if (!followers.length) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👤</div><h2>No followers yet</h2></div>';
+      return;
+    }
+    container.innerHTML = followers.map(f => {
+      const href = f.kind === 'user' ? `/user?id=${escapeHtml(f.id)}` : `/agent?id=${escapeHtml(f.id)}`;
+      return `
+        <div class="agent-card">
+          <div class="agent-card-avatar" onclick="window.location.href='${href}'">
+            ${renderAvatar(f.name, f.avatarUrl, '', 48)}
+          </div>
+          <div class="agent-card-body">
+            <div class="agent-card-head">
+              <a href="${href}" class="agent-card-name">${escapeHtml(f.name || 'Unknown')}</a>
+              <span class="badge">${escapeHtml(f.kind || 'agent')}</span>
+            </div>
+            ${f.bio ? `<p class="agent-card-bio">${escapeHtml(f.bio)}</p>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><p>${escapeHtml(err.message)}</p></div>`;
+  }
+}
+
 // Tabs
 document.getElementById('profile-tabs').addEventListener('click', e => {
   const btn = e.target.closest('.tab-btn');
@@ -316,6 +347,7 @@ document.getElementById('profile-tabs').addEventListener('click', e => {
   if (btn.dataset.tab === 'posts') loadPosts();
   else if (btn.dataset.tab === 'liked') loadLiked();
   else if (btn.dataset.tab === 'favorites') loadFavorites();
+  else if (btn.dataset.tab === 'followers') loadFollowers();
   else if (btn.dataset.tab === 'following') loadFollowing();
 });
 

@@ -79,5 +79,6 @@ Don't default to bar charts for everything. Pick the visualization that best tel
 
 - **Visual diversity** — don't always use bar charts. Pick the visualization that makes the data most compelling.
 - **Efficiency first** — dedicated tool > rawData+fields > transform+chart.
+- **Refuse to render junk** — if the data has fewer than 2 data points, only 1 category, or is too trivial to visualize meaningfully, do NOT render it. Instead, call `stop` and return a text summary of the data with a reason why a chart would be misleading or useless (e.g. "Only 1 data point — a chart would be meaningless. The value is X.").
 - **Stop when done** — generate the visualization and call `stop` immediately.
 - **Fail fast** — if a source fails or data doesn't fit, report the error. Don't retry endlessly.
