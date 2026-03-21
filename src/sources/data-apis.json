@@ -3,13 +3,20 @@
     "id": "coingecko-market",
     "name": "CoinGecko Market Data",
     "category": "Data APIs",
-    "topics": ["cryptocurrency", "finance", "data science"],
+    "topics": [
+      "cryptocurrency",
+      "finance",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://api.coingecko.com/api/v3/coins/markets",
       "searchParam": null,
       "resultPath": "root",
       "limitParam": "per_page",
-      "extraParams": { "vs_currency": "usd", "order": "market_cap_desc" }
+      "extraParams": {
+        "vs_currency": "usd",
+        "order": "market_cap_desc"
+      }
     },
     "normalize": {
       "titleTemplate": "{name} ({symbol})",
@@ -25,12 +32,18 @@
     "id": "open-meteo-forecast",
     "name": "Open-Meteo Forecast",
     "category": "Data APIs",
-    "topics": ["climate", "data science", "travel"],
+    "topics": [
+      "climate",
+      "data science",
+      "travel"
+    ],
     "search": {
       "endpoint": "https://api.open-meteo.com/v1/forecast",
       "searchParam": "latitude",
       "resultPath": "current_weather",
-      "extraParams": { "current_weather": "true" }
+      "extraParams": {
+        "current_weather": "true"
+      }
     },
     "normalize": {
       "titleTemplate": "Weather at {latitude},{longitude}",
@@ -45,13 +58,20 @@
     "id": "usgs-earthquake",
     "name": "USGS Earthquake",
     "category": "Data APIs",
-    "topics": ["geology", "science", "data science"],
+    "topics": [
+      "geology",
+      "science",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://earthquake.usgs.gov/fdsnws/event/1/query",
       "searchParam": null,
       "resultPath": "features",
       "limitParam": "limit",
-      "extraParams": { "format": "geojson", "orderby": "time" }
+      "extraParams": {
+        "format": "geojson",
+        "orderby": "time"
+      }
     },
     "normalize": {
       "titlePath": "properties.title",
@@ -67,12 +87,20 @@
     "id": "world-bank",
     "name": "World Bank",
     "category": "Data APIs",
-    "topics": ["economics", "data science", "world news"],
+    "topics": [
+      "economics",
+      "data science",
+      "world news"
+    ],
     "search": {
       "endpoint": "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD",
       "searchParam": null,
       "resultPath": "1",
-      "extraParams": { "format": "json", "per_page": "10", "date": "2020:2024" }
+      "extraParams": {
+        "format": "json",
+        "per_page": "10",
+        "date": "2020:2024"
+      }
     },
     "normalize": {
       "titleTemplate": "{country.value} GDP",
@@ -88,12 +116,18 @@
     "id": "rest-countries",
     "name": "REST Countries",
     "category": "Data APIs",
-    "topics": ["world news", "education", "data science"],
+    "topics": [
+      "world news",
+      "education",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://restcountries.com/v3.1/name",
       "searchParam": "",
       "resultPath": "root",
-      "extraParams": { "fields": "name,capital,population,region,flags" }
+      "extraParams": {
+        "fields": "name,capital,population,region,flags"
+      }
     },
     "normalize": {
       "titlePath": "name.common",
@@ -108,7 +142,12 @@
     "id": "openaq",
     "name": "OpenAQ",
     "category": "Data APIs",
-    "topics": ["environment", "climate", "public health", "data science"],
+    "topics": [
+      "environment",
+      "climate",
+      "public health",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://api.openaq.org/v2/latest",
       "searchParam": "city",
@@ -129,7 +168,11 @@
     "id": "exchange-rates",
     "name": "Exchange Rates API",
     "category": "Data APIs",
-    "topics": ["finance", "economics", "data science"],
+    "topics": [
+      "finance",
+      "economics",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://open.er-api.com/v6/latest/USD",
       "searchParam": null,
@@ -148,7 +191,11 @@
     "id": "iss-tracker",
     "name": "ISS Tracker",
     "category": "Data APIs",
-    "topics": ["space", "space exploration", "data science"],
+    "topics": [
+      "space",
+      "space exploration",
+      "data science"
+    ],
     "search": {
       "endpoint": "http://api.open-notify.org/iss-now.json",
       "searchParam": null,
@@ -167,12 +214,18 @@
     "id": "sunrise-sunset",
     "name": "Sunrise-Sunset",
     "category": "Data APIs",
-    "topics": ["astronomy", "travel", "photography"],
+    "topics": [
+      "astronomy",
+      "travel",
+      "photography"
+    ],
     "search": {
       "endpoint": "https://api.sunrise-sunset.org/json",
       "searchParam": "lat",
       "resultPath": "results",
-      "extraParams": { "formatted": "0" }
+      "extraParams": {
+        "formatted": "0"
+      }
     },
     "normalize": {
       "titleTemplate": "Sunrise/Sunset Data",
@@ -187,7 +240,11 @@
     "id": "numbers-api",
     "name": "Numbers API",
     "category": "Data APIs",
-    "topics": ["mathematics", "education", "folklore"],
+    "topics": [
+      "mathematics",
+      "education",
+      "folklore"
+    ],
     "search": {
       "endpoint": "http://numbersapi.com",
       "searchParam": "",
@@ -202,13 +259,21 @@
     "id": "open-food-facts",
     "name": "Open Food Facts",
     "category": "Data APIs",
-    "topics": ["food", "nutrition", "health", "data science"],
+    "topics": [
+      "food",
+      "nutrition",
+      "health",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://world.openfoodfacts.org/cgi/search.pl",
       "searchParam": "search_terms",
       "resultPath": "products",
       "limitParam": "page_size",
-      "extraParams": { "json": "1", "search_simple": "1" }
+      "extraParams": {
+        "json": "1",
+        "search_simple": "1"
+      }
     },
     "normalize": {
       "titlePath": "product_name",
@@ -224,7 +289,10 @@
     "id": "dog-api",
     "name": "Dog API",
     "category": "Data APIs",
-    "topics": ["pets", "photography"],
+    "topics": [
+      "pets",
+      "photography"
+    ],
     "search": {
       "endpoint": "https://dog.ceo/api/breeds/image/random",
       "searchParam": null,
@@ -239,7 +307,10 @@
     "id": "cat-api",
     "name": "Cat API",
     "category": "Data APIs",
-    "topics": ["pets", "photography"],
+    "topics": [
+      "pets",
+      "photography"
+    ],
     "search": {
       "endpoint": "https://api.thecatapi.com/v1/images/search",
       "searchParam": null,
@@ -260,7 +331,10 @@
     "id": "jsonplaceholder",
     "name": "JSON Placeholder",
     "category": "Data APIs",
-    "topics": ["web development", "education"],
+    "topics": [
+      "web development",
+      "education"
+    ],
     "search": {
       "endpoint": "https://jsonplaceholder.typicode.com/posts",
       "searchParam": null,
@@ -280,7 +354,11 @@
     "id": "spacex-launches",
     "name": "SpaceX Launch Data",
     "category": "Data APIs",
-    "topics": ["space", "engineering", "technology"],
+    "topics": [
+      "space",
+      "engineering",
+      "technology"
+    ],
     "search": {
       "endpoint": "https://api.spacexdata.com/v4/launches",
       "searchParam": null,
@@ -299,12 +377,18 @@
     "id": "nasa-neo",
     "name": "NASA Near-Earth Objects",
     "category": "Data APIs",
-    "topics": ["space", "asteroids", "science"],
+    "topics": [
+      "space",
+      "asteroids",
+      "science"
+    ],
     "search": {
       "endpoint": "https://api.nasa.gov/neo/rest/v1/feed",
       "searchParam": null,
       "resultPath": "near_earth_objects",
-      "extraParams": { "api_key": "DEMO_KEY" }
+      "extraParams": {
+        "api_key": "DEMO_KEY"
+      }
     },
     "normalize": {
       "titlePath": "name",
@@ -319,7 +403,12 @@
     "id": "solar-system",
     "name": "Solar System Bodies",
     "category": "Data APIs",
-    "topics": ["space", "astronomy", "science", "education"],
+    "topics": [
+      "space",
+      "astronomy",
+      "science",
+      "education"
+    ],
     "search": {
       "endpoint": "https://api.le-systeme-solaire.net/rest/bodies/",
       "searchParam": null,
@@ -338,7 +427,11 @@
     "id": "astronauts-in-space",
     "name": "Astronauts In Space",
     "category": "Data APIs",
-    "topics": ["space", "people", "ISS"],
+    "topics": [
+      "space",
+      "people",
+      "ISS"
+    ],
     "search": {
       "endpoint": "http://api.open-notify.org/astros.json",
       "searchParam": null,
@@ -357,12 +450,20 @@
     "id": "datausa-population",
     "name": "DataUSA Population",
     "category": "Data APIs",
-    "topics": ["demographics", "USA", "population", "data science"],
+    "topics": [
+      "demographics",
+      "USA",
+      "population",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://datausa.io/api/data",
       "searchParam": null,
       "resultPath": "data",
-      "extraParams": { "drilldowns": "Nation", "measures": "Population" }
+      "extraParams": {
+        "drilldowns": "Nation",
+        "measures": "Population"
+      }
     },
     "normalize": {
       "titleTemplate": "US Population {Year}",
@@ -377,7 +478,11 @@
     "id": "genderize",
     "name": "Genderize.io",
     "category": "Data APIs",
-    "topics": ["demographics", "names", "statistics"],
+    "topics": [
+      "demographics",
+      "names",
+      "statistics"
+    ],
     "search": {
       "endpoint": "https://api.genderize.io",
       "searchParam": "name",
@@ -396,7 +501,11 @@
     "id": "nationalize",
     "name": "Nationalize.io",
     "category": "Data APIs",
-    "topics": ["demographics", "names", "nationality"],
+    "topics": [
+      "demographics",
+      "names",
+      "nationality"
+    ],
     "search": {
       "endpoint": "https://api.nationalize.io",
       "searchParam": "name",
@@ -415,7 +524,11 @@
     "id": "agify",
     "name": "Agify.io",
     "category": "Data APIs",
-    "topics": ["demographics", "names", "age"],
+    "topics": [
+      "demographics",
+      "names",
+      "age"
+    ],
     "search": {
       "endpoint": "https://api.agify.io",
       "searchParam": "name",
@@ -434,12 +547,19 @@
     "id": "disease-sh-countries",
     "name": "COVID-19 by Country",
     "category": "Data APIs",
-    "topics": ["health", "COVID", "epidemiology", "data science"],
+    "topics": [
+      "health",
+      "COVID",
+      "epidemiology",
+      "data science"
+    ],
     "search": {
       "endpoint": "https://disease.sh/v3/covid-19/countries",
       "searchParam": null,
       "resultPath": "root",
-      "extraParams": { "sort": "cases" }
+      "extraParams": {
+        "sort": "cases"
+      }
     },
     "normalize": {
       "titlePath": "country",
@@ -454,12 +574,18 @@
     "id": "disease-sh-historical",
     "name": "COVID-19 Historical",
     "category": "Data APIs",
-    "topics": ["health", "COVID", "time-series"],
+    "topics": [
+      "health",
+      "COVID",
+      "time-series"
+    ],
     "search": {
       "endpoint": "https://disease.sh/v3/covid-19/historical/all",
       "searchParam": null,
       "resultPath": "root",
-      "extraParams": { "lastdays": "30" }
+      "extraParams": {
+        "lastdays": "30"
+      }
     },
     "normalize": {
       "titleTemplate": "COVID-19 Global Historical",
@@ -474,7 +600,12 @@
     "id": "carbon-intensity-uk",
     "name": "UK Carbon Intensity",
     "category": "Data APIs",
-    "topics": ["energy", "carbon", "environment", "UK"],
+    "topics": [
+      "energy",
+      "carbon",
+      "environment",
+      "UK"
+    ],
     "search": {
       "endpoint": "https://api.carbonintensity.org.uk/intensity/date",
       "searchParam": null,
@@ -493,7 +624,12 @@
     "id": "carbon-generation-uk",
     "name": "UK Electricity Generation Mix",
     "category": "Data APIs",
-    "topics": ["energy", "renewables", "electricity", "UK"],
+    "topics": [
+      "energy",
+      "renewables",
+      "electricity",
+      "UK"
+    ],
     "search": {
       "endpoint": "https://api.carbonintensity.org.uk/generation",
       "searchParam": null,
@@ -512,12 +648,18 @@
     "id": "open-meteo-air-quality",
     "name": "Open-Meteo Air Quality",
     "category": "Data APIs",
-    "topics": ["environment", "air-quality", "forecast"],
+    "topics": [
+      "environment",
+      "air-quality",
+      "forecast"
+    ],
     "search": {
       "endpoint": "https://air-quality-api.open-meteo.com/v1/air-quality",
       "searchParam": "latitude",
       "resultPath": "hourly",
-      "extraParams": { "hourly": "pm10,pm2_5,ozone,nitrogen_dioxide" }
+      "extraParams": {
+        "hourly": "pm10,pm2_5,ozone,nitrogen_dioxide"
+      }
     },
     "normalize": {
       "titleTemplate": "Air Quality Forecast",
@@ -532,12 +674,19 @@
     "id": "open-meteo-marine",
     "name": "Open-Meteo Marine",
     "category": "Data APIs",
-    "topics": ["environment", "ocean", "marine", "waves"],
+    "topics": [
+      "environment",
+      "ocean",
+      "marine",
+      "waves"
+    ],
     "search": {
       "endpoint": "https://marine-api.open-meteo.com/v1/marine",
       "searchParam": "latitude",
       "resultPath": "hourly",
-      "extraParams": { "hourly": "wave_height,wave_period,wave_direction" }
+      "extraParams": {
+        "hourly": "wave_height,wave_period,wave_direction"
+      }
     },
     "normalize": {
       "titleTemplate": "Marine Forecast",
@@ -552,12 +701,20 @@
     "id": "usgs-water",
     "name": "USGS Water Services",
     "category": "Data APIs",
-    "topics": ["environment", "water", "hydrology", "USA"],
+    "topics": [
+      "environment",
+      "water",
+      "hydrology",
+      "USA"
+    ],
     "search": {
       "endpoint": "https://waterservices.usgs.gov/nwis/iv/",
       "searchParam": "sites",
       "resultPath": "value.timeSeries",
-      "extraParams": { "format": "json", "parameterCd": "00060,00065" }
+      "extraParams": {
+        "format": "json",
+        "parameterCd": "00060,00065"
+      }
     },
     "normalize": {
       "titleTemplate": "USGS Water Data",
@@ -572,7 +729,11 @@
     "id": "coincap-assets",
     "name": "CoinCap Assets",
     "category": "Data APIs",
-    "topics": ["cryptocurrency", "finance", "markets"],
+    "topics": [
+      "cryptocurrency",
+      "finance",
+      "markets"
+    ],
     "search": {
       "endpoint": "https://api.coincap.io/v2/assets",
       "searchParam": null,
@@ -592,12 +753,18 @@
     "id": "coincap-history",
     "name": "CoinCap Price History",
     "category": "Data APIs",
-    "topics": ["cryptocurrency", "finance", "time-series"],
+    "topics": [
+      "cryptocurrency",
+      "finance",
+      "time-series"
+    ],
     "search": {
       "endpoint": "https://api.coincap.io/v2/assets/bitcoin/history",
       "searchParam": null,
       "resultPath": "data",
-      "extraParams": { "interval": "d1" }
+      "extraParams": {
+        "interval": "d1"
+      }
     },
     "normalize": {
       "titleTemplate": "Crypto Price History",
@@ -612,7 +779,12 @@
     "id": "frankfurter-latest",
     "name": "Frankfurter Exchange Rates",
     "category": "Data APIs",
-    "topics": ["finance", "forex", "currency", "ECB"],
+    "topics": [
+      "finance",
+      "forex",
+      "currency",
+      "ECB"
+    ],
     "search": {
       "endpoint": "https://api.frankfurter.app/latest",
       "searchParam": null,
@@ -631,7 +803,11 @@
     "id": "frankfurter-historical",
     "name": "Frankfurter Historical Rates",
     "category": "Data APIs",
-    "topics": ["finance", "forex", "time-series"],
+    "topics": [
+      "finance",
+      "forex",
+      "time-series"
+    ],
     "search": {
       "endpoint": "https://api.frankfurter.app/2024-01-01..2024-12-31",
       "searchParam": null,
@@ -650,7 +826,12 @@
     "id": "citybikes",
     "name": "CityBikes",
     "category": "Data APIs",
-    "topics": ["transport", "bikes", "urban", "sharing"],
+    "topics": [
+      "transport",
+      "bikes",
+      "urban",
+      "sharing"
+    ],
     "search": {
       "endpoint": "https://api.citybik.es/v2/networks",
       "searchParam": null,
@@ -669,7 +850,11 @@
     "id": "ergast-f1",
     "name": "Formula 1 Data",
     "category": "Data APIs",
-    "topics": ["sports", "F1", "motorsport"],
+    "topics": [
+      "sports",
+      "F1",
+      "motorsport"
+    ],
     "search": {
       "endpoint": "https://api.jolpi.ca/ergast/f1/current/driverStandings.json",
       "searchParam": null,
@@ -688,7 +873,11 @@
     "id": "github-events",
     "name": "GitHub Public Events",
     "category": "Data APIs",
-    "topics": ["technology", "open-source", "developer"],
+    "topics": [
+      "technology",
+      "open-source",
+      "developer"
+    ],
     "search": {
       "endpoint": "https://api.github.com/events",
       "searchParam": null,
@@ -707,12 +896,20 @@
     "id": "stackexchange-tags",
     "name": "StackOverflow Popular Tags",
     "category": "Data APIs",
-    "topics": ["technology", "programming", "Q&A"],
+    "topics": [
+      "technology",
+      "programming",
+      "Q&A"
+    ],
     "search": {
       "endpoint": "https://api.stackexchange.com/2.3/tags",
       "searchParam": null,
       "resultPath": "items",
-      "extraParams": { "order": "desc", "sort": "popular", "site": "stackoverflow" }
+      "extraParams": {
+        "order": "desc",
+        "sort": "popular",
+        "site": "stackoverflow"
+      }
     },
     "normalize": {
       "titlePath": "name",
@@ -727,7 +924,12 @@
     "id": "wikipedia-pageviews",
     "name": "Wikipedia Pageviews",
     "category": "Data APIs",
-    "topics": ["technology", "wikipedia", "popularity", "time-series"],
+    "topics": [
+      "technology",
+      "wikipedia",
+      "popularity",
+      "time-series"
+    ],
     "search": {
       "endpoint": "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents",
       "searchParam": null,
@@ -746,7 +948,12 @@
     "id": "itunes-search",
     "name": "iTunes Search",
     "category": "Data APIs",
-    "topics": ["media", "music", "apps", "entertainment"],
+    "topics": [
+      "media",
+      "music",
+      "apps",
+      "entertainment"
+    ],
     "search": {
       "endpoint": "https://itunes.apple.com/search",
       "searchParam": "term",
@@ -766,7 +973,11 @@
     "id": "fruityvice",
     "name": "Fruityvice",
     "category": "Data APIs",
-    "topics": ["food", "nutrition", "health"],
+    "topics": [
+      "food",
+      "nutrition",
+      "health"
+    ],
     "search": {
       "endpoint": "https://www.fruityvice.com/api/fruit/all",
       "searchParam": null,
@@ -785,7 +996,11 @@
     "id": "themealdb",
     "name": "TheMealDB",
     "category": "Data APIs",
-    "topics": ["food", "recipes", "cooking"],
+    "topics": [
+      "food",
+      "recipes",
+      "cooking"
+    ],
     "search": {
       "endpoint": "https://www.themealdb.com/api/json/v1/1/categories.php",
       "searchParam": null,
@@ -804,12 +1019,18 @@
     "id": "thecocktaildb",
     "name": "TheCocktailDB",
     "category": "Data APIs",
-    "topics": ["food", "drinks", "cocktails"],
+    "topics": [
+      "food",
+      "drinks",
+      "cocktails"
+    ],
     "search": {
       "endpoint": "https://www.thecocktaildb.com/api/json/v1/1/list.php",
       "searchParam": null,
       "resultPath": "drinks",
-      "extraParams": { "c": "list" }
+      "extraParams": {
+        "c": "list"
+      }
     },
     "normalize": {
       "titlePath": "strCategory",
@@ -824,7 +1045,11 @@
     "id": "universities",
     "name": "Universities",
     "category": "Data APIs",
-    "topics": ["education", "universities", "global"],
+    "topics": [
+      "education",
+      "universities",
+      "global"
+    ],
     "search": {
       "endpoint": "http://universities.hipolabs.com/search",
       "searchParam": "country",
@@ -843,12 +1068,18 @@
     "id": "open-brewery",
     "name": "Open Brewery DB",
     "category": "Data APIs",
-    "topics": ["food", "drinks", "breweries"],
+    "topics": [
+      "food",
+      "drinks",
+      "breweries"
+    ],
     "search": {
       "endpoint": "https://api.openbrewerydb.org/v1/breweries",
       "searchParam": null,
       "resultPath": "root",
-      "extraParams": { "per_page": "50" }
+      "extraParams": {
+        "per_page": "50"
+      }
     },
     "normalize": {
       "titlePath": "name",
@@ -863,7 +1094,11 @@
     "id": "nobel-prize",
     "name": "Nobel Prize API",
     "category": "Data APIs",
-    "topics": ["science", "education", "history"],
+    "topics": [
+      "science",
+      "education",
+      "history"
+    ],
     "search": {
       "endpoint": "https://api.nobelprize.org/2.1/laureates",
       "searchParam": null,
@@ -882,7 +1117,11 @@
     "id": "pokeapi",
     "name": "PokeAPI",
     "category": "Data APIs",
-    "topics": ["gaming", "pokemon", "entertainment"],
+    "topics": [
+      "gaming",
+      "pokemon",
+      "entertainment"
+    ],
     "search": {
       "endpoint": "https://pokeapi.co/api/v2/pokemon",
       "searchParam": null,
@@ -902,7 +1141,11 @@
     "id": "open-trivia",
     "name": "Open Trivia DB",
     "category": "Data APIs",
-    "topics": ["education", "trivia", "entertainment"],
+    "topics": [
+      "education",
+      "trivia",
+      "entertainment"
+    ],
     "search": {
       "endpoint": "https://opentdb.com/api_count_global.php",
       "searchParam": null,
@@ -921,7 +1164,11 @@
     "id": "open-library",
     "name": "Open Library",
     "category": "Data APIs",
-    "topics": ["books", "literature", "education"],
+    "topics": [
+      "books",
+      "literature",
+      "education"
+    ],
     "search": {
       "endpoint": "https://openlibrary.org/search.json",
       "searchParam": "q",
@@ -941,7 +1188,11 @@
     "id": "jikan-anime",
     "name": "Jikan Anime (MyAnimeList)",
     "category": "Data APIs",
-    "topics": ["anime", "entertainment", "media"],
+    "topics": [
+      "anime",
+      "entertainment",
+      "media"
+    ],
     "search": {
       "endpoint": "https://api.jikan.moe/v4/top/anime",
       "searchParam": null,
@@ -961,7 +1212,11 @@
     "id": "tvmaze-shows",
     "name": "TVMaze Shows",
     "category": "Data APIs",
-    "topics": ["entertainment", "TV", "media"],
+    "topics": [
+      "entertainment",
+      "TV",
+      "media"
+    ],
     "search": {
       "endpoint": "https://api.tvmaze.com/shows",
       "searchParam": null,
@@ -980,7 +1235,17 @@
     "id": "google-maps-static",
     "name": "Google Maps Static",
     "category": "Data APIs",
-    "topics": ["travel", "architecture", "real estate", "history", "food", "space exploration", "city life", "citywalk", "urban exploration"],
+    "topics": [
+      "travel",
+      "architecture",
+      "real estate",
+      "history",
+      "food",
+      "space exploration",
+      "city life",
+      "citywalk",
+      "urban exploration"
+    ],
     "dataType": "media",
     "requiresKey": true,
     "envKey": "GOOGLE_MAPS_API_KEY"
@@ -989,7 +1254,14 @@
     "id": "omdb",
     "name": "OMDb Movie Database",
     "category": "Data APIs",
-    "topics": ["film", "movie", "cinema", "tv shows", "documentaries", "streaming"],
+    "topics": [
+      "film",
+      "movie",
+      "cinema",
+      "tv shows",
+      "documentaries",
+      "streaming"
+    ],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
@@ -998,7 +1270,16 @@
     "id": "openfda-drug-events",
     "name": "OpenFDA Drug Adverse Events",
     "category": "Data APIs",
-    "topics": ["health", "medical research", "cancer", "diabetes", "cardiology", "rare diseases", "immunology", "public health"],
+    "topics": [
+      "health",
+      "medical research",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology",
+      "public health"
+    ],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
@@ -1007,7 +1288,15 @@
     "id": "clinicaltrials-gov",
     "name": "ClinicalTrials.gov",
     "category": "Data APIs",
-    "topics": ["medical research", "cancer", "diabetes", "cardiology", "rare diseases", "immunology", "health"],
+    "topics": [
+      "medical research",
+      "cancer",
+      "diabetes",
+      "cardiology",
+      "rare diseases",
+      "immunology",
+      "health"
+    ],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
@@ -1016,7 +1305,11 @@
     "id": "makeup-api",
     "name": "Makeup Product Database",
     "category": "Data APIs",
-    "topics": ["beauty", "makeup", "fashion"],
+    "topics": [
+      "beauty",
+      "makeup",
+      "fashion"
+    ],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
@@ -1025,7 +1318,13 @@
     "id": "ohmanda-horoscope",
     "name": "Daily Horoscope",
     "category": "Data APIs",
-    "topics": ["astrology", "horoscope", "zodiac", "tarot", "spirituality"],
+    "topics": [
+      "astrology",
+      "horoscope",
+      "zodiac",
+      "tarot",
+      "spirituality"
+    ],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
@@ -1034,7 +1333,13 @@
     "id": "tarot-cards",
     "name": "Tarot Card Draw",
     "category": "Data APIs",
-    "topics": ["tarot", "astrology", "horoscope", "zodiac", "spirituality"],
+    "topics": [
+      "tarot",
+      "astrology",
+      "horoscope",
+      "zodiac",
+      "spirituality"
+    ],
     "dataType": "structured",
     "requiresKey": false,
     "envKey": null
@@ -1043,7 +1348,18 @@
     "id": "google-places",
     "name": "Google Places",
     "category": "Data APIs",
-    "topics": ["travel", "architecture", "real estate", "history", "photography", "food", "cooking", "city life", "citywalk", "urban exploration"],
+    "topics": [
+      "travel",
+      "architecture",
+      "real estate",
+      "history",
+      "photography",
+      "food",
+      "cooking",
+      "city life",
+      "citywalk",
+      "urban exploration"
+    ],
     "dataType": "structured",
     "requiresKey": true,
     "envKey": "GOOGLE_MAPS_API_KEY"
@@ -1052,9 +1368,535 @@
     "id": "google-streetview-static",
     "name": "Google Street View Static",
     "category": "Data APIs",
-    "topics": ["travel", "architecture", "real estate", "history", "photography", "food", "city life", "citywalk", "urban exploration"],
+    "topics": [
+      "travel",
+      "architecture",
+      "real estate",
+      "history",
+      "photography",
+      "food",
+      "city life",
+      "citywalk",
+      "urban exploration"
+    ],
     "dataType": "media",
     "requiresKey": true,
     "envKey": "GOOGLE_MAPS_API_KEY"
+  },
+  {
+    "id": "restcountries-v31",
+    "name": "REST Countries v3.1",
+    "topics": [
+      "world news",
+      "economics",
+      "travel"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "openweathermap-air",
+    "name": "Open Weather Air Pollution",
+    "topics": [
+      "climate",
+      "public health",
+      "data science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "open-meteo-historical",
+    "name": "Open-Meteo Historical Weather",
+    "topics": [
+      "climate",
+      "data science",
+      "history"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "who-gho",
+    "name": "WHO Global Health Observatory",
+    "topics": [
+      "public health",
+      "medical research",
+      "data science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "worldbank-indicators",
+    "name": "World Bank Indicators",
+    "topics": [
+      "economics",
+      "data science",
+      "world news"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "eia-energy",
+    "name": "EIA Energy Data",
+    "topics": [
+      "renewable energy",
+      "sustainability",
+      "economics"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nrel-solar",
+    "name": "NREL Solar Resource",
+    "topics": [
+      "renewable energy",
+      "sustainability",
+      "climate"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "fao-food",
+    "name": "FAO Food Price Index",
+    "topics": [
+      "food",
+      "economics",
+      "world news"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "icanhazdadjoke",
+    "name": "Dad Jokes API",
+    "topics": [
+      "humor",
+      "creative writing"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "quotable",
+    "name": "Quotable (Random Quotes)",
+    "topics": [
+      "philosophy",
+      "creative writing",
+      "books"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "randomuser",
+    "name": "Random User Generator",
+    "topics": [
+      "data science",
+      "sociology"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "catfact",
+    "name": "Cat Facts",
+    "topics": [
+      "pets",
+      "science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "dogfact",
+    "name": "Dog Facts",
+    "topics": [
+      "pets",
+      "science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "chucknorris",
+    "name": "Chuck Norris Jokes",
+    "topics": [
+      "humor",
+      "creative writing"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "advice-slip",
+    "name": "Advice Slip API",
+    "topics": [
+      "philosophy",
+      "mental health"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bored-api",
+    "name": "Bored API (Activity Suggestions)",
+    "topics": [
+      "health",
+      "mental health"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "covid-vaccine",
+    "name": "COVID Vaccine Tracker",
+    "topics": [
+      "public health",
+      "medical research"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "spaceflight-news",
+    "name": "Spaceflight News API",
+    "topics": [
+      "space",
+      "space exploration",
+      "technology"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "iss-location",
+    "name": "ISS Current Location",
+    "topics": [
+      "space",
+      "astronomy",
+      "science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "apod-nasa",
+    "name": "NASA Astronomy Picture of the Day",
+    "topics": [
+      "astronomy",
+      "space",
+      "photography"
+    ],
+    "dataType": "media",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mars-rover",
+    "name": "NASA Mars Rover Photos",
+    "topics": [
+      "space",
+      "space exploration",
+      "photography"
+    ],
+    "dataType": "media",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "metmuseum",
+    "name": "Metropolitan Museum of Art",
+    "topics": [
+      "art",
+      "history",
+      "cultural studies"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "rijksmuseum",
+    "name": "Rijksmuseum Collection",
+    "topics": [
+      "art",
+      "history",
+      "photography"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "artic",
+    "name": "Art Institute of Chicago",
+    "topics": [
+      "art",
+      "design",
+      "cultural studies"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "openlibrary-search",
+    "name": "Open Library Search",
+    "topics": [
+      "books",
+      "literature",
+      "education"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "musicbrainz",
+    "name": "MusicBrainz",
+    "topics": [
+      "music",
+      "art",
+      "cultural studies"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "lyrics-ovh",
+    "name": "Lyrics.ovh",
+    "topics": [
+      "music",
+      "creative writing"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "deezer",
+    "name": "Deezer Music Search",
+    "topics": [
+      "music",
+      "streaming"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "rawg",
+    "name": "RAWG Video Games",
+    "topics": [
+      "gaming",
+      "game development",
+      "streaming"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "cheapshark",
+    "name": "CheapShark Game Deals",
+    "topics": [
+      "gaming",
+      "ecommerce"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "deck-of-cards",
+    "name": "Deck of Cards API",
+    "topics": [
+      "gaming",
+      "data science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "newsdata",
+    "name": "NewsData.io",
+    "topics": [
+      "world news",
+      "politics",
+      "technology"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "mediastack",
+    "name": "Mediastack News",
+    "topics": [
+      "world news",
+      "media criticism"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "ip-geolocation",
+    "name": "IP Geolocation (ipapi)",
+    "topics": [
+      "technology",
+      "cybersecurity"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "exchangerate-host",
+    "name": "ExchangeRate.host",
+    "topics": [
+      "finance",
+      "economics"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "carbon-interface",
+    "name": "Carbon Footprint Calculator",
+    "topics": [
+      "sustainability",
+      "climate",
+      "environment"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "openchargepoint",
+    "name": "Open Charge Map (EV Chargers)",
+    "topics": [
+      "autonomous vehicles",
+      "sustainability",
+      "travel"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "thedogapi-breeds",
+    "name": "Dog Breeds API",
+    "topics": [
+      "pets",
+      "science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "thecatapi-breeds",
+    "name": "Cat Breeds API",
+    "topics": [
+      "pets",
+      "science"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "nationalize-batch",
+    "name": "Nationalize Batch",
+    "topics": [
+      "linguistics",
+      "data science",
+      "sociology"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "color-api",
+    "name": "The Color API",
+    "topics": [
+      "design",
+      "graphic design",
+      "art"
+    ],
+    "dataType": "structured",
+    "category": "Data APIs",
+    "requiresKey": false,
+    "envKey": null
   }
 ]

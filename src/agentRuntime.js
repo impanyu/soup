@@ -229,6 +229,10 @@ function getDataAgentTools(callingAgent, callerMcpTools = []) {
     'fetch_data', 'inspect_data', 'transform_data', 'generate_chart',
     'render_data_map', 'render_heatmap', 'render_wordcloud', 'render_gauge',
     'render_treemap', 'render_polar_area', 'render_bubble', 'render_progress_bar', 'render_multi_axis', 'render_table',
+    'get_space_news', 'get_iss_location', 'get_nasa_apod', 'get_mars_photos', 'chart_historical_weather',
+    'search_art', 'search_music', 'search_games', 'get_game_deals',
+    'get_random_quote', 'get_dad_joke', 'get_ev_chargers',
+    'get_dog_breeds', 'get_cat_breeds', 'get_color_info',
     'save_media', 'stop'
   ];
   const staticTools = dataToolNames.map(n => getTool(n)).filter(Boolean);
@@ -3057,6 +3061,220 @@ async function executeAction(agent, decision, runState) {
       } catch (err) {
         return { ok: false, summary: `render_table failed: ${err.message}` };
       }
+    }
+
+    // ── Space & Science tools ──
+
+    case 'get_space_news': {
+      const p = decision.params || {};
+      const limit = Math.min(20, Math.max(1, p.limit || 10));
+      try {
+        const res = await fetch(`https://api.spaceflightnewsapi.net/v4/articles/?limit=${limit}`, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        const articles = (data.results || []).map(a => ({ title: a.title, url: a.url, source: a.news_site, publishedAt: a.published_at, summary: a.summary, imageUrl: a.image_url }));
+        return { ok: true, summary: `${articles.length} space news articles`, articles };
+      } catch (err) { return { ok: false, summary: `get_space_news failed: ${err.message}` }; }
+    }
+
+    case 'get_iss_location': {
+      try {
+        const res = await fetch('http://api.open-notify.org/iss-now.json', { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        const pos = data.iss_position;
+        return { ok: true, summary: `ISS at ${pos.latitude}, ${pos.longitude}`, location: { lat: Number(pos.latitude), lng: Number(pos.longitude), timestamp: data.timestamp } };
+      } catch (err) { return { ok: false, summary: `get_iss_location failed: ${err.message}` }; }
+    }
+
+    case 'get_nasa_apod': {
+      const p = decision.params || {};
+      const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
+      let url = `https://api.nasa.gov/planetary/apod?api_key=${apiKey}`;
+      if (p.date) url += `&date=${p.date}`;
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        return { ok: true, summary: `APOD: "${data.title}" (${data.date})`, apod: { title: data.title, explanation: data.explanation, url: data.url, hdurl: data.hdurl, date: data.date, mediaType: data.media_type } };
+      } catch (err) { return { ok: false, summary: `get_nasa_apod failed: ${err.message}` }; }
+    }
+
+    case 'get_mars_photos': {
+      const p = decision.params || {};
+      const rover = p.rover || 'curiosity';
+      const sol = p.sol || 1000;
+      const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
+      try {
+        const res = await fetch(`https://api.nasa.gov/mars-photos/api/v1/rovers/${rover}/photos?sol=${sol}&page=1&api_key=${apiKey}`, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        const photos = (data.photos || []).slice(0, 10).map(p => ({ id: p.id, imgSrc: p.img_src, camera: p.camera?.full_name, earthDate: p.earth_date, rover: p.rover?.name }));
+        return { ok: true, summary: `${photos.length} Mars rover photos (${rover}, sol ${sol}). Use save_media on imgSrc URLs.`, photos };
+      } catch (err) { return { ok: false, summary: `get_mars_photos failed: ${err.message}` }; }
+    }
+
+    case 'chart_historical_weather': {
+      const p = decision.params || {};
+      if (p.latitude == null || p.longitude == null) return { ok: false, summary: 'latitude and longitude required.' };
+      if (!p.start_date || !p.end_date) return { ok: false, summary: 'start_date and end_date required (YYYY-MM-DD).' };
+      const variable = p.variable || 'temperature_2m_mean';
+      const chartType = p.chartType || 'line';
+      const locName = p.location_name || `${p.latitude},${p.longitude}`;
+      try {
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${p.latitude}&longitude=${p.longitude}&start_date=${p.start_date}&end_date=${p.end_date}&daily=${variable}&timezone=auto`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        const dates = data.daily?.time || [];
+        const values = data.daily?.[variable] || [];
+        const title = p.title || `${locName} — ${variable.replace(/_/g, ' ')} (${p.start_date} to ${p.end_date})`;
+        return await saveDataApiChart({ agent, chartType, title, labels: dates, values, datasetLabel: variable.replace(/_/g, ' '), tags: ['weather', 'climate', 'historical'], description: `Historical ${variable} for ${locName}.` });
+      } catch (err) { return { ok: false, summary: `chart_historical_weather failed: ${err.message}` }; }
+    }
+
+    // ── Art & Culture tools ──
+
+    case 'search_art': {
+      const p = decision.params || {};
+      if (!p.query) return { ok: false, summary: 'query is required.' };
+      const limit = Math.min(20, Math.max(1, p.limit || 10));
+      try {
+        const searchRes = await fetch(`https://collectionapi.metmuseum.org/public/collection/v1/search?q=${encodeURIComponent(p.query)}`, { signal: AbortSignal.timeout(15000) });
+        if (!searchRes.ok) throw new Error(`API: ${searchRes.status}`);
+        const searchData = await searchRes.json();
+        const ids = (searchData.objectIDs || []).slice(0, limit);
+        const artworks = await Promise.all(ids.map(async id => {
+          try {
+            const r = await fetch(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`, { signal: AbortSignal.timeout(10000) });
+            const d = await r.json();
+            return { id: d.objectID, title: d.title, artist: d.artistDisplayName, date: d.objectDate, medium: d.medium, department: d.department, imageUrl: d.primaryImageSmall || d.primaryImage, url: d.objectURL };
+          } catch { return null; }
+        }));
+        const valid = artworks.filter(Boolean);
+        return { ok: true, summary: `${valid.length} artwork(s) for "${p.query}". Use save_media on imageUrl to save.`, artworks: valid };
+      } catch (err) { return { ok: false, summary: `search_art failed: ${err.message}` }; }
+    }
+
+    // ── Music tools ──
+
+    case 'search_music': {
+      const p = decision.params || {};
+      if (!p.query) return { ok: false, summary: 'query is required.' };
+      const limit = Math.min(25, Math.max(1, p.limit || 10));
+      try {
+        const res = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(p.query)}&limit=${limit}`, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        const tracks = (data.data || []).map(t => ({ title: t.title, artist: t.artist?.name, album: t.album?.title, duration: t.duration, previewUrl: t.preview, albumCover: t.album?.cover_medium, link: t.link }));
+        return { ok: true, summary: `${tracks.length} track(s) for "${p.query}"`, tracks };
+      } catch (err) { return { ok: false, summary: `search_music failed: ${err.message}` }; }
+    }
+
+    // ── Gaming tools ──
+
+    case 'search_games': {
+      const p = decision.params || {};
+      if (!p.query) return { ok: false, summary: 'query is required.' };
+      try {
+        const res = await fetch(`https://api.rawg.io/api/games?search=${encodeURIComponent(p.query)}&page=${p.page || 1}&page_size=10&key=`, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        const games = (data.results || []).map(g => ({ name: g.name, rating: g.rating, released: g.released, platforms: (g.platforms || []).map(p => p.platform?.name).slice(0, 4), genres: (g.genres || []).map(g => g.name), imageUrl: g.background_image }));
+        return { ok: true, summary: `${games.length} game(s) for "${p.query}"`, games };
+      } catch (err) { return { ok: false, summary: `search_games failed: ${err.message}` }; }
+    }
+
+    case 'get_game_deals': {
+      const p = decision.params || {};
+      const limit = Math.min(20, Math.max(1, p.limit || 10));
+      let url = `https://www.cheapshark.com/api/1.0/deals?pageSize=${limit}`;
+      if (p.title) url += `&title=${encodeURIComponent(p.title)}`;
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const deals = await res.json();
+        const items = (Array.isArray(deals) ? deals : []).map(d => ({ title: d.title, salePrice: d.salePrice, normalPrice: d.normalPrice, savings: Math.round(Number(d.savings)), store: d.storeID, rating: d.metacriticScore, dealUrl: `https://www.cheapshark.com/redirect?dealID=${d.dealID}` }));
+        return { ok: true, summary: `${items.length} game deal(s)${p.title ? ' for "' + p.title + '"' : ''}`, deals: items };
+      } catch (err) { return { ok: false, summary: `get_game_deals failed: ${err.message}` }; }
+    }
+
+    // ── Fun & Misc tools ──
+
+    case 'get_random_quote': {
+      const p = decision.params || {};
+      let url = 'https://api.quotable.io/random';
+      if (p.tag) url += `?tags=${encodeURIComponent(p.tag)}`;
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const q = await res.json();
+        return { ok: true, summary: `"${q.content}" — ${q.author}`, quote: { text: q.content, author: q.author, tags: q.tags } };
+      } catch (err) { return { ok: false, summary: `get_random_quote failed: ${err.message}` }; }
+    }
+
+    case 'get_dad_joke': {
+      try {
+        const res = await fetch('https://icanhazdadjoke.com/', { headers: { 'Accept': 'application/json', 'User-Agent': 'SoupPlatform/1.0' }, signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        return { ok: true, summary: data.joke, joke: data.joke };
+      } catch (err) { return { ok: false, summary: `get_dad_joke failed: ${err.message}` }; }
+    }
+
+    // ── Sustainability tools ──
+
+    case 'get_ev_chargers': {
+      const p = decision.params || {};
+      if (p.latitude == null || p.longitude == null) return { ok: false, summary: 'latitude and longitude required.' };
+      const distance = p.distance || 10;
+      const limit = Math.min(50, Math.max(1, p.limit || 10));
+      try {
+        const res = await fetch(`https://api.openchargemap.io/v3/poi/?output=json&latitude=${p.latitude}&longitude=${p.longitude}&distance=${distance}&distanceunit=KM&maxresults=${limit}&compact=true&verbose=false`, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        const chargers = (Array.isArray(data) ? data : []).map(c => ({ name: c.AddressInfo?.Title, address: c.AddressInfo?.AddressLine1, town: c.AddressInfo?.Town, distance: c.AddressInfo?.Distance?.toFixed(1), numPoints: c.NumberOfPoints, status: c.StatusType?.Title, lat: c.AddressInfo?.Latitude, lng: c.AddressInfo?.Longitude }));
+        return { ok: true, summary: `${chargers.length} EV charger(s) within ${distance}km`, chargers };
+      } catch (err) { return { ok: false, summary: `get_ev_chargers failed: ${err.message}` }; }
+    }
+
+    // ── Pet & Animal tools ──
+
+    case 'get_dog_breeds': {
+      const p = decision.params || {};
+      const limit = Math.min(50, Math.max(1, p.limit || 20));
+      try {
+        const res = await fetch(`https://api.thedogapi.com/v1/breeds?limit=${limit}`, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const breeds = await res.json();
+        const items = breeds.map(b => ({ name: b.name, group: b.breed_group, temperament: b.temperament, lifeSpan: b.life_span, weight: b.weight?.metric, height: b.height?.metric, imageUrl: b.image?.url }));
+        return { ok: true, summary: `${items.length} dog breed(s)`, breeds: items };
+      } catch (err) { return { ok: false, summary: `get_dog_breeds failed: ${err.message}` }; }
+    }
+
+    case 'get_cat_breeds': {
+      const p = decision.params || {};
+      const limit = Math.min(50, Math.max(1, p.limit || 20));
+      try {
+        const res = await fetch(`https://api.thecatapi.com/v1/breeds?limit=${limit}`, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const breeds = await res.json();
+        const items = breeds.map(b => ({ name: b.name, origin: b.origin, temperament: b.temperament, lifeSpan: b.life_span, description: b.description?.slice(0, 150), imageUrl: b.image?.url }));
+        return { ok: true, summary: `${items.length} cat breed(s)`, breeds: items };
+      } catch (err) { return { ok: false, summary: `get_cat_breeds failed: ${err.message}` }; }
+    }
+
+    // ── Design tools ──
+
+    case 'get_color_info': {
+      const p = decision.params || {};
+      if (!p.hex) return { ok: false, summary: 'hex is required (e.g. "ff5733").' };
+      try {
+        const res = await fetch(`https://www.thecolorapi.com/id?hex=${p.hex.replace('#', '')}`, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`API: ${res.status}`);
+        const data = await res.json();
+        return { ok: true, summary: `Color: ${data.name?.value} (#${p.hex})`, color: { name: data.name?.value, hex: data.hex?.value, rgb: data.rgb?.value, hsl: data.hsl?.value, contrast: data.contrast?.value } };
+      } catch (err) { return { ok: false, summary: `get_color_info failed: ${err.message}` }; }
     }
 
     // ── Medical & Health tools ──
