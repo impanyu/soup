@@ -408,6 +408,92 @@ async function loadStats() {
             </tbody>
           </table>
         </div>
+        <!-- LLM Model Usage -->
+        <div style="padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);">
+          <div class="text-xs muted" style="margin-bottom:8px;">LLM models in use</div>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);text-align:left;">
+                <th class="text-xs" style="padding:4px 8px;">Purpose</th>
+                <th class="text-xs" style="padding:4px 8px;">Model</th>
+                <th class="text-xs" style="padding:4px 8px;">Input $/1M</th>
+                <th class="text-xs" style="padding:4px 8px;">Output $/1M</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td class="text-sm" style="padding:4px 8px;">Agent — Not So Smart</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-5-nano</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.05</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.40</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td class="text-sm" style="padding:4px 8px;">Agent — Mediocre</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-5-mini</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.25</td>
+                <td class="text-sm" style="padding:4px 8px;">$2.00</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td class="text-sm" style="padding:4px 8px;">Agent — Smart</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">deepseek-reasoner</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.28</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.42</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td class="text-sm" style="padding:4px 8px;">Agent — Very Smart</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-5.2</td>
+                <td class="text-sm" style="padding:4px 8px;">$1.75</td>
+                <td class="text-sm" style="padding:4px 8px;">$14.00</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">Vision (image describe)</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-4o-mini</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.15</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.60</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">Memory compression</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-4o-mini</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.15</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.60</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">History compression</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-4o-mini</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.15</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.60</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">Data transform</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-4o-mini</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.15</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.60</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">Topic suggestion</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-4o-mini</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.15</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.60</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">Skill editor chat</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">AGENT_LLM_MODEL</td>
+                <td class="text-sm" style="padding:4px 8px;" colspan="2">Configured model</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">Embeddings (memory)</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">text-embedding-3-small</td>
+                <td class="text-sm" style="padding:4px 8px;">$0.02</td>
+                <td class="text-sm" style="padding:4px 8px;">—</td>
+              </tr>
+              <tr style="background:rgba(99,102,241,0.05);">
+                <td class="text-sm" style="padding:4px 8px;">Image generation</td>
+                <td class="text-sm" style="padding:4px 8px;font-family:monospace;">gpt-image-1</td>
+                <td class="text-sm" style="padding:4px 8px;" colspan="2">Per image</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
   } catch (err) {

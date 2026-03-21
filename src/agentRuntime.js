@@ -90,7 +90,7 @@ function shortContent(content, { includeEngagement = false } = {}) {
     authorUserId: content.authorUserId || null,
     authorName: author?.name || content.authorName || 'Unknown',
     title: content.title,
-    text: (content.text || '').slice(0, 240),
+    text: content.text || '',
     tags: content.tags || [],
     media,
     viewCount: content.viewCount || 0,
@@ -109,7 +109,7 @@ function pickSummary(content) {
   return {
     id: content.id,
     summary: content.summary || '(no text)',
-    tags: (content.tags || []).slice(0, 3),
+    tags: content.tags || [],
     date: content.createdAt
   };
 }
@@ -118,7 +118,7 @@ function shortProfile(agentOrUser) {
   return {
     id: agentOrUser.id,
     name: agentOrUser.name,
-    bio: (agentOrUser.bio || '').slice(0, 200),
+    bio: agentOrUser.bio || '',
     kind: agentOrUser.kind || 'agent',
     subscriptionFee: agentOrUser.subscriptionFee || 0
   };
@@ -129,7 +129,7 @@ function shortProfile(agentOrUser) {
 const PAGE_SIZE = 20;
 
 // Models that only accept the default temperature (1) — never send temperature to these
-const TEMP_UNSUPPORTED_MODELS = ['gpt-5-nano', 'gpt-5-mini'];
+const TEMP_UNSUPPORTED_MODELS = ['gpt-5-nano', 'gpt-5-mini', 'deepseek-reasoner'];
 function paginate(items, page = 1, pageSize = PAGE_SIZE) {
   const p = Math.max(1, Math.floor(page));
   const size = Math.max(1, Math.floor(pageSize));
@@ -151,19 +151,32 @@ export const DEFAULT_PHASE_MAX_STEPS = {
 // ─── Intelligence levels ─────────────────────────────────────────────────────────
 
 export const INTELLIGENCE_LEVELS = {
-  dumb:        { label: 'Dumb',        model: 'gpt-5-nano',   description: 'Cheapest, fastest, least capable',     costPerStep: 0.5, reasoningEffort: 'none' },
-  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality',      costPerStep: 1.0, reasoningEffort: 'low' },
-  mediocre:    { label: 'Mediocre',    model: 'gpt-5.2',      description: 'Good all-rounder, balanced cost/quality', costPerStep: 3.5, reasoningEffort: 'low' },
-  smart:       { label: 'Smart',       model: 'gpt-5.4',      description: 'Most capable, highest cost',           costPerStep: 5.0, reasoningEffort: 'medium' }
+  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-nano',       description: 'Cheapest, fastest, least capable',         costPerStep: 0.5, reasoningEffort: 'none' },
+  mediocre:     { label: 'Mediocre',     model: 'gpt-5-mini',       description: 'Budget-friendly, decent quality',          costPerStep: 1.0, reasoningEffort: 'low' },
+  smart:        { label: 'Smart',        model: 'deepseek-reasoner', description: 'DeepSeek thinking mode, great value',     costPerStep: 1.5, reasoningEffort: 'none', endpoint: 'https://api.deepseek.com/v1/chat/completions', apiKeyEnv: 'DEEPSEEK_API_KEY' },
+  very_smart:   { label: 'Very Smart',   model: 'gpt-5.2',          description: 'Most capable OpenAI model, highest cost', costPerStep: 3.5, reasoningEffort: 'low' }
 };
 
 function getIntelligenceProfile(agent) {
-  const level = agent.intelligenceLevel || 'dumb';
+  const level = agent.intelligenceLevel || 'not_so_smart';
   return INTELLIGENCE_LEVELS[level] || INTELLIGENCE_LEVELS.dumb;
 }
 
 function getModelForAgent(agent) {
   return getIntelligenceProfile(agent).model;
+}
+
+function getEndpointForAgent(agent) {
+  const profile = getIntelligenceProfile(agent);
+  return profile.endpoint || process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+}
+
+function getApiKeyForAgent(agent) {
+  const profile = getIntelligenceProfile(agent);
+  if (profile.apiKeyEnv && process.env[profile.apiKeyEnv]) {
+    return process.env[profile.apiKeyEnv];
+  }
+  return process.env.AGENT_LLM_API_KEY;
 }
 
 function getReasoningEffortForAgent(agent) {
@@ -193,7 +206,7 @@ function ensureDataAgent() {
     bio: 'Platform data agent — fetches data from APIs and MCP servers, generates visualizations.',
     avatarUrl: '',
     activenessLevel: 'very_lazy',
-    intelligenceLevel: 'dumb',
+    intelligenceLevel: 'not_so_smart',
     intervalMinutes: 99999,
     credits: Infinity,
     subscriptionFee: 0,
@@ -215,6 +228,7 @@ function getDataAgentTools(callingAgent, callerMcpTools = []) {
   const dataToolNames = [
     'fetch_data', 'inspect_data', 'transform_data', 'generate_chart',
     'render_data_map', 'render_heatmap', 'render_wordcloud', 'render_gauge',
+    'render_treemap', 'render_polar_area', 'render_bubble', 'render_progress_bar', 'render_multi_axis', 'render_table',
     'save_media', 'stop'
   ];
   const staticTools = dataToolNames.map(n => getTool(n)).filter(Boolean);
@@ -237,7 +251,7 @@ function getDataAgentTools(callingAgent, callerMcpTools = []) {
 }
 
 async function executeDataAgentRequest(request, callingAgent, callerRunState) {
-  const apiKey = process.env.AGENT_LLM_API_KEY;
+  const apiKey = getApiKeyForAgent(callingAgent);
   if (!apiKey) return { ok: false, summary: 'No LLM API key configured.' };
 
   const dataAgent = ensureDataAgent();
@@ -266,8 +280,8 @@ ${skillBlock}${mcpBlock}
 Return exactly ONE JSON object per turn:
 {"action":"<tool_name>","reason":"<1 short sentence>","params":{...}}`;
 
-  const endpoint = process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
-  // Data agent uses the calling agent's model — smarter agents get smarter data work
+  // Data agent uses the calling agent's model/endpoint/key
+  const endpoint = getEndpointForAgent(callingAgent);
   const model = getModelForAgent(callingAgent);
   const reasoningEffort = getReasoningEffortForAgent(callingAgent);
 
@@ -279,16 +293,21 @@ Return exactly ONE JSON object per turn:
 
   const results = [];
 
+  const isDeepSeekData = endpoint.includes('deepseek.com');
   for (let step = 0; step < DATA_AGENT_MAX_STEPS; step++) {
-    const dataAgentBody = {
-      model,
-      messages,
-      max_completion_tokens: 4096,
-      response_format: { type: 'json_object' }
-    };
-    if (reasoningEffort === 'none') {
-      if (!TEMP_UNSUPPORTED_MODELS.includes(model)) dataAgentBody.temperature = 0;
+    const dataAgentBody = { model, messages };
+    if (isDeepSeekData) {
+      dataAgentBody.max_tokens = 4096;
+      if (model !== 'deepseek-reasoner') {
+        dataAgentBody.response_format = { type: 'json_object' };
+      }
     } else {
+      dataAgentBody.max_completion_tokens = 4096;
+      dataAgentBody.response_format = { type: 'json_object' };
+    }
+    if (reasoningEffort === 'none') {
+      if (!TEMP_UNSUPPORTED_MODELS.includes(model) && !isDeepSeekData) dataAgentBody.temperature = 0;
+    } else if (!isDeepSeekData) {
       dataAgentBody.reasoning_effort = reasoningEffort;
     }
     const res = await fetch(endpoint, {
@@ -696,7 +715,7 @@ function formatPostInsights(content) {
   return `## Post Insights\n${content || ''}\n`;
 }
 
-/** Auto-compress a memory section using gpt-5-mini. */
+/** Auto-compress a memory section using gpt-4o-mini. */
 async function compressMemorySection(text, targetWords) {
   const apiKey = process.env.AGENT_LLM_API_KEY;
   if (!apiKey) return text;
@@ -706,7 +725,7 @@ async function compressMemorySection(text, targetWords) {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: `Condense the following memory notes into ~${targetWords} words. Preserve key insights, lessons learned, important names/IDs/URLs, and any observations that would help make better decisions in the future. Merge similar points. Keep the bullet-point format (each line starting with "- ").` },
           { role: 'user', content: text }
@@ -731,15 +750,23 @@ async function compressMemorySection(text, targetWords) {
 
 
 function buildStepMessages(runState, phase) {
-  // Full action/result history across all phases
   const steps = runState.steps;
   const historyLines = [];
-  let lastPhase = null;
-  for (const step of steps) {
-    if (step.phase !== lastPhase) {
-      historyLines.push(`\n=== Phase: ${step.phase} ===`);
-      lastPhase = step.phase;
-    }
+
+  // If agent compressed history, show summary + only steps after compression
+  const compressedHistory = runState.workingSet._compressedHistory;
+  const compressedAt = runState.workingSet._compressedAtStep || 0;
+
+  if (compressedHistory) {
+    historyLines.push(`\n=== Compressed session history ===\n${compressedHistory}`);
+    // Only show steps that happened AFTER compression
+    const recentSteps = steps.slice(compressedAt);
+    let lastPhase = null;
+    for (const step of recentSteps) {
+      if (step.phase !== lastPhase) {
+        historyLines.push(`\n=== Phase: ${step.phase} ===`);
+        lastPhase = step.phase;
+      }
       const params = Object.entries(step.params || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ');
       historyLines.push(`> Action: ${step.action}(${params})`);
       if (step.reason) historyLines.push(`  Reason: ${step.reason}`);
@@ -753,18 +780,69 @@ function buildStepMessages(runState, phase) {
       if (step.result?.viewed) {
         const v = step.result.viewed;
         historyLines.push(`    Post: "${v.title}" by ${v.authorName}`);
-        historyLines.push(`    Text: ${(v.text || '').slice(0, 200)}`);
+        historyLines.push(`    Text: ${v.text || ''}`);
         historyLines.push(`    Tags: ${(v.tags || []).join(', ')}`);
         if (v.media?.length) historyLines.push(`    Media: ${v.media.map(m => m.url).join(', ')}`);
       }
       if (step.result?.profile) {
         const pr = step.result.profile;
-        historyLines.push(`    Profile: ${pr.name} — ${(pr.bio || '').slice(0, 100)}`);
+        historyLines.push(`    Profile: ${pr.name} — ${pr.bio || ''}`);
       }
       if (step.result?.references) {
         for (const ref of step.result.references.slice(0, 5)) {
           historyLines.push(`    - "${ref.title}" (${ref.source}) ${ref.url || ''}`);
-          if (ref.snippet) historyLines.push(`      ${ref.snippet.slice(0, 150)}`);
+          if (ref.snippet) historyLines.push(`      ${ref.snippet}`);
+        }
+      }
+      if (step.result?.article) {
+        historyLines.push(`    Article: ${step.result.article.url}`);
+        historyLines.push(`    Content: ${step.result.article.text || ''}`);
+        if (step.result.article.images?.length > 0) {
+          historyLines.push(`    Images found in article:`);
+          for (const img of step.result.article.images) {
+            historyLines.push(`      - ${img.url}${img.alt ? ` (${img.alt})` : ''}`);
+          }
+        }
+      }
+      if (step.result?.users) {
+        for (const u of step.result.users.slice(0, 5)) {
+          historyLines.push(`    - ${u.name} [${u.id}]`);
+        }
+      }
+    }
+  } else {
+    // Full action/result history across all phases
+    let lastPhase = null;
+    for (const step of steps) {
+      if (step.phase !== lastPhase) {
+        historyLines.push(`\n=== Phase: ${step.phase} ===`);
+        lastPhase = step.phase;
+      }
+      const params = Object.entries(step.params || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ');
+      historyLines.push(`> Action: ${step.action}(${params})`);
+      if (step.reason) historyLines.push(`  Reason: ${step.reason}`);
+      historyLines.push(`  Result: ${step.result?.summary || 'ok'}`);
+      if (step.result?.posts) {
+        const postList = step.result.posts.slice(0, 10).map(p =>
+          `    - [${p.id}] "${(p.title || p.text || '').slice(0, 60)}" by ${p.authorName} (tags: ${(p.tags || []).join(', ')})`
+        ).join('\n');
+        historyLines.push(postList);
+      }
+      if (step.result?.viewed) {
+        const v = step.result.viewed;
+        historyLines.push(`    Post: "${v.title}" by ${v.authorName}`);
+        historyLines.push(`    Text: ${v.text || ''}`);
+        historyLines.push(`    Tags: ${(v.tags || []).join(', ')}`);
+        if (v.media?.length) historyLines.push(`    Media: ${v.media.map(m => m.url).join(', ')}`);
+      }
+      if (step.result?.profile) {
+        const pr = step.result.profile;
+        historyLines.push(`    Profile: ${pr.name} — ${pr.bio || ''}`);
+      }
+      if (step.result?.references) {
+        for (const ref of step.result.references.slice(0, 5)) {
+          historyLines.push(`    - "${ref.title}" (${ref.source}) ${ref.url || ''}`);
+          if (ref.snippet) historyLines.push(`      ${ref.snippet}`);
         }
       }
       if (step.result?.sources) {
@@ -778,7 +856,7 @@ function buildStepMessages(runState, phase) {
       }
       if (step.result?.article) {
         historyLines.push(`    Article: ${step.result.article.url}`);
-        historyLines.push(`    Content: ${(step.result.article.text || '').slice(0, 500)}`);
+        historyLines.push(`    Content: ${step.result.article.text || ''}`);
         if (step.result.article.images?.length > 0) {
           historyLines.push(`    Images found in article:`);
           for (const img of step.result.article.images) {
@@ -792,6 +870,7 @@ function buildStepMessages(runState, phase) {
         }
       }
   }
+  } // close else block
 
   const historyBlock = historyLines.length > 0
     ? `Here is everything you did so far this session:\n${historyLines.join('\n')}`
@@ -1182,6 +1261,11 @@ function validateLlmDecisionSchema(raw, phase, extraTools = []) {
       for (const [key, spec] of Object.entries(tool.params || {})) {
         if (Object.prototype.hasOwnProperty.call(raw.params, key)) {
           const val = raw.params[key];
+          // Skip type check for optional params that are null/undefined
+          if (val === null || val === undefined) {
+            delete raw.params[key];
+            continue;
+          }
           if (spec.type === 'string' && typeof val !== 'string') {
             errors.push(`Param "${key}" must be a string.`);
           }
@@ -1223,13 +1307,16 @@ function normalizeLlmPayload(payload) {
   if (isPlainObject(payload) && typeof payload.output === 'string') {
     try { return JSON.parse(payload.output); } catch { return null; }
   }
+  // DeepSeek reasoner puts thinking in reasoning_content and answer in content
   if (isPlainObject(payload) && Array.isArray(payload.choices) && payload.choices[0]?.message?.content) {
     if (payload.choices[0].finish_reason === 'length') {
       console.error(`[LLM] Response truncated (finish_reason=length). Increase max_tokens.`);
       return null;
     }
-    const content = payload.choices[0].message.content;
+    let content = payload.choices[0].message.content;
     if (typeof content === 'string') {
+      // Strip markdown code fences (common with DeepSeek and other models without response_format)
+      content = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
       try { return JSON.parse(content); } catch {
         // LLM sometimes returns multiple JSON objects concatenated — extract the first one
         const m = content.match(/^\s*\{/);
@@ -1265,10 +1352,10 @@ function normalizeLlmPayload(payload) {
 }
 
 async function llmDecision(agent, phase, runState) {
-  const apiKey = process.env.AGENT_LLM_API_KEY;
+  const apiKey = getApiKeyForAgent(agent);
   if (!apiKey) return null;
 
-  const endpoint = process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+  const endpoint = getEndpointForAgent(agent);
   const model = getModelForAgent(agent);
 
   const mcpTools = runState.workingSet.mcpTools || [];
@@ -1281,19 +1368,31 @@ async function llmDecision(agent, phase, runState) {
   ];
 
   const reasoningEffort = getReasoningEffortForAgent(agent);
+  const isDeepSeek = endpoint.includes('deepseek.com');
   const requestBody = {
     model,
-    messages,
-    max_completion_tokens: 16384,
-    response_format: { type: 'json_object' }
+    messages
   };
+
+  // DeepSeek uses max_tokens; OpenAI uses max_completion_tokens
+  if (isDeepSeek) {
+    requestBody.max_tokens = 8192;
+    // DeepSeek reasoner doesn't support response_format or temperature
+    if (model !== 'deepseek-reasoner') {
+      requestBody.response_format = { type: 'json_object' };
+    }
+  } else {
+    requestBody.max_completion_tokens = 16384;
+    requestBody.response_format = { type: 'json_object' };
+  }
+
   // Only set temperature when reasoning is off and model supports it
   if (reasoningEffort === 'none') {
     const temperature = process.env.AGENT_LLM_TEMPERATURE;
-    if (temperature !== undefined && temperature !== '' && !TEMP_UNSUPPORTED_MODELS.includes(model)) {
+    if (temperature !== undefined && temperature !== '' && !TEMP_UNSUPPORTED_MODELS.includes(model) && !isDeepSeek) {
       requestBody.temperature = Number(temperature);
     }
-  } else {
+  } else if (!isDeepSeek) {
     requestBody.reasoning_effort = reasoningEffort;
   }
 
@@ -1350,11 +1449,46 @@ async function llmDecision(agent, phase, runState) {
 
 // ─── Data API chart helpers ──────────────────────────────────────────────────────
 
-async function saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags, description, fillArea }) {
+async function saveDataApiChart({ agent, chartType, title, labels, values, datasetLabel, tags, description, fillArea, runState }) {
+  // Route to advanced renderers for special chart types
+  const ADVANCED_TYPES = {
+    treemap: true, progress_bar: true, polar_area: true, polarArea: true,
+    heatmap: true, wordcloud: true, gauge: true, bubble: true, table: true
+  };
+
+  if (ADVANCED_TYPES[chartType]) {
+    if (chartType === 'treemap') {
+      const data = labels.map((l, i) => ({ label: l, value: values[i] || 0 }));
+      const config = { type: 'treemap', data: { datasets: [{ tree: values, labels: { display: true, formatter: (ctx) => labels[ctx.dataIndex] || '' }, backgroundColor: ['#6366f1cc','#f43f5ecc','#10b981cc','#f59e0bcc','#8b5cf6cc','#06b6d4cc','#ec4899cc','#14b8a6cc','#f97316cc','#a855f7cc'].slice(0, labels.length), spacing: 2, borderWidth: 1, borderColor: '#fff' }] }, options: { plugins: { title: { display: true, text: title, font: { size: 16, weight: 'bold' } }, legend: { display: false } } } };
+      return saveChartFromConfig({ agent, config, title, description, width: 600, height: 400 });
+    }
+    if (chartType === 'progress_bar') {
+      const colors = ['#6366f1','#f43f5e','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#14b8a6'];
+      const config = { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => colors[i % colors.length] + 'cc'), borderColor: labels.map((_, i) => colors[i % colors.length]), borderWidth: 1, borderRadius: 4 }] }, options: { indexAxis: 'y', plugins: { title: { display: true, text: title, font: { size: 16, weight: 'bold' } }, legend: { display: false }, datalabels: { display: true, anchor: 'end', align: 'end', font: { weight: 'bold', size: 11 } } }, scales: { x: { beginAtZero: true } } } };
+      return saveChartFromConfig({ agent, config, title, description, width: 600, height: Math.max(300, labels.length * 40 + 100) });
+    }
+    if (chartType === 'polar_area' || chartType === 'polarArea') {
+      const colors = ['#6366f1cc','#f43f5ecc','#10b981cc','#f59e0bcc','#8b5cf6cc','#06b6d4cc','#ec4899cc','#14b8a6cc','#f97316cc','#a855f7cc'];
+      const data = { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => colors[i % colors.length]), borderColor: '#fff', borderWidth: 2 }] };
+      return saveDataApiChartRaw({ agent, chartType: 'polarArea', title, data, tags, description });
+    }
+    // Fall through for other types that need runState
+  }
+
   const datasets = [{ label: datasetLabel, data: values }];
   if (fillArea) datasets[0].fill = true;
   const data = { labels, datasets };
   return saveDataApiChartRaw({ agent, chartType, title, data, tags, description });
+}
+
+async function saveChartFromConfig({ agent, config, title, description, width = 600, height = 400 }) {
+  const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=${width}&h=${height}&bkg=white`;
+  try {
+    const stored = await agentStorage.downloadToAgentStorage(agent.id, chartUrl);
+    return { ok: true, summary: `Chart saved: "${title}". Use embed_image with localUrl in create phase.`, chartUrl: stored.localUrl, description };
+  } catch {
+    return { ok: true, summary: `Chart generated: "${title}" (remote URL — local save failed).`, chartUrl, description };
+  }
 }
 
 async function saveDataApiChartRaw({ agent, chartType, title, data, tags, description }) {
@@ -1461,6 +1595,47 @@ async function executeAction(agent, decision, runState) {
       return { ok: true, summary: `Your posts page ${pg.page}/${pg.totalPages} (${pg.totalItems} total)`, posts: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
+    case 'check_replies': {
+      const limit = Math.min(Math.max(1, decision.params?.limit || 10), 20);
+      const myPosts = db.getAgentPublished(agent.id).slice(-limit);
+      const postsWithUnreplied = [];
+
+      for (const post of myPosts) {
+        const children = db.getChildren(post.id).filter(c => !c.repostOfId);
+        if (children.length === 0) continue;
+
+        // Find comments NOT authored by this agent that have no reply from this agent
+        const unreplied = [];
+        for (const comment of children) {
+          if (comment.authorId === agent.id) continue;
+          // Check if agent has replied to this comment
+          const replies = db.getChildren(comment.id);
+          const agentReplied = replies.some(r => r.authorId === agent.id);
+          if (!agentReplied) {
+            unreplied.push(shortContent(comment, { includeEngagement: true }));
+          }
+        }
+
+        if (unreplied.length > 0) {
+          postsWithUnreplied.push({
+            post: shortContent(post, { includeEngagement: true }),
+            unrepliedComments: unreplied
+          });
+        }
+      }
+
+      if (postsWithUnreplied.length === 0) {
+        return { ok: true, summary: `No unreplied comments on your last ${myPosts.length} posts. You're all caught up!`, posts: [] };
+      }
+
+      const totalUnreplied = postsWithUnreplied.reduce((s, p) => s + p.unrepliedComments.length, 0);
+      return {
+        ok: true,
+        summary: `${totalUnreplied} unreplied comment(s) across ${postsWithUnreplied.length} post(s). Use comment tool with the comment's ID to reply.`,
+        posts: postsWithUnreplied
+      };
+    }
+
     case 'browse_mentions': {
       const result = db.getMentionsFor('agent', agent.id, { page: decision.params?.page || 1, perPage: 20 });
       const items = result.contents.map(c => ({ ...shortContent(c, { includeEngagement: true }) }));
@@ -1468,20 +1643,22 @@ async function executeAction(agent, decision, runState) {
     }
 
     case 'browse_followers': {
-      const followers = db.getAgentFollowers(agent.id).map(shortProfile);
-      return { ok: true, summary: `You have ${followers.length} followers`, users: followers };
+      const allFollowers = db.getAgentFollowers(agent.id).map(shortProfile);
+      const pg = paginate(allFollowers, decision.params?.page, 20);
+      return { ok: true, summary: `You have ${pg.totalItems} followers (page ${pg.page}/${pg.totalPages})`, users: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'browse_following': {
-      const following = db.getAgentFollowing(agent.id).map(f => ({
+      const allFollowing = db.getAgentFollowing(agent.id).map(f => ({
         ...shortProfile(f),
         subscriptionFee: f.subscriptionFee || 0,
         cancelled: !!f.followCancelledAt,
         expiresAt: f.followExpiresAt || null
       }));
-      const paid = following.filter(f => f.subscriptionFee > 0);
+      const paid = allFollowing.filter(f => f.subscriptionFee > 0);
       const totalMonthlyCost = paid.reduce((s, f) => s + f.subscriptionFee, 0);
-      return { ok: true, summary: `You follow ${following.length} accounts (${paid.length} paid, ${totalMonthlyCost} cr/mo total)`, users: following };
+      const pg = paginate(allFollowing, decision.params?.page, 20);
+      return { ok: true, summary: `You follow ${pg.totalItems} accounts (${paid.length} paid, ${totalMonthlyCost} cr/mo total, page ${pg.page}/${pg.totalPages})`, users: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'browse_my_stats': {
@@ -1506,26 +1683,27 @@ async function executeAction(agent, decision, runState) {
 
       // Separate children into pure comments and reposts, deduplicated
       const allChildren = db.getChildren(content.id);
-      const comments = allChildren.filter(c => !c.repostOfId).slice(0, 10)
+      const allComments = allChildren.filter(c => !c.repostOfId)
         .map(c => ({ ...shortContent(c, { includeEngagement: true }), childType: 'comment' }));
       const repostIds = new Set();
-      const repostItems = [];
+      const allRepostItems = [];
       for (const c of allChildren.filter(c => c.repostOfId)) {
-        if (!repostIds.has(c.id)) { repostIds.add(c.id); repostItems.push(c); }
+        if (!repostIds.has(c.id)) { repostIds.add(c.id); allRepostItems.push(c); }
       }
       for (const c of db.getRepostsOf(content.id)) {
-        if (!repostIds.has(c.id)) { repostIds.add(c.id); repostItems.push(c); }
+        if (!repostIds.has(c.id)) { repostIds.add(c.id); allRepostItems.push(c); }
       }
-      const reposts = repostItems
+      const allReposts = allRepostItems
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-        .slice(0, 10)
         .map(c => ({ ...shortContent(c, { includeEngagement: true }), childType: 'repost' }));
+      const commentsPg = paginate(allComments, decision.params?.commentsPage, 10);
+      const repostsPg = paginate(allReposts, decision.params?.repostsPage, 10);
       const ancestors = db.getAncestors(content.id).map(c => shortContent(c));
 
-      const hint = comments.some(c => c.commentCount > 0 || c.repostCount > 0)
+      const hint = commentsPg.items.some(c => c.commentCount > 0 || c.repostCount > 0)
         ? ' Some comments/reposts have sub-threads — use view_post with their ID to explore deeper.'
         : '';
-      return { ok: true, summary: `Viewed post ${content.id} (${sc.engagement.likes} likes, ${sc.engagement.favorites} favs, ${comments.length} comments, ${reposts.length} reposts).${hint} Use comment/repost with any ID to reply. Use view_profile with authorId + authorKind to check any author.`, viewed: sc, comments, reposts, ancestors };
+      return { ok: true, summary: `Viewed post ${content.id} (${sc.engagement.likes} likes, ${sc.engagement.favorites} favs, ${commentsPg.totalItems} comments, ${repostsPg.totalItems} reposts).${hint} Use comment/repost with any ID to reply. Use view_profile with authorId + authorKind to check any author.`, viewed: sc, comments: commentsPg.items, commentsPage: commentsPg.page, commentsTotalPages: commentsPg.totalPages, commentsHasMore: commentsPg.hasMore, reposts: repostsPg.items, repostsPage: repostsPg.page, repostsTotalPages: repostsPg.totalPages, repostsHasMore: repostsPg.hasMore, ancestors };
     }
 
     case 'list_comments': {
@@ -1562,10 +1740,11 @@ async function executeAction(agent, decision, runState) {
       db.recordView({ actorKind: 'agent', actorId: agent.id, targetKind, targetId: target.id });
       runState.workingSet.knownUserIds.add(target.id);
 
-      const posts = (targetKind === 'user'
+      const allPosts = (targetKind === 'user'
         ? db.getUserPublished(target.id)
         : db.getAgentPublished(target.id)
-      ).slice(-5).map(c => shortContent(c, { includeEngagement: true }));
+      ).reverse().map(c => shortContent(c, { includeEngagement: true }));
+      const postsPg = paginate(allPosts, decision.params?.postsPage, 10);
 
       const profile = shortProfile(target);
       profile.kind = targetKind;
@@ -1575,7 +1754,7 @@ async function executeAction(agent, decision, runState) {
       profile.isFree = !target.subscriptionFee || target.subscriptionFee <= 0;
       runState.workingSet.viewedProfiles.push(profile);
 
-      return { ok: true, summary: `Viewed profile of ${target.name} (${profile.isFree ? 'free' : profile.subscriptionFee + ' cr/mo'}${profile.isFollowing ? ', following' : ', not following'}). Posts include commentCount/repostCount — use view_post to explore threads, or follow/unfollow this ${targetKind}.`, profile, posts };
+      return { ok: true, summary: `Viewed profile of ${target.name} (${profile.isFree ? 'free' : profile.subscriptionFee + ' cr/mo'}${profile.isFollowing ? ', following' : ', not following'}, ${postsPg.totalItems} posts). Posts include commentCount/repostCount — use view_post to explore threads, or follow/unfollow this ${targetKind}.`, profile, posts: postsPg.items, postsPage: postsPg.page, postsTotalPages: postsPg.totalPages, postsHasMore: postsPg.hasMore };
     }
 
     case 'search_posts': {
@@ -1590,11 +1769,12 @@ async function executeAction(agent, decision, runState) {
     case 'search_users': {
       const query = safeString(decision.params?.query || (agent.preferences?.topics || [])[0] || '');
       const result = db.search({ query, type: 'agents' });
-      const discovered = result.agents.filter((a) => a.id !== agent.id).slice(0, 15);
+      const discovered = result.agents.filter((a) => a.id !== agent.id);
       for (const a of discovered) {
         runState.workingSet.knownUserIds.add(a.id);
       }
-      return { ok: true, summary: `Searched users for: ${query || 'all'}`, resultCount: discovered.length, users: discovered.map(shortProfile) };
+      const pg = paginate(discovered.map(shortProfile), decision.params?.page, 10);
+      return { ok: true, summary: `Searched users for "${query || 'all'}": ${pg.totalItems} results (page ${pg.page}/${pg.totalPages})`, users: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     // ── Reactions ──
@@ -1762,7 +1942,7 @@ async function executeAction(agent, decision, runState) {
       const updated = agentStorage.draftToMarkdown(parsed);
       agentStorage.writeDraft(agent.id, updated);
 
-      return { ok: true, summary: `Edited draft`, draft: { title: parsed.title, text: parsed.text.slice(0, 200), tags: parsed.tags, mediaCount: parsed.media.length } };
+      return { ok: true, summary: `Draft edited successfully. (${parsed.media.length}/4 media attached)` };
     }
 
     case 'generate_media': {
@@ -2173,14 +2353,14 @@ async function executeAction(agent, decision, runState) {
       const allRefs = [];
       for (const result of results) {
         const items = result.status === 'fulfilled' ? result.value : [];
-        for (const item of (items || []).slice(0, limit)) allRefs.push(item);
+        for (const item of items || []) allRefs.push(item);
       }
-      const newRefs = allRefs.slice(0, 20);
       runState.workingSet.externalReferences = [
         ...(runState.workingSet.externalReferences || []),
-        ...newRefs
-      ].slice(-30);
-      return { ok: true, summary: `Searched ${sources.length} sources for "${query}": ${newRefs.length} results.`, references: newRefs };
+        ...allRefs
+      ].slice(-50);
+      const pg = paginate(allRefs, decision.params?.page, 10);
+      return { ok: true, summary: `Searched ${sources.length} sources for "${query}": ${pg.totalItems} results (page ${pg.page}/${pg.totalPages}).`, references: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'fetch_by_url': {
@@ -2224,14 +2404,14 @@ async function executeAction(agent, decision, runState) {
       const allRefs = [];
       for (const result of results) {
         const items = result.status === 'fulfilled' ? result.value : [];
-        for (const item of (items || []).slice(0, limit)) allRefs.push(item);
+        for (const item of items || []) allRefs.push(item);
       }
-      const newRefs = allRefs.slice(0, 30);
       runState.workingSet.externalReferences = [
         ...(runState.workingSet.externalReferences || []),
-        ...newRefs
-      ].slice(-30);
-      return { ok: true, summary: `Latest from ${sources.length} sources: ${newRefs.length} items.`, references: newRefs };
+        ...allRefs
+      ].slice(-50);
+      const pg = paginate(allRefs, decision.params?.page, 10);
+      return { ok: true, summary: `Latest from ${sources.length} sources: ${pg.totalItems} items (page ${pg.page}/${pg.totalPages}).`, references: pg.items, page: pg.page, totalPages: pg.totalPages, hasMore: pg.hasMore };
     }
 
     case 'fetch_data': {
@@ -2480,12 +2660,16 @@ async function executeAction(agent, decision, runState) {
     // ── Data Agent ──
 
     case 'query_data_agent': {
+      if (runState.workingSet._dataAgentProducedImage) {
+        return { ok: false, summary: 'Data agent already produced an image this run. Use the saved image with embed_image instead of requesting another.' };
+      }
       const request = decision.params?.request;
       if (!request) return { ok: false, summary: 'request param is required — describe what data/visualization you need.' };
 
       try {
         console.log(`[${agent.name}] Delegating to data agent: ${request.slice(0, 120)}`);
         const result = await executeDataAgentRequest(request, agent, runState);
+        if (result.savedToStorage) runState.workingSet._dataAgentProducedImage = true;
         return result;
       } catch (err) {
         return { ok: false, summary: `Data agent failed: ${err.message}` };
@@ -2656,6 +2840,210 @@ async function executeAction(agent, decision, runState) {
         return { ok: true, summary: `Gauge saved: "${desc}"`, localUrl: stored.localUrl, chartUrl: stored.localUrl, description: desc };
       } catch (err) {
         return { ok: false, summary: `render_gauge failed: ${err.message}` };
+      }
+    }
+
+    case 'render_treemap': {
+      const p = decision.params || {};
+      if (!p.title || !p.data || !Array.isArray(p.data)) return { ok: false, summary: 'title and data array are required.' };
+      const scheme = p.colorScheme || 'vibrant';
+      const palettes = {
+        vibrant: ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#a855f7'],
+        cool: ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#818cf8', '#c084fc'],
+        warm: ['#f43f5e', '#f97316', '#f59e0b', '#ef4444', '#ec4899', '#e11d48', '#fb923c', '#fbbf24', '#f472b6', '#fb7185'],
+        earth: ['#78716c', '#92400e', '#065f46', '#1e40af', '#7c2d12', '#164e63', '#713f12', '#365314', '#4c1d95', '#831843'],
+        pastel: ['#93c5fd', '#c4b5fd', '#fda4af', '#fdba74', '#86efac', '#a5f3fc', '#f9a8d4', '#fcd34d', '#bef264', '#d8b4fe']
+      };
+      const colors = palettes[scheme] || palettes.vibrant;
+      const config = {
+        type: 'treemap',
+        data: { datasets: [{ tree: p.data.map(d => d.value || 0), labels: { display: true, formatter: (ctx) => p.data[ctx.dataIndex]?.label || '' }, backgroundColor: p.data.map((_, i) => colors[i % colors.length]), spacing: 2, borderWidth: 1, borderColor: '#fff' }] },
+        options: { plugins: { title: { display: true, text: p.title, font: { size: 16, weight: 'bold' } }, legend: { display: false } } }
+      };
+      const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=600&h=400&bkg=white`;
+      try {
+        const stored = await agentStorage.downloadToAgentStorage(agent.id, chartUrl);
+        agentStorage.recordFileMetadata(agent.id, stored.filename, { caption: p.title });
+        runState.workingSet.savedFilesThisRun.push({ filename: stored.filename, localUrl: stored.localUrl, description: p.title });
+        return { ok: true, summary: `Treemap saved: "${p.title}"`, localUrl: stored.localUrl, chartUrl: stored.localUrl, description: p.title };
+      } catch (err) { return { ok: false, summary: `render_treemap failed: ${err.message}` }; }
+    }
+
+    case 'render_polar_area': {
+      const p = decision.params || {};
+      if (!p.title || !p.labels || !p.values) return { ok: false, summary: 'title, labels, and values are required.' };
+      const colors = ['#6366f1cc', '#f43f5ecc', '#10b981cc', '#f59e0bcc', '#8b5cf6cc', '#06b6d4cc', '#ec4899cc', '#14b8a6cc', '#f97316cc', '#a855f7cc'];
+      const data = { labels: p.labels, datasets: [{ data: p.values, backgroundColor: p.labels.map((_, i) => colors[i % colors.length]), borderColor: '#fff', borderWidth: 2 }] };
+      return await saveDataApiChartRaw({ agent, chartType: 'polarArea', title: p.title, data, tags: [], description: p.title });
+    }
+
+    case 'render_bubble': {
+      const p = decision.params || {};
+      if (!p.title || !p.data || !Array.isArray(p.data)) return { ok: false, summary: 'title and data array are required.' };
+      const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
+      const datasets = p.data.map((d, i) => ({
+        label: d.label || `Item ${i + 1}`,
+        data: [{ x: d.x, y: d.y, r: d.r || 10 }],
+        backgroundColor: (colors[i % colors.length]) + '99',
+        borderColor: colors[i % colors.length],
+        borderWidth: 1
+      }));
+      const config = {
+        type: 'bubble',
+        data: { datasets },
+        options: {
+          plugins: { title: { display: true, text: p.title, font: { size: 16, weight: 'bold' } }, legend: { position: 'bottom', labels: { usePointStyle: true } } },
+          scales: { x: { title: { display: !!p.xLabel, text: p.xLabel || '' } }, y: { title: { display: !!p.yLabel, text: p.yLabel || '' } } }
+        }
+      };
+      const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=600&h=400&bkg=white`;
+      try {
+        const stored = await agentStorage.downloadToAgentStorage(agent.id, chartUrl);
+        agentStorage.recordFileMetadata(agent.id, stored.filename, { caption: p.title });
+        runState.workingSet.savedFilesThisRun.push({ filename: stored.filename, localUrl: stored.localUrl, description: p.title });
+        return { ok: true, summary: `Bubble chart saved: "${p.title}"`, localUrl: stored.localUrl, chartUrl: stored.localUrl, description: p.title };
+      } catch (err) { return { ok: false, summary: `render_bubble failed: ${err.message}` }; }
+    }
+
+    case 'render_progress_bar': {
+      const p = decision.params || {};
+      if (!p.title || !p.items || !Array.isArray(p.items)) return { ok: false, summary: 'title and items array are required.' };
+      const palettes = {
+        vibrant: ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'],
+        cool: ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#06b6d4', '#14b8a6', '#10b981', '#22d3ee'],
+        warm: ['#f43f5e', '#f97316', '#f59e0b', '#ef4444', '#ec4899', '#e11d48', '#fb923c', '#fbbf24'],
+        earth: ['#78716c', '#92400e', '#065f46', '#1e40af', '#7c2d12', '#164e63', '#713f12', '#365314'],
+        pastel: ['#93c5fd', '#c4b5fd', '#fda4af', '#fdba74', '#86efac', '#a5f3fc', '#f9a8d4', '#fcd34d']
+      };
+      const colors = palettes[p.colorScheme] || palettes.vibrant;
+      const labels = p.items.map(i => i.label);
+      const values = p.items.map(i => i.value);
+      const unit = p.unit || '';
+      const data = {
+        labels,
+        datasets: [{ data: values, backgroundColor: p.items.map((_, i) => colors[i % colors.length] + 'cc'), borderColor: p.items.map((_, i) => colors[i % colors.length]), borderWidth: 1, borderRadius: 4 }]
+      };
+      const config = {
+        type: 'bar',
+        data,
+        options: {
+          indexAxis: 'y',
+          plugins: {
+            title: { display: true, text: p.title, font: { size: 16, weight: 'bold' } },
+            legend: { display: false },
+            datalabels: { display: true, anchor: 'end', align: 'end', font: { weight: 'bold', size: 11 }, formatter: (val) => `${val}${unit}` }
+          },
+          scales: { x: { beginAtZero: true } }
+        }
+      };
+      const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=600&h=${Math.max(300, p.items.length * 40 + 100)}&bkg=white`;
+      try {
+        const stored = await agentStorage.downloadToAgentStorage(agent.id, chartUrl);
+        agentStorage.recordFileMetadata(agent.id, stored.filename, { caption: p.title });
+        runState.workingSet.savedFilesThisRun.push({ filename: stored.filename, localUrl: stored.localUrl, description: p.title });
+        return { ok: true, summary: `Progress bar chart saved: "${p.title}"`, localUrl: stored.localUrl, chartUrl: stored.localUrl, description: p.title };
+      } catch (err) { return { ok: false, summary: `render_progress_bar failed: ${err.message}` }; }
+    }
+
+    case 'render_multi_axis': {
+      const p = decision.params || {};
+      if (!p.title || !p.labels || !p.datasets) return { ok: false, summary: 'title, labels, and datasets are required.' };
+      const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'];
+      const datasets = p.datasets.map((ds, i) => {
+        const color = colors[i % colors.length];
+        const isRight = ds.yAxis === 'right';
+        return {
+          label: ds.label,
+          data: ds.data,
+          type: ds.type || 'line',
+          yAxisID: isRight ? 'y1' : 'y',
+          borderColor: color,
+          backgroundColor: ds.type === 'bar' ? color + 'cc' : color + '33',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: ds.type !== 'bar',
+          pointRadius: ds.type !== 'bar' ? 3 : undefined,
+          borderRadius: ds.type === 'bar' ? 4 : undefined,
+          order: ds.type === 'bar' ? 2 : 1
+        };
+      });
+      const config = {
+        type: 'bar',
+        data: { labels: p.labels, datasets },
+        options: {
+          plugins: { title: { display: true, text: p.title, font: { size: 16, weight: 'bold' } }, legend: { position: 'bottom', labels: { usePointStyle: true } } },
+          scales: {
+            y: { position: 'left', beginAtZero: true },
+            y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+          }
+        }
+      };
+      const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=600&h=400&bkg=white`;
+      try {
+        const stored = await agentStorage.downloadToAgentStorage(agent.id, chartUrl);
+        agentStorage.recordFileMetadata(agent.id, stored.filename, { caption: p.title });
+        runState.workingSet.savedFilesThisRun.push({ filename: stored.filename, localUrl: stored.localUrl, description: p.title });
+        return { ok: true, summary: `Multi-axis chart saved: "${p.title}"`, localUrl: stored.localUrl, chartUrl: stored.localUrl, description: p.title };
+      } catch (err) { return { ok: false, summary: `render_multi_axis failed: ${err.message}` }; }
+    }
+
+    case 'render_table': {
+      const p = decision.params || {};
+      if (!p.title || !p.headers || !p.rows) return { ok: false, summary: 'title, headers, and rows are required.' };
+
+      // Build an SVG table image
+      const cellW = 120, cellH = 32, pad = 8;
+      const cols = p.headers.length;
+      const rowCount = p.rows.length;
+      const tableW = cols * cellW + pad * 2;
+      const titleH = 40;
+      const tableH = titleH + (rowCount + 1) * cellH + pad * 2;
+
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${tableW}" height="${tableH}" viewBox="0 0 ${tableW} ${tableH}">`;
+      svg += `<rect width="${tableW}" height="${tableH}" fill="white"/>`;
+      svg += `<text x="${tableW / 2}" y="${28}" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="bold" fill="#1f2937">${p.title.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`;
+
+      // Header row
+      const startY = titleH;
+      for (let c = 0; c < cols; c++) {
+        const x = pad + c * cellW;
+        svg += `<rect x="${x}" y="${startY}" width="${cellW}" height="${cellH}" fill="#6366f1" stroke="#fff" stroke-width="1"/>`;
+        svg += `<text x="${x + cellW / 2}" y="${startY + 21}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">${String(p.headers[c] || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').slice(0, 18)}</text>`;
+      }
+
+      // Data rows
+      for (let r = 0; r < rowCount; r++) {
+        const y = startY + (r + 1) * cellH;
+        const bg = r % 2 === 0 ? '#f9fafb' : '#ffffff';
+        for (let c = 0; c < cols; c++) {
+          const x = pad + c * cellW;
+          const val = String((p.rows[r] || [])[c] ?? '').slice(0, 20);
+          svg += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" fill="${bg}" stroke="#e5e7eb" stroke-width="1"/>`;
+          svg += `<text x="${x + cellW / 2}" y="${y + 21}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#374151">${val.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`;
+        }
+      }
+      svg += '</svg>';
+
+      // Convert SVG to image via QuickChart
+      const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({ type: 'bar', data: { labels: [''], datasets: [{ data: [0] }] }, options: { plugins: { title: { display: false } } } }))}&w=${tableW}&h=${tableH}&bkg=white`;
+
+      // Use SVG directly — save as SVG file
+      try {
+        const buffer = Buffer.from(svg, 'utf-8');
+        agentStorage.ensureAgentDirs(agent.id);
+        const crypto = await import('node:crypto');
+        const hash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 12);
+        const filename = `${hash}.svg`;
+        const { writeFileSync } = await import('node:fs');
+        const { join } = await import('node:path');
+        const filePath = join(process.cwd(), 'data', 'agents', agent.id, 'files', filename);
+        writeFileSync(filePath, buffer);
+        const localUrl = `/agents/${agent.id}/files/${filename}`;
+        agentStorage.recordFileMetadata(agent.id, filename, { caption: p.title });
+        runState.workingSet.savedFilesThisRun.push({ filename, localUrl, description: p.title });
+        return { ok: true, summary: `Table saved: "${p.title}" (${rowCount} rows × ${cols} cols)`, localUrl, chartUrl: localUrl, description: p.title };
+      } catch (err) {
+        return { ok: false, summary: `render_table failed: ${err.message}` };
       }
     }
 
@@ -2921,19 +3309,28 @@ async function executeAction(agent, decision, runState) {
         agentStorage.recordFileMetadata(agent.id, mapResult.filename, { caption: mapDesc, sourceUrl: mapUrl });
         runState.workingSet.savedFilesThisRun.push({ filename: mapResult.filename, localUrl: mapResult.localUrl, description: mapDesc });
 
-        // Save street view
-        const svUrl = `https://maps.googleapis.com/maps/api/streetview?location=${lat},${lng}&size=600x400&fov=90&pitch=0&key=${apiKey}`;
-        const svResult = await agentStorage.downloadToAgentStorage(agent.id, svUrl);
-        const svDesc = `Street view of ${formattedAddress}`;
-        agentStorage.recordFileMetadata(agent.id, svResult.filename, { caption: svDesc, sourceUrl: svUrl });
-        runState.workingSet.savedFilesThisRun.push({ filename: svResult.filename, localUrl: svResult.localUrl, description: svDesc });
+        // Save street view (only if imagery exists)
+        let streetViewImage = null;
+        try {
+          const svMetaRes = await fetch(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&key=${apiKey}`, { signal: AbortSignal.timeout(10000) });
+          const svMeta = svMetaRes.ok ? await svMetaRes.json() : { status: 'OK' };
+          if (svMeta.status === 'OK') {
+            const svUrl = `https://maps.googleapis.com/maps/api/streetview?location=${lat},${lng}&size=600x400&fov=90&pitch=0&key=${apiKey}`;
+            const svResult = await agentStorage.downloadToAgentStorage(agent.id, svUrl);
+            const svDesc = `Street view of ${formattedAddress}`;
+            agentStorage.recordFileMetadata(agent.id, svResult.filename, { caption: svDesc, sourceUrl: svUrl });
+            runState.workingSet.savedFilesThisRun.push({ filename: svResult.filename, localUrl: svResult.localUrl, description: svDesc });
+            streetViewImage = svResult.localUrl;
+          }
+        } catch { /* skip street view if check fails */ }
 
+        const svNote = streetViewImage ? ' and street view' : ' (no street view coverage here)';
         return {
           ok: true,
-          summary: `Traveled to ${formattedAddress}. Saved satellite map and street view. Use explore_nearby to discover places, map_streetview to look around, or get_place_photo to capture specific spots.`,
+          summary: `Traveled to ${formattedAddress}. Saved satellite map${svNote}. Use explore_nearby to discover places, map_streetview to look around, or get_place_photo to capture specific spots.`,
           location: { lat, lng, formattedAddress, ...components },
           mapImage: mapResult.localUrl,
-          streetViewImage: svResult.localUrl
+          streetViewImage
         };
       } catch (err) {
         return { ok: false, summary: `travel_to failed: ${err.message}` };
@@ -3105,6 +3502,17 @@ async function executeAction(agent, decision, runState) {
       const apiKey = process.env.GOOGLE_MAPS_API_KEY;
       if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured (GOOGLE_MAPS_API_KEY).' };
 
+      // Check if street view imagery exists at this location
+      try {
+        const metaRes = await fetch(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${encodeURIComponent(location)}&key=${apiKey}`, { signal: AbortSignal.timeout(10000) });
+        if (metaRes.ok) {
+          const meta = await metaRes.json();
+          if (meta.status !== 'OK') {
+            return { ok: false, summary: `No Street View imagery available at "${location}". Try a nearby major road, landmark, or city center instead.` };
+          }
+        }
+      } catch { /* proceed anyway if metadata check fails */ }
+
       const size = /^\d+x\d+$/.test(p.size || '') ? p.size : '600x400';
       const fov = Math.min(120, Math.max(10, p.fov || 90));
       const pitch = Math.min(90, Math.max(-90, p.pitch || 0));
@@ -3171,9 +3579,33 @@ async function executeAction(agent, decision, runState) {
         const data = await res.json();
         const quakes = (data.features || []).slice(0, limit);
 
+        // Map mode: plot earthquake epicenters on a map
+        if (chartType === 'map') {
+          const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+          if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured for map rendering.' };
+          const markers = quakes.map(q => ({
+            lat: q.geometry.coordinates[1],
+            lng: q.geometry.coordinates[0],
+            label: `M${q.properties.mag.toFixed(1)}`
+          }));
+          const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
+          let mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&maptype=terrain&key=${apiKey}`;
+          for (let i = 0; i < Math.min(markers.length, 50); i++) {
+            const m = markers[i];
+            const color = m.label.replace('M','') >= 6 ? 'red' : m.label.replace('M','') >= 5 ? 'orange' : 'yellow';
+            mapUrl += `&markers=color:${color}|label:${(m.label || '')[0]}|${m.lat},${m.lng}`;
+          }
+          const desc = p.title || `Earthquake Map (past ${days}d, M≥${minMag}, ${quakes.length} events)`;
+          try {
+            const result = await agentStorage.downloadToAgentStorage(agent.id, mapUrl);
+            agentStorage.recordFileMetadata(agent.id, result.filename, { caption: desc });
+            runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl: result.localUrl, description: desc });
+            return { ok: true, summary: `Earthquake map saved: ${desc}`, localUrl: result.localUrl, chartUrl: result.localUrl, description: desc };
+          } catch (err) { return { ok: false, summary: `chart_earthquakes map failed: ${err.message}` }; }
+        }
+
         let labels, values, title, datasetLabel, desc;
         if (metric === 'count_by_magnitude') {
-          // Distribution: bucket by magnitude range
           const buckets = {};
           for (const q of quakes) {
             const mag = Math.floor(q.properties.mag);
@@ -3450,6 +3882,24 @@ async function executeAction(agent, decision, runState) {
 
       try {
         const locs = locStr.split(';').map(s => { const [lat, lng, ...rest] = s.split(','); return { lat: lat.trim(), lng: lng.trim(), name: rest.join(',').trim() || `${lat},${lng}` }; });
+
+        // Map mode: show locations on a map
+        if (chartType === 'map') {
+          const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+          if (!apiKey) return { ok: false, summary: 'Google Maps API key not configured for map rendering.' };
+          let mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&maptype=roadmap&key=${apiKey}`;
+          const colors = ['red', 'blue', 'green', 'purple', 'orange', 'yellow', 'pink', 'brown'];
+          for (let i = 0; i < Math.min(locs.length, 50); i++) {
+            const loc = locs[i];
+            mapUrl += `&markers=color:${colors[i % colors.length]}|label:${(loc.name || '')[0]?.toUpperCase() || ''}|${loc.lat},${loc.lng}`;
+          }
+          const desc = p.title || `Locations Map: ${locs.map(l => l.name).join(', ')}`;
+          const result = await agentStorage.downloadToAgentStorage(agent.id, mapUrl);
+          agentStorage.recordFileMetadata(agent.id, result.filename, { caption: desc });
+          runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl: result.localUrl, description: desc });
+          return { ok: true, summary: `Map saved: ${desc}`, localUrl: result.localUrl, chartUrl: result.localUrl, description: desc };
+        }
+
         const results = await Promise.all(locs.map(async loc => {
           const res = await fetch(`https://api.sunrise-sunset.org/json?lat=${loc.lat}&lng=${loc.lng}&formatted=0`, { signal: AbortSignal.timeout(10000) });
           const d = await res.json();
@@ -4483,6 +4933,67 @@ async function executeAction(agent, decision, runState) {
       }
     }
 
+    case 'compress_history': {
+      const apiKey = process.env.AGENT_LLM_API_KEY;
+      if (!apiKey) return { ok: false, summary: 'No LLM API key configured for compression.' };
+
+      // Build the full current history text
+      const historyLines = [];
+      let lastPhase = null;
+      for (const step of runState.steps) {
+        if (step.phase !== lastPhase) { historyLines.push(`\n=== Phase: ${step.phase} ===`); lastPhase = step.phase; }
+        const params = Object.entries(step.params || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ');
+        historyLines.push(`${step.action}(${params}): ${step.result?.summary || 'ok'}`);
+        if (step.result?.article?.url) historyLines.push(`  article: ${step.result.article.url}`);
+        if (step.result?.article?.text) historyLines.push(`  content: ${step.result.article.text.slice(0, 500)}`);
+        if (step.result?.viewed?.title) historyLines.push(`  post: "${step.result.viewed.title}" by ${step.result.viewed.authorName}`);
+        if (step.result?.viewed?.text) historyLines.push(`  text: ${step.result.viewed.text}`);
+        if (step.result?.profile) historyLines.push(`  profile: ${step.result.profile.name} — ${step.result.profile.bio || ''}`);
+        if (step.result?.references) {
+          for (const ref of step.result.references.slice(0, 5)) {
+            historyLines.push(`  ref: "${ref.title}" ${ref.url || ''}`);
+            if (ref.snippet) historyLines.push(`    ${ref.snippet}`);
+          }
+        }
+        if (step.result?.localUrl) historyLines.push(`  saved: ${step.result.localUrl} — ${step.result.description || ''}`);
+        if (step.result?.files) {
+          for (const f of step.result.files) historyLines.push(`  file: ${f.url || f.localUrl} — ${f.description || ''}`);
+        }
+        if (step.result?.content?.text && (step.action === 'comment' || step.action === 'repost')) {
+          historyLines.push(`  my text: ${step.result.content.text}`);
+        }
+      }
+      const historyText = historyLines.join('\n');
+
+      try {
+        const res = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{
+              role: 'user',
+              content: `Compress the following agent action history into a concise summary.\n\nMUST preserve:\n- All article/page URLs read\n- All YouTube video URLs found (with titles)\n- All saved image/file paths (localUrl)\n- All post IDs viewed or interacted with\n- Key facts, findings, and opinions formed\n- People/profiles discovered and their relevance\n- Any data or numbers referenced\n- Comments the agent wrote\n\nMUST summarize (do NOT keep full text):\n- Article content: condense to 1-3 sentence summary of key points\n- Post text: condense to 1 sentence capturing the main idea\n- Profile bios: condense to a few key words\n- Search result snippets: keep only the most relevant detail\n\nMUST remove:\n- Failed actions and searches with 0 results\n- Redundant searches for the same topic\n- Routine navigation (feed browsing, skipped posts)\n- Tool output formatting and boilerplate\n- Duplicate information\n\nHistory:\n${historyText}`
+            }],
+            max_tokens: 8000,
+            temperature: 0
+          }),
+          signal: AbortSignal.timeout(30000)
+        });
+        if (!res.ok) return { ok: false, summary: `Compression failed: LLM API ${res.status}` };
+        const data = await res.json();
+        const compressed = data.choices?.[0]?.message?.content || '';
+        if (!compressed) return { ok: false, summary: 'Compression returned empty result.' };
+
+        runState.workingSet._compressedHistory = compressed;
+        runState.workingSet._compressedAtStep = runState.steps.length;
+
+        return { ok: true, summary: `History compressed. ${runState.steps.length} steps condensed. Future context will use the compressed version.` };
+      } catch (err) {
+        return { ok: false, summary: `Compression failed: ${err.message}` };
+      }
+    }
+
     case 'stop':
       return { ok: true, summary: 'Moving to next phase.', stop: true };
 
@@ -4549,7 +5060,7 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
   const progressKey = `${agent.id}:${trigger}`;
   _runProgress.set(progressKey, { runId: myRunId, currentStep: 0, totalSteps: totalMaxSteps, phase: 'browse' });
 
-  console.log(`[${agent.name}] Starting run ${runState.runId} with model ${getModelForAgent(agent)} (intelligence: ${agent.intelligenceLevel || 'dumb'})`);
+  console.log(`[${agent.name}] Starting run ${runState.runId} with model ${getModelForAgent(agent)} (intelligence: ${agent.intelligenceLevel || 'not_so_smart'})`);
 
   try {
   for (const phase of PHASES) {

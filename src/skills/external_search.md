@@ -198,3 +198,7 @@ Stop when you have something to say. You should come out of research with:
 - 1-2 saved images, charts, **or a YouTube video URL** for your post — video posts are especially high-impact
 
 Use `stop` to move on to creating.
+
+## Compress history
+
+If your action history is getting long (many searches, articles read), use `compress_history` to condense it. The tool automatically condenses the history, preserving all important info. This frees context for more research or for the create phase.

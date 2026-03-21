@@ -548,15 +548,50 @@ const server = http.createServer(async (req, res) => {
 
       // Actual API cost per 1M tokens by model (USD)
       const MODEL_PRICING = {
-        'gpt-5-nano':  { input: 0.05, output: 0.40 },
-        'gpt-5-mini':  { input: 0.25, output: 2.00 },
-        'gpt-5.2':     { input: 1.75, output: 14.00 },
-        'gpt-5.4':     { input: 2.50, output: 15.00 },
+        'gpt-5-nano':        { input: 0.05, output: 0.40 },
+        'gpt-5-mini':        { input: 0.25, output: 2.00 },
+        'gpt-5':             { input: 1.25, output: 10.00 },
+        'gpt-5.1':           { input: 1.25, output: 10.00 },
+        'gpt-5.2':           { input: 1.75, output: 14.00 },
+        'gpt-5.4':           { input: 2.50, output: 15.00 },
+        'gpt-4o':            { input: 2.50, output: 10.00 },
+        'gpt-4o-mini':       { input: 0.15, output: 0.60 },
+        'gpt-4.1':           { input: 2.00, output: 8.00 },
+        'gpt-4.1-mini':      { input: 0.40, output: 1.60 },
+        'gpt-4.1-nano':      { input: 0.10, output: 0.40 },
+        'deepseek-chat':     { input: 0.28, output: 0.42 },
+        'deepseek-reasoner': { input: 0.28, output: 0.42 },
       };
 
       function calcApiCostUsd(model, inputTokens, outputTokens) {
         const p = MODEL_PRICING[model] || MODEL_PRICING['gpt-5-nano'];
         return (inputTokens / 1e6) * p.input + (outputTokens / 1e6) * p.output;
+      }
+
+      // Estimate utility LLM overhead per run (vision, compression, transform, embeddings)
+      // These calls use gpt-4o-mini and aren't tracked in step tokens
+      function estimateUtilityCostUsd(steps) {
+        let utilityCost = 0;
+        const utilityPrice = MODEL_PRICING['gpt-4o-mini'];
+        for (const s of steps) {
+          // save_media with image triggers vision describe (~300 in + 50 out tokens)
+          if (s.action === 'save_media' && s.result?.ok && s.result?.description) {
+            utilityCost += (300 / 1e6) * utilityPrice.input + (50 / 1e6) * utilityPrice.output;
+          }
+          // set_avatar triggers vision relevance check (~400 in + 30 out tokens)
+          if (s.action === 'set_avatar' && s.result?.ok) {
+            utilityCost += (400 / 1e6) * utilityPrice.input + (30 / 1e6) * utilityPrice.output;
+          }
+          // transform_data triggers LLM reshape (~2000 in + 500 out tokens)
+          if (s.action === 'transform_data' && s.result?.ok) {
+            utilityCost += (2000 / 1e6) * utilityPrice.input + (500 / 1e6) * utilityPrice.output;
+          }
+          // compress_history triggers LLM compression (~3000 in + 1000 out tokens)
+          if (s.action === 'compress_history' && s.result?.ok) {
+            utilityCost += (3000 / 1e6) * utilityPrice.input + (1000 / 1e6) * utilityPrice.output;
+          }
+        }
+        return utilityCost;
       }
 
       // Gather all income (top-ups stored in dollars) and run logs
@@ -599,19 +634,21 @@ const server = http.createServer(async (req, res) => {
         try { data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data; } catch { data = {}; }
         const steps = data?.steps || [];
         const agent = getAgent(r.agentId);
-        const model = agent ? (INTELLIGENCE_LEVELS[agent.intelligenceLevel] || INTELLIGENCE_LEVELS.dumb).model : 'gpt-5-nano';
+        const model = agent ? (INTELLIGENCE_LEVELS[agent.intelligenceLevel] || INTELLIGENCE_LEVELS.not_so_smart).model : 'gpt-5-nano';
         let totalIn = 0, totalOut = 0;
         for (const s of steps) {
           const tu = s.tokenUsage || {};
           totalIn += tu.input || 0;
           totalOut += tu.output || 0;
         }
-        const apiCostUsd = calcApiCostUsd(model, totalIn, totalOut);
+        const mainCost = calcApiCostUsd(model, totalIn, totalOut);
+        const utilityCost = estimateUtilityCostUsd(steps);
+        const apiCostUsd = mainCost + utilityCost;
         allEntries.push({
           createdAt: r.startedAt || r.createdAt,
           category: 'expense',
           typeLabel: data?.reason === 'manual_run' ? 'Manual Run' : 'Scheduled Run',
-          detail: `${agent?.name || r.agentId?.slice(0, 12)} (${model}) — ${r.stepsExecuted || steps.length} steps, ${totalIn.toLocaleString()} in + ${totalOut.toLocaleString()} out`,
+          detail: `${agent?.name || r.agentId?.slice(0, 12)} (${model}) — ${r.stepsExecuted || steps.length} steps, ${totalIn.toLocaleString()} in + ${totalOut.toLocaleString()} out${utilityCost > 0 ? ` + utility $${utilityCost.toFixed(4)}` : ''}`,
           amountUsd: Math.round(apiCostUsd * 1e6) / 1e6
         });
       }
@@ -803,7 +840,7 @@ const server = http.createServer(async (req, res) => {
         name,
         userType,
         password,
-        initialCredits: Number.isFinite(Number(body.initialCredits)) ? Number(body.initialCredits) : 200
+        initialCredits: Number.isFinite(Number(body.initialCredits)) ? Number(body.initialCredits) : 100
       });
       const session = db.createAuthSession(user.id);
       sendJson(res, 201, { token: session.token, user });

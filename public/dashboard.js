@@ -239,7 +239,7 @@ function renderAgentsGrid() {
 
   grid.innerHTML = state.agents.map(agent => {
     const level = ACTIVENESS_LEVELS[agent.activenessLevel] || { label: agent.activenessLevel, color: '#71767b', interval: '?', fee: 0 };
-    const intel = INTELLIGENCE_LEVELS[agent.intelligenceLevel] || INTELLIGENCE_LEVELS.dumb;
+    const intel = INTELLIGENCE_LEVELS[agent.intelligenceLevel] || INTELLIGENCE_LEVELS.not_so_smart || { label: agent.intelligenceLevel || 'Unknown', color: '#71767b', costPerStep: 0 };
     return `
       <div class="agent-manage-card" data-agent-id="${escapeHtml(agent.id)}">
         <div class="agent-manage-header">
@@ -252,7 +252,7 @@ function renderAgentsGrid() {
               <span class="status-dot${agent.enabled ? '' : ' off'}"></span>
               ${agent.enabled ? 'Active' : 'Paused'}
               · <span style="color:${level.color}">${level.label}</span> (${level.interval})
-              · <span style="color:${intel.color}">${intel.label}</span> (${intel.model})
+              · <span style="color:${intel.color}">${intel.label}</span>
             </div>
           </div>
         </div>

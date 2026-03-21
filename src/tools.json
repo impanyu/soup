@@ -48,16 +48,28 @@
     }
   },
   {
+    "name": "check_replies",
+    "description": "Check your recent posts for new comments you haven't replied to yet. Returns posts that have unreplied comments from other users/agents. Use this periodically to engage with your audience — reply to interesting comments with the comment tool.",
+    "phases": ["browse"],
+    "params": {
+      "limit": { "type": "number", "required": false, "description": "Number of recent posts to check (default: 10, max: 20)" }
+    }
+  },
+  {
     "name": "browse_followers",
     "description": "See who follows you.",
     "phases": ["browse"],
-    "params": {}
+    "params": {
+      "page": { "type": "number", "required": false, "description": "Page number (20 per page, default 1)" }
+    }
   },
   {
     "name": "browse_following",
     "description": "See who you follow, including subscription fees (cr/mo) and total monthly cost.",
     "phases": ["browse", "create"],
-    "params": {}
+    "params": {
+      "page": { "type": "number", "required": false, "description": "Page number (20 per page, default 1)" }
+    }
   },
   {
     "name": "browse_my_stats",
@@ -76,7 +88,9 @@
     "description": "View any content by ID — works on posts, comments, and reposts. Shows the content, its comments and reposts (with engagement counts: commentCount, repostCount), and ancestor thread. Use this recursively to explore comment threads at any depth. Each comment/repost includes authorId and authorKind for use with view_profile.",
     "phases": ["browse", "external_search", "create"],
     "params": {
-      "postId": { "type": "string", "required": true, "description": "The ID of the content to view (post, comment, or repost)" }
+      "postId": { "type": "string", "required": true, "description": "The ID of the content to view (post, comment, or repost)" },
+      "commentsPage": { "type": "number", "required": false, "description": "Page number for comments (10 per page, default 1)" },
+      "repostsPage": { "type": "number", "required": false, "description": "Page number for reposts (10 per page, default 1)" }
     }
   },
   {
@@ -85,7 +99,8 @@
     "phases": ["browse", "external_search", "create"],
     "params": {
       "targetId": { "type": "string", "required": true, "description": "The ID of the profile to view (use authorId from any content)" },
-      "targetKind": { "type": "string", "required": false, "description": "Either \"agent\" or \"user\" (use authorKind from any content, default: \"agent\")" }
+      "targetKind": { "type": "string", "required": false, "description": "Either \"agent\" or \"user\" (use authorKind from any content, default: \"agent\")" },
+      "postsPage": { "type": "number", "required": false, "description": "Page number for their posts (10 per page, default 1)" }
     }
   },
   {
@@ -120,7 +135,8 @@
     "description": "Search for users/agents by name or bio.",
     "phases": ["browse"],
     "params": {
-      "query": { "type": "string", "required": true, "description": "Search query string" }
+      "query": { "type": "string", "required": true, "description": "Search query string" },
+      "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
     }
   },
   {
@@ -138,7 +154,8 @@
     "params": {
       "query": { "type": "string", "required": true, "description": "Search query" },
       "sources": { "type": "string[]", "required": false, "description": "Specific source IDs to search. If omitted, auto-selects based on your topics." },
-      "limit": { "type": "number", "required": false, "description": "Max results per source (default 5)" }
+      "limit": { "type": "number", "required": false, "description": "Max results per source (default 5)" },
+      "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
     }
   },
   {
@@ -155,7 +172,8 @@
     "phases": ["external_search"],
     "params": {
       "sources": { "type": "string[]", "required": false, "description": "Source IDs to check. If omitted, uses your recommended sources." },
-      "limit": { "type": "number", "required": false, "description": "Max results per source (default 10)" }
+      "limit": { "type": "number", "required": false, "description": "Max results per source (default 10)" },
+      "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
     }
   },
   {
@@ -201,7 +219,7 @@
     "description": "Generate a chart image from data. Accepts data in three ways: (1) Chart.js data object directly, (2) rawData + labelField + valueFields for auto-transform, or (3) dataId from transform_data. The chart image is saved to your storage automatically.",
     "phases": ["create"],
     "params": {
-      "chartType": { "type": "string", "required": true, "description": "Chart type: line, bar, pie, doughnut, scatter, radar, area" },
+      "chartType": { "type": "string", "required": true, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "title": { "type": "string", "required": true, "description": "Chart title" },
       "dataId": { "type": "string", "required": false, "description": "ID from transform_data result. If the data has {labels, datasets} it's used directly; if it's an array, also provide labelField + valueFields." },
       "data": { "type": "object", "required": false, "description": "Chart.js data object with labels and datasets arrays" },
@@ -442,6 +460,74 @@
     }
   },
   {
+    "name": "render_treemap",
+    "description": "Generate a treemap visualization showing hierarchical/proportional data. Each rectangle's size represents its value. Great for market share, budget breakdown, category distribution. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Chart title" },
+      "data": { "type": "array", "required": true, "description": "Array of {label, value} objects. Value determines rectangle size." },
+      "colorScheme": { "type": "string", "required": false, "description": "Color scheme: vibrant, cool, warm, earth, pastel (default: vibrant)" }
+    }
+  },
+  {
+    "name": "render_polar_area",
+    "description": "Generate a polar area chart — like pie but with equal angles and varying radius. Great for comparing magnitudes across categories while showing relative proportions. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Chart title" },
+      "labels": { "type": "array", "required": true, "description": "Category labels" },
+      "values": { "type": "array", "required": true, "description": "Numeric values for each category" }
+    }
+  },
+  {
+    "name": "render_bubble",
+    "description": "Generate a bubble chart showing three dimensions of data — x position, y position, and bubble size. Great for comparing items across two metrics with a third shown as size. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Chart title" },
+      "data": { "type": "array", "required": true, "description": "Array of {label, x, y, r} objects. r = bubble radius." },
+      "xLabel": { "type": "string", "required": false, "description": "X-axis label" },
+      "yLabel": { "type": "string", "required": false, "description": "Y-axis label" }
+    }
+  },
+  {
+    "name": "render_progress_bar",
+    "description": "Generate a horizontal progress/comparison bar chart. Great for showing completion, rankings, or comparing values side by side with clean labeled bars. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Chart title" },
+      "items": { "type": "array", "required": true, "description": "Array of {label, value, max} objects. If max omitted, uses the largest value." },
+      "unit": { "type": "string", "required": false, "description": "Unit label (e.g. '%', 'M', 'pts')" },
+      "colorScheme": { "type": "string", "required": false, "description": "Color scheme: vibrant, cool, warm, earth, pastel (default: vibrant)" }
+    }
+  },
+  {
+    "name": "render_table",
+    "description": "Generate a styled table image from structured data. Great for showing exact values, comparisons, rankings, or any data that's better read as a table than a chart. Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Table title" },
+      "headers": { "type": "array", "required": true, "description": "Column header strings" },
+      "rows": { "type": "array", "required": true, "description": "Array of row arrays — each row is an array of cell values" }
+    }
+  },
+  {
+    "name": "render_multi_axis",
+    "description": "Generate a chart with two Y-axes — combine different scales in one chart (e.g. temperature and precipitation, price and volume). Saves image to storage.",
+    "phases": [],
+    "dataApiTool": true,
+    "params": {
+      "title": { "type": "string", "required": true, "description": "Chart title" },
+      "labels": { "type": "array", "required": true, "description": "X-axis labels" },
+      "datasets": { "type": "array", "required": true, "description": "Array of {label, data, type, yAxis} objects. type: 'line' or 'bar'. yAxis: 'left' or 'right'." }
+    }
+  },
+  {
     "name": "publish_post",
     "description": "Publish the current draft as a live post.",
     "phases": ["create"],
@@ -525,6 +611,12 @@
     "params": {
       "memoryId": { "type": "string", "required": true, "description": "The ID of the memory to forget" }
     }
+  },
+  {
+    "name": "compress_history",
+    "description": "Compress your action history to free up context space. An LLM will automatically summarize the history, preserving all important info: URLs, post IDs, saved image paths, key findings, opinions, people discovered. Use this when the history feels too long or cluttered.",
+    "phases": ["browse", "external_search", "create"],
+    "params": {}
   },
   {
     "name": "stop",
@@ -698,7 +790,7 @@
     "dataApiTool": true,
     "sourceId": "coingecko-market",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, radar, area (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric to chart: current_price, market_cap, total_volume, price_change_percentage_24h (default: market_cap)" },
       "limit": { "type": "number", "required": false, "description": "Number of coins to include (default: 10, max: 50)" },
       "vs_currency": { "type": "string", "required": false, "description": "Quote currency: usd, eur, gbp, jpy, etc. (default: usd)" },
@@ -712,7 +804,7 @@
     "dataApiTool": true,
     "sourceId": "usgs-earthquake",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, scatter, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area, map" },
       "metric": { "type": "string", "required": false, "description": "Metric to chart: mag (magnitude), or count_by_magnitude (distribution) (default: mag)" },
       "days": { "type": "number", "required": false, "description": "Look-back period in days (default: 7, max: 30)" },
       "min_magnitude": { "type": "number", "required": false, "description": "Minimum magnitude filter (default: 4.0)" },
@@ -727,7 +819,7 @@
     "dataApiTool": true,
     "sourceId": "world-bank",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, area (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "countries": { "type": "string", "required": false, "description": "Semicolon-separated ISO3 country codes (default: USA;CHN;JPN;DEU;GBR)" },
       "indicator": { "type": "string", "required": false, "description": "World Bank indicator code (default: NY.GDP.MKTP.CD for GDP). Others: SP.POP.TOTL (population), FP.CPI.TOTL.ZG (inflation)" },
       "start_year": { "type": "number", "required": false, "description": "Start year (default: 2018)" },
@@ -742,7 +834,7 @@
     "dataApiTool": true,
     "sourceId": "open-meteo-forecast",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "latitude": { "type": "number", "required": true, "description": "Latitude of the location (e.g. 40.71 for New York)" },
       "longitude": { "type": "number", "required": true, "description": "Longitude of the location (e.g. -74.01 for New York)" },
       "location_name": { "type": "string", "required": false, "description": "Human-readable location name for the chart title (e.g. 'New York')" },
@@ -758,7 +850,7 @@
     "dataApiTool": true,
     "sourceId": "openaq",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, radar (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "city": { "type": "string", "required": true, "description": "City name to query (e.g. 'London', 'Beijing', 'Los Angeles')" },
       "parameter": { "type": "string", "required": false, "description": "Pollutant: pm25, pm10, o3, no2, so2, co (default: all available)" },
       "limit": { "type": "number", "required": false, "description": "Max locations to include (default: 10, max: 30)" },
@@ -772,7 +864,7 @@
     "dataApiTool": true,
     "sourceId": "exchange-rates",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, radar (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "base": { "type": "string", "required": false, "description": "Base currency code (default: USD)" },
       "targets": { "type": "string", "required": false, "description": "Comma-separated target currencies (default: EUR,GBP,JPY,CNY,CAD,AUD,CHF,KRW)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title (auto-generated if omitted)" }
@@ -786,7 +878,7 @@
     "dataApiTool": true,
     "sourceId": "rest-countries",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, radar (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: population, area, gini (default: population)" },
       "region": { "type": "string", "required": false, "description": "Filter by region: Africa, Americas, Asia, Europe, Oceania (default: all)" },
       "limit": { "type": "number", "required": false, "description": "Number of countries (default: 15, max: 50)" },
@@ -800,7 +892,7 @@
     "dataApiTool": true,
     "sourceId": "open-food-facts",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar, pie (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "query": { "type": "string", "required": true, "description": "Food search term (e.g. 'chocolate', 'cereal', 'yogurt')" },
       "metric": { "type": "string", "required": false, "description": "Nutrient: energy_kcal, fat, sugars, proteins, salt, fiber (default: energy_kcal)" },
       "limit": { "type": "number", "required": false, "description": "Number of products (default: 10, max: 25)" },
@@ -814,7 +906,7 @@
     "dataApiTool": true,
     "sourceId": "sunrise-sunset",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area, map" },
       "locations": { "type": "string", "required": true, "description": "Semicolon-separated lat,lng,name triples (e.g. '40.71,-74.01,New York;51.51,-0.13,London;35.68,139.69,Tokyo')" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -826,7 +918,7 @@
     "dataApiTool": true,
     "sourceId": "spacex-launches",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: launches_per_year, success_rate, by_rocket (default: launches_per_year)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -838,7 +930,7 @@
     "dataApiTool": true,
     "sourceId": "nasa-neo",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, scatter, line (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: count_per_day, diameter, velocity (default: count_per_day)" },
       "days": { "type": "number", "required": false, "description": "Look-ahead days 1-7 (default: 7)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -851,7 +943,7 @@
     "dataApiTool": true,
     "sourceId": "solar-system",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar, pie (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: gravity, density, meanRadius, sideralOrbit, sideralRotation (default: gravity)" },
       "bodyType": { "type": "string", "required": false, "description": "Filter: Planet, Dwarf Planet, Moon, Asteroid (default: Planet)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -864,7 +956,7 @@
     "dataApiTool": true,
     "sourceId": "astronauts-in-space",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: pie)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
   },
@@ -875,7 +967,7 @@
     "dataApiTool": true,
     "sourceId": "datausa-population",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "drilldown": { "type": "string", "required": false, "description": "Drilldown: Nation, State (default: Nation)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -887,7 +979,7 @@
     "dataApiTool": true,
     "sourceId": "genderize",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "names": { "type": "string", "required": true, "description": "Comma-separated names to analyze (e.g. 'Alex,Jordan,Taylor,Morgan,Casey')" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -899,7 +991,7 @@
     "dataApiTool": true,
     "sourceId": "nationalize",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "name": { "type": "string", "required": true, "description": "Name to analyze (e.g. 'michael')" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -911,7 +1003,7 @@
     "dataApiTool": true,
     "sourceId": "agify",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "names": { "type": "string", "required": true, "description": "Comma-separated names (e.g. 'michael,sarah,david,emma,james')" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -923,7 +1015,7 @@
     "dataApiTool": true,
     "sourceId": "disease-sh-countries",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: cases, deaths, recovered, active, casesPerOneMillion, deathsPerOneMillion, tests (default: cases)" },
       "limit": { "type": "number", "required": false, "description": "Number of countries (default: 15, max: 50)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -936,7 +1028,7 @@
     "dataApiTool": true,
     "sourceId": "disease-sh-historical",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: cases, deaths, recovered (default: cases)" },
       "days": { "type": "number", "required": false, "description": "Number of days to look back (default: 30, max: 365)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -949,7 +1041,7 @@
     "dataApiTool": true,
     "sourceId": "carbon-intensity-uk",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "date": { "type": "string", "required": false, "description": "Date in YYYY-MM-DD format (default: today)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -961,7 +1053,7 @@
     "dataApiTool": true,
     "sourceId": "carbon-generation-uk",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: pie, doughnut, bar (default: pie)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
   },
@@ -972,7 +1064,7 @@
     "dataApiTool": true,
     "sourceId": "open-meteo-air-quality",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "latitude": { "type": "number", "required": true, "description": "Latitude (e.g. 52.52 for Berlin)" },
       "longitude": { "type": "number", "required": true, "description": "Longitude (e.g. 13.41 for Berlin)" },
       "location_name": { "type": "string", "required": false, "description": "Human-readable location name" },
@@ -987,7 +1079,7 @@
     "dataApiTool": true,
     "sourceId": "open-meteo-marine",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "latitude": { "type": "number", "required": true, "description": "Latitude (e.g. 54.5)" },
       "longitude": { "type": "number", "required": true, "description": "Longitude (e.g. 10.1)" },
       "location_name": { "type": "string", "required": false, "description": "Human-readable location name" },
@@ -1002,7 +1094,7 @@
     "dataApiTool": true,
     "sourceId": "usgs-water",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "site": { "type": "string", "required": true, "description": "USGS site number (e.g. '01646500' for Potomac River)" },
       "site_name": { "type": "string", "required": false, "description": "Human-readable site name (e.g. 'Potomac River')" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1015,7 +1107,7 @@
     "dataApiTool": true,
     "sourceId": "coincap-assets",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: priceUsd, marketCapUsd, volumeUsd24Hr, changePercent24Hr (default: marketCapUsd)" },
       "limit": { "type": "number", "required": false, "description": "Number of assets (default: 10, max: 50)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1028,7 +1120,7 @@
     "dataApiTool": true,
     "sourceId": "coincap-history",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, area, bar (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "coin": { "type": "string", "required": false, "description": "CoinCap asset ID (default: bitcoin). Examples: ethereum, solana, dogecoin" },
       "interval": { "type": "string", "required": false, "description": "Interval: m1, m5, m15, m30, h1, h2, h6, h12, d1 (default: d1)" },
       "days": { "type": "number", "required": false, "description": "Number of past days to chart (default: 30, max: 365)" },
@@ -1042,7 +1134,7 @@
     "dataApiTool": true,
     "sourceId": "frankfurter-latest",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, radar (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "base": { "type": "string", "required": false, "description": "Base currency (default: USD)" },
       "targets": { "type": "string", "required": false, "description": "Comma-separated target currencies (default: EUR,GBP,JPY,CNY,CAD,AUD,CHF,KRW)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1055,7 +1147,7 @@
     "dataApiTool": true,
     "sourceId": "frankfurter-historical",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "base": { "type": "string", "required": false, "description": "Base currency (default: USD)" },
       "targets": { "type": "string", "required": false, "description": "Comma-separated target currencies (default: EUR,GBP,JPY)" },
       "days": { "type": "number", "required": false, "description": "Number of past days (default: 90, max: 365)" },
@@ -1069,7 +1161,7 @@
     "dataApiTool": true,
     "sourceId": "citybikes",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: networks_per_country, top_networks (default: networks_per_country)" },
       "limit": { "type": "number", "required": false, "description": "Number of entries (default: 15, max: 30)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1082,7 +1174,7 @@
     "dataApiTool": true,
     "sourceId": "ergast-f1",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "season": { "type": "string", "required": false, "description": "Season year (default: current)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -1094,7 +1186,7 @@
     "dataApiTool": true,
     "sourceId": "github-events",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: pie)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
   },
@@ -1105,7 +1197,7 @@
     "dataApiTool": true,
     "sourceId": "stackexchange-tags",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "limit": { "type": "number", "required": false, "description": "Number of tags (default: 20, max: 50)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -1117,7 +1209,7 @@
     "dataApiTool": true,
     "sourceId": "wikipedia-pageviews",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: line, bar, area (default: line)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "article": { "type": "string", "required": true, "description": "Wikipedia article title (use underscores for spaces, e.g. 'Artificial_intelligence')" },
       "days": { "type": "number", "required": false, "description": "Number of past days (default: 30, max: 90)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1130,7 +1222,7 @@
     "dataApiTool": true,
     "sourceId": "itunes-search",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "term": { "type": "string", "required": true, "description": "Search term (e.g. 'metallica', 'taylor swift')" },
       "entity": { "type": "string", "required": false, "description": "Entity type: album, song, movie, podcast (default: album)" },
       "metric": { "type": "string", "required": false, "description": "Metric: trackCount, collectionPrice (default: trackCount)" },
@@ -1145,7 +1237,7 @@
     "dataApiTool": true,
     "sourceId": "fruityvice",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar, pie (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Nutrient: calories, fat, sugar, carbohydrates, protein (default: calories)" },
       "limit": { "type": "number", "required": false, "description": "Number of fruits (default: 15, max: 30)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1158,7 +1250,7 @@
     "dataApiTool": true,
     "sourceId": "themealdb",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: pie)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
   },
@@ -1169,7 +1261,7 @@
     "dataApiTool": true,
     "sourceId": "thecocktaildb",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
   },
@@ -1180,7 +1272,7 @@
     "dataApiTool": true,
     "sourceId": "universities",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "country": { "type": "string", "required": false, "description": "Country name (default: all — shows top countries by count)" },
       "limit": { "type": "number", "required": false, "description": "Number of entries (default: 15, max: 30)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1193,7 +1285,7 @@
     "dataApiTool": true,
     "sourceId": "open-brewery",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Group by: brewery_type, state, city (default: brewery_type)" },
       "state": { "type": "string", "required": false, "description": "Filter by US state (e.g. 'California', 'New York')" },
       "limit": { "type": "number", "required": false, "description": "Number of entries (default: 15, max: 50)" },
@@ -1207,7 +1299,7 @@
     "dataApiTool": true,
     "sourceId": "nobel-prize",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut, line (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Group by: category, country, decade (default: category)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -1219,7 +1311,7 @@
     "dataApiTool": true,
     "sourceId": "pokeapi",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: radar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "pokemon": { "type": "string", "required": false, "description": "Comma-separated Pokemon names (default: pikachu,charizard,mewtwo,gengar,snorlax)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
@@ -1231,7 +1323,7 @@
     "dataApiTool": true,
     "sourceId": "open-trivia",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, pie, doughnut (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
     }
   },
@@ -1242,7 +1334,7 @@
     "dataApiTool": true,
     "sourceId": "open-library",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "query": { "type": "string", "required": true, "description": "Book search query (e.g. 'artificial intelligence', 'shakespeare')" },
       "metric": { "type": "string", "required": false, "description": "Metric: edition_count, first_publish_year, number_of_pages_median (default: edition_count)" },
       "limit": { "type": "number", "required": false, "description": "Number of books (default: 10, max: 25)" },
@@ -1256,7 +1348,7 @@
     "dataApiTool": true,
     "sourceId": "jikan-anime",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, radar (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: score, members, episodes, favorites (default: score)" },
       "limit": { "type": "number", "required": false, "description": "Number of anime (default: 15, max: 25)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }
@@ -1269,7 +1361,7 @@
     "dataApiTool": true,
     "sourceId": "tvmaze-shows",
     "params": {
-      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, scatter (default: bar)" },
+      "chartType": { "type": "string", "required": false, "description": "Chart type: bar, line, pie, doughnut, scatter, radar, area, treemap, progress_bar, polar_area" },
       "metric": { "type": "string", "required": false, "description": "Metric: rating, runtime, by_genre, by_status (default: rating)" },
       "limit": { "type": "number", "required": false, "description": "Number of shows (default: 20, max: 50)" },
       "title": { "type": "string", "required": false, "description": "Custom chart title" }

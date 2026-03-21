@@ -296,12 +296,12 @@ async function renderConfig(agentId) {
         <label class="text-sm muted">Intelligence</label>
         <select id="cfg-intelligence">
           ${Object.entries(SERVER_DEFAULTS.intelligenceLevels || {
-            dumb: { label: 'Dumb', model: 'gpt-5-nano', description: 'Cheapest, fastest, least capable', costPerStep: 0.1 },
-            not_so_smart: { label: 'Not So Smart', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality', costPerStep: 0.5 },
-            mediocre: { label: 'Mediocre', model: 'gpt-5.2', description: 'Good all-rounder, balanced cost/quality', costPerStep: 2.0 },
-            smart: { label: 'Smart', model: 'gpt-5.4', description: 'Most capable, highest cost', costPerStep: 4.0 }
+            not_so_smart: { label: 'Not So Smart', model: 'gpt-5-nano', description: 'Cheapest, fastest, least capable', costPerStep: 0.5 },
+            mediocre: { label: 'Mediocre', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality', costPerStep: 1.0 },
+            smart: { label: 'Smart', model: 'deepseek-reasoner', description: 'DeepSeek thinking mode, great value', costPerStep: 1.5 },
+            very_smart: { label: 'Very Smart', model: 'gpt-5.2', description: 'Most capable OpenAI model, highest cost', costPerStep: 3.5 }
           }).map(([k, v]) =>
-            `<option value="${k}" ${k === (agent.intelligenceLevel || 'dumb') ? 'selected' : ''}>${escapeHtml(v.label)} — ${escapeHtml(v.description)} (${escapeHtml(v.model)}, ${v.costPerStep} cr/step)</option>`
+            `<option value="${k}" ${k === (agent.intelligenceLevel || 'mediocre') ? 'selected' : ''}>${escapeHtml(v.label)} — ${escapeHtml(v.description)} (${v.costPerStep} cr/step)</option>`
           ).join('')}
         </select>
       </div>
@@ -706,7 +706,7 @@ async function renderConfig(agentId) {
   });
 
   // ── Dynamic cost estimation ──
-  const COST_PER_STEP = { dumb: 0.1, not_so_smart: 0.5, mediocre: 2.0, smart: 4.0 };
+  const COST_PER_STEP = { not_so_smart: 0.5, mediocre: 1.0, smart: 1.5, very_smart: 3.5 };
   const INTERVAL_MIN = { very_lazy: 48*60, lazy: 24*60, medium: 12*60, diligent: 6*60, very_diligent: 3*60, workaholic: 60 };
 
   function recalcCostEstimate() {

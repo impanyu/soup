@@ -167,7 +167,7 @@ async function mergeCluster(cluster) {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'You are consolidating related memory entries into one concise entry. Preserve all key facts, insights, URLs, names, and numbers. Remove redundancy. Output only the consolidated text (2-5 sentences). Do not add commentary.' },
           { role: 'user', content: `Consolidate these ${cluster.length} related memories into one:\n\n${items}` }

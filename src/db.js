@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS users (
   userType TEXT DEFAULT 'human',
   apiKey TEXT NOT NULL,
   passwordHash TEXT NOT NULL,
-  credits REAL DEFAULT 200,
+  credits REAL DEFAULT 100,
   subscriptionFee REAL DEFAULT 0,
   stripeCustomerId TEXT,
   googleId TEXT,
@@ -481,7 +481,7 @@ class SqliteDB {
         this.db.prepare(`INSERT OR IGNORE INTO agents (id, ownerUserId, name, bio, avatarUrl, activenessLevel, intelligenceLevel, intervalMinutes, credits, subscriptionFee, enabled, isFree, preferences, runConfig, mcpServers, externalArticlesHistory, createdAt, lastActionAt, nextActionAt)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
           a.id, a.ownerUserId, a.name, a.bio || '', a.avatarUrl || '',
-          a.activenessLevel || 'medium', a.intelligenceLevel || 'dumb',
+          a.activenessLevel || 'medium', a.intelligenceLevel || 'not_so_smart',
           a.intervalMinutes ?? 720, a.credits ?? 0, a.subscriptionFee ?? 0,
           a.enabled ? 1 : 0, a.isFree ? 1 : 0,
           js(prefs), js(rc), js(a.mcpServers || []), js(a.externalArticlesHistory || []),
@@ -732,7 +732,7 @@ class SqliteDB {
     this.db.prepare(`INSERT OR IGNORE INTO agents (id, ownerUserId, name, bio, avatarUrl, activenessLevel, intelligenceLevel, intervalMinutes, credits, subscriptionFee, enabled, isFree, preferences, runConfig, mcpServers, externalArticlesHistory, createdAt, lastActionAt, nextActionAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       agent.id, agent.ownerUserId, agent.name, agent.bio || '', agent.avatarUrl || '',
-      agent.activenessLevel || 'medium', agent.intelligenceLevel || 'dumb',
+      agent.activenessLevel || 'medium', agent.intelligenceLevel || 'not_so_smart',
       agent.intervalMinutes ?? 99999, agent.credits ?? 0, agent.subscriptionFee ?? 0,
       agent.enabled ? 1 : 0, agent.isFree ? 1 : 0,
       js(agent.preferences || {}), js(agent.runConfig || {}),
@@ -743,7 +743,7 @@ class SqliteDB {
 
   // ── User methods ───────────────────────────────────────────────────────────
 
-  createUser({ name, userType = 'human', initialCredits = 200, password = '', subscriptionFee = 0, bio = '', googleId = null, email = null, avatarUrl = '' }) {
+  createUser({ name, userType = 'human', initialCredits = 100, password = '', subscriptionFee = 0, bio = '', googleId = null, email = null, avatarUrl = '' }) {
     if (this.getUserByName(name)) {
       throw new Error(`Username "${name}" is already taken.`);
     }
@@ -910,7 +910,7 @@ class SqliteDB {
       lastActionAt=?, nextActionAt=?
       WHERE id=?`).run(
       next.ownerUserId, next.name, next.bio || '', next.avatarUrl || '',
-      next.activenessLevel, next.intelligenceLevel || 'dumb',
+      next.activenessLevel, next.intelligenceLevel || 'not_so_smart',
       next.intervalMinutes, next.credits ?? 0, next.subscriptionFee ?? 0,
       next.enabled ? 1 : 0, next.isFree ? 1 : 0,
       js(next.preferences), js(next.runConfig),
@@ -1588,8 +1588,8 @@ class SqliteDB {
   chargeByActualSteps(agentId, stepsExecuted, reason = 'manual_run') {
     const agent = this.getAgent(agentId);
     if (!agent) return { charged: 0 };
-    const costPerStepTable = { dumb: 0.5, not_so_smart: 1.0, mediocre: 3.5, smart: 5.0 };
-    const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.dumb;
+    const costPerStepTable = { not_so_smart: 0.5, mediocre: 1.0, smart: 1.5, very_smart: 3.5 };
+    const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.not_so_smart;
     const fee = Math.round(costPerStep * stepsExecuted);
     if (fee <= 0) return { charged: 0 };
 
@@ -1608,8 +1608,8 @@ class SqliteDB {
   }
 
   calculateRunCost(agent) {
-    const costPerStepTable = { dumb: 0.5, not_so_smart: 1.0, mediocre: 3.5, smart: 5.0 };
-    const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.dumb;
+    const costPerStepTable = { not_so_smart: 0.5, mediocre: 1.0, smart: 1.5, very_smart: 3.5 };
+    const costPerStep = costPerStepTable[agent.intelligenceLevel] || costPerStepTable.not_so_smart;
     const phaseSteps = agent.runConfig?.phaseMaxSteps || {};
     const totalSteps = (phaseSteps.browse || 20) + (phaseSteps.external_search || 20) + (phaseSteps.create || 10);
     return Math.round(costPerStep * totalSteps);
