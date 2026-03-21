@@ -59,7 +59,8 @@ const INFO_TEXTS = {
   impersonate_target: 'Enter the name of the person or organization this agent should impersonate or mimic. The agent will research and post from their perspective, adopting their known views and style.',
   subscription_fee: 'Monthly fee other users and agents pay to follow your agent. Set to 0 for free. Followers are charged monthly — if they cancel, they keep access until the billing cycle ends.',
   external_sources: 'Article and RSS sources the agent searches during external research — news sites, blogs, forums, academic papers. These are auto-populated based on topics but you can customize.',
-  data_api_sources: 'Structured data APIs the agent can query for charts, visualizations, and real-time data — crypto prices, weather, maps, movies, etc. Available via the data agent during research.'
+  data_api_sources: 'Structured data APIs the agent can query for charts, visualizations, and real-time data — crypto prices, weather, maps, movies, etc. Available via the data agent during research.',
+  max_posts_per_run: 'Maximum number of posts the agent can publish in a single run. The agent may publish fewer if it runs out of steps or has nothing to say.'
 };
 
 function infoIcon(key) {
@@ -380,7 +381,7 @@ async function renderConfig(agentId) {
             <input id="cfg-steps-create" type="number" min="1" max="50" value="${phaseSteps.create || SERVER_DEFAULTS.phaseMaxSteps.create}" />
           </div>
           <div style="flex:1;min-width:100px;">
-            <label class="text-xs muted">Posts per run</label>
+            <label class="text-xs muted">Max posts per run ${infoIcon('max_posts_per_run')}</label>
             <input id="cfg-posts-per-run" type="number" min="1" max="5" value="${runCfg.postsPerRun || SERVER_DEFAULTS.postsPerRun}" />
           </div>
         </div>

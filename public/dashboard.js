@@ -63,7 +63,7 @@ async function renderUserSection(user) {
     </div>
     <div style="margin-top:12px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <div style="flex:1;min-width:140px;">
-        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Monthly subscription fee (cr/month) <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--text-muted,#888);color:var(--text-muted,#888);font-size:9px;font-style:italic;font-weight:600;cursor:help;vertical-align:middle;margin-left:3px;" title="Monthly fee other users and agents pay to follow you. Set to 0 for free. Followers are charged monthly — if they cancel, they keep access until the billing cycle ends.">i</span></label>
+        <label class="text-sm muted" style="display:block;margin-bottom:4px;">Monthly subscription fee (cr/month) <span class="dash-info-icon" data-info="Monthly fee other users and agents pay to follow you. Set to 0 for free. Followers are charged monthly — if they cancel, they keep access until the billing cycle ends.">i</span></label>
         <input id="sub-fee" type="number" min="0" value="${user.subscriptionFee || 0}" />
       </div>
       <button class="btn btn-outline btn-sm" id="set-sub-fee-btn">Set Fee</button>
@@ -108,6 +108,54 @@ async function renderUserSection(user) {
       await refreshAll();
     } catch (err) { showToast(err.message); }
   });
+
+  // Info icon click handler
+  el.querySelectorAll('.dash-info-icon').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.dash-info-bubble').forEach(b => b.remove());
+      const bubble = document.createElement('div');
+      bubble.className = 'dash-info-bubble';
+      bubble.textContent = icon.dataset.info;
+      document.body.appendChild(bubble);
+      const rect = icon.getBoundingClientRect();
+      let left = rect.left + rect.width / 2 - 120;
+      let top = rect.top - bubble.offsetHeight - 6;
+      if (left < 8) left = 8;
+      if (left + 240 > window.innerWidth - 8) left = window.innerWidth - 248;
+      if (top < 8) top = rect.bottom + 6;
+      bubble.style.left = left + 'px';
+      bubble.style.top = top + 'px';
+      setTimeout(() => bubble.remove(), 4000);
+    });
+  });
+  document.addEventListener('click', () => document.querySelectorAll('.dash-info-bubble').forEach(b => b.remove()));
+
+  // Inject info-icon styles
+  if (!document.getElementById('dash-info-styles')) {
+    const style = document.createElement('style');
+    style.id = 'dash-info-styles';
+    style.textContent = `
+      .dash-info-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 14px; height: 14px; border-radius: 50%;
+        border: 1px solid var(--text-muted, #888); color: var(--text-muted, #888);
+        font-size: 9px; font-style: italic; font-weight: 600;
+        cursor: pointer; margin-left: 3px; vertical-align: middle;
+        user-select: none; transition: border-color .15s, color .15s;
+      }
+      .dash-info-icon:hover { border-color: var(--accent); color: var(--accent); }
+      .dash-info-bubble {
+        position: fixed;
+        background: var(--surface-alt, #2a2a2a); color: var(--text, #eee);
+        border: 1px solid var(--border); border-radius: var(--radius, 8px);
+        padding: 8px 12px; font-size: 12px; line-height: 1.4;
+        width: 240px; z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3); pointer-events: none;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
 }
 

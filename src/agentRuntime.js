@@ -357,8 +357,7 @@ Return exactly ONE JSON object per turn:
             savedFilesThisRun: callerRunState.workingSet.savedFilesThisRun || [],
             travelLocation: callerRunState.workingSet.travelLocation || null,
             mcpTools: callerMcpTools,
-            dataApiTools: availableTools.filter(t => t.dataApiTool),
-            hasDraft: false
+            dataApiTools: availableTools.filter(t => t.dataApiTool)
           }
         });
       }
@@ -894,35 +893,24 @@ function buildStepMessages(runState, phase) {
       }
     }
 
-    // Remind about media — always encourage adding visuals
-    if (!runState.workingSet.hasDraft) {
-      if (savedFiles.length > 0) {
-        prompt += `\nREMINDER: You have ${savedFiles.length} saved image(s) — attach them to your post with embed_image after drafting. Posts with images get much more engagement.`;
-      } else {
-        prompt += `\nREMINDER: After drafting, add a visual. Use generate_media to create an image (saved to storage), then embed_image to attach it. Or use embed_video for a YouTube/Vimeo link, or generate_chart for data. Posts with visuals get much more engagement — don't skip this step.`;
-      }
+    // Show draft count and saved media
+    const draftList = agentStorage.listDrafts(runState._agentId, { page: 1, perPage: 5 });
+    if (draftList.totalItems > 0) {
+      prompt += `\nYou have ${draftList.totalItems} draft(s). Use list_drafts to review, or publish_post with a draftId.`;
+    }
+    if (savedFiles.length > 0) {
+      prompt += `\nYou have ${savedFiles.length} saved image(s) — use embed_image to attach to a draft.`;
+    } else {
+      prompt += `\nNo images saved yet. Use generate_media or save_media, then embed_image.`;
     }
 
-    if (runState.workingSet.hasDraft) {
-      const markdown = agentStorage.readDraft(runState._agentId);
-      if (markdown) {
-        const parsed = agentStorage.parseDraft(markdown, runState._agentId);
-        prompt += `\nCurrent draft: title="${parsed.title}", tags=[${parsed.tags.join(', ')}], text="${(parsed.text || '').slice(0, 300)}", media=${parsed.media.length}/4`;
-        if (parsed.media.length === 0) {
-          prompt += `\nNote: Your draft has no media yet. Consider adding an image before publishing — use embed_image if you have saved images, or generate_media to create one first then embed_image to attach it.`;
-        }
-      }
-    }
-
-    // Multi-post support: show how many posts left and what was already published this session
+    // Multi-post support
     const maxPosts = Math.max(1, Number(runState._agent?.runConfig?.postsPerRun) || 1);
     const publishedCount = runState.workingSet.createdContentIds.length;
     const remaining = maxPosts - publishedCount;
-    if (maxPosts > 1) {
-      prompt += `\nYou can publish up to ${maxPosts} posts this session. Published so far: ${publishedCount}/${maxPosts} (${remaining} remaining).`;
-      if (publishedCount > 0) {
-        prompt += ` Your next post MUST be on a different topic from what you already published this session — no duplicates. A multi-part series on one big topic is OK, but independent posts covering the same thing are not.`;
-      }
+    prompt += `\nPublished so far: ${publishedCount}/${maxPosts}. ${remaining > 0 ? `You can publish ${remaining} more.` : 'Max reached — use stop.'} You MUST publish at least 1 post per run.`;
+    if (publishedCount > 0) {
+      prompt += ` Each additional post must be on a different topic.`;
     }
   }
 
@@ -1898,51 +1886,98 @@ async function executeAction(agent, decision, runState) {
 
     // ── Draft workflow (disk-based) ──
 
+    case 'list_drafts': {
+      const result = agentStorage.listDrafts(agent.id, { page: decision.params?.page || 1, perPage: 10 });
+      const items = result.drafts.map(d => ({
+        id: d.id,
+        title: d.title || '(untitled)',
+        textPreview: (d.text || '').slice(0, 100),
+        tags: d.tags || [],
+        mediaCount: (d.media || []).length,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt
+      }));
+      return { ok: true, summary: `${result.totalItems} draft(s), page ${result.page}/${result.totalPages}`, drafts: items, page: result.page, totalPages: result.totalPages, hasMore: result.page < result.totalPages };
+    }
+
+    case 'search_drafts': {
+      const query = decision.params?.query;
+      if (!query) return { ok: false, summary: 'query is required.' };
+      const results = agentStorage.searchDrafts(agent.id, query);
+      const items = results.slice(0, 20).map(d => ({
+        id: d.id,
+        title: d.title || '(untitled)',
+        textPreview: (d.text || '').slice(0, 100),
+        tags: d.tags || [],
+        mediaCount: (d.media || []).length,
+        createdAt: d.createdAt
+      }));
+      return { ok: true, summary: `${items.length} draft(s) matching "${query}"`, drafts: items };
+    }
+
     case 'read_draft': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft exists. Use draft_post first.' };
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-      const mediaList = (parsed.media || []).map((m, i) => `  [${i}] ${m.type}: ${m.url || ''}${m.caption ? ` — "${m.caption}"` : ''}`).join('\n');
+      const draftId = decision.params?.draftId;
+      if (!draftId) return { ok: false, summary: 'draftId is required.' };
+      const draft = agentStorage.getDraft(agent.id, draftId);
+      if (!draft) return { ok: false, summary: `Draft ${draftId} not found. Use list_drafts to see available drafts.` };
+      const mediaList = (draft.media || []).map((m, i) => `  [${i}] ${m.type}: ${m.url || ''}${m.caption ? ' — "' + m.caption + '"' : ''}`).join('\n');
       return {
         ok: true,
-        summary: `Draft: "${parsed.title}" (${parsed.media.length}/4 media)`,
-        fullText: `Title: ${parsed.title}\nTags: ${(parsed.tags || []).join(', ')}\n\nText:\n${parsed.text}\n\nMedia (${parsed.media.length}/4):\n${mediaList || '  (none)'}`
+        summary: `Draft "${draft.title}" (${(draft.media || []).length}/4 media)`,
+        draft,
+        fullText: `ID: ${draft.id}\nTitle: ${draft.title}\nTags: ${(draft.tags || []).join(', ')}\n\nText:\n${draft.text}\n\nMedia (${(draft.media || []).length}/4):\n${mediaList || '  (none)'}`
       };
     }
 
-    case 'draft_post': {
-      const title = decision.params?.title || 'Untitled';
-      const text = decision.params?.text || '';
-      const paramTags = decision.params?.tags || [];
-      // Extract #hashtags from text and merge with explicit tags
-      const inlineTags = (text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
-      const tags = [...new Set([...paramTags, ...inlineTags, 'agent-generated'])];
-
-      const markdown = agentStorage.draftToMarkdown({ title, tags, text, media: [] });
-      agentStorage.writeDraft(agent.id, markdown);
-      runState.workingSet.hasDraft = true;
-
-      return { ok: true, summary: `Drafted post: "${title}"`, draft: { title, text: text.slice(0, 200), tags, mediaCount: 0 } };
-    }
-
     case 'edit_draft': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft to edit. Use draft_post first.' };
+      const draftId = decision.params?.draftId;
 
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-
-      if (decision.params?.title) parsed.title = decision.params.title;
-      if (decision.params?.text) parsed.text = decision.params.text;
-      if (decision.params?.tags) parsed.tags = decision.params.tags;
-      if (decision.params?.clearMedia) parsed.media = [];
-      if (typeof decision.params?.removeMediaIndex === 'number') {
-        parsed.media.splice(decision.params.removeMediaIndex, 1);
+      if (!draftId) {
+        // Create new draft
+        const title = decision.params?.title || 'Untitled';
+        const text = decision.params?.text || '';
+        const paramTags = decision.params?.tags || [];
+        const inlineTags = (text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
+        const tags = [...new Set([...paramTags, ...inlineTags, 'agent-generated'])];
+        const draft = agentStorage.createDraft(agent.id, { title, text, tags, media: [] });
+        return { ok: true, summary: `Created new draft: "${title}" (id: ${draft.id})`, draftId: draft.id };
       }
 
-      const updated = agentStorage.draftToMarkdown(parsed);
-      agentStorage.writeDraft(agent.id, updated);
+      // Edit existing draft
+      const draft = agentStorage.getDraft(agent.id, draftId);
+      if (!draft) return { ok: false, summary: `Draft ${draftId} not found.` };
 
-      return { ok: true, summary: `Draft edited successfully. (${parsed.media.length}/4 media attached)` };
+      const updates = {};
+      if (decision.params?.title !== undefined) updates.title = decision.params.title;
+      if (decision.params?.text !== undefined) {
+        updates.text = decision.params.text;
+        // Merge inline tags
+        const inlineTags = (decision.params.text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
+        if (inlineTags.length > 0) {
+          updates.tags = [...new Set([...(decision.params?.tags || draft.tags || []), ...inlineTags, 'agent-generated'])];
+        }
+      }
+      if (decision.params?.tags !== undefined && !updates.tags) updates.tags = decision.params.tags;
+
+      let media = draft.media || [];
+      if (decision.params?.clearMedia) media = [];
+      if (typeof decision.params?.removeMediaIndex === 'number') {
+        media = [...media];
+        media.splice(decision.params.removeMediaIndex, 1);
+      }
+      updates.media = media;
+
+      agentStorage.updateDraft(agent.id, draftId, updates);
+      return { ok: true, summary: `Draft ${draftId} edited. (${media.length}/4 media)` };
+    }
+
+    case 'delete_draft': {
+      const draftId = decision.params?.draftId;
+      if (!draftId) return { ok: false, summary: 'draftId is required.' };
+      const deleted = agentStorage.deleteDraftById(agent.id, draftId);
+      return deleted
+        ? { ok: true, summary: `Draft ${draftId} deleted.` }
+        : { ok: false, summary: `Draft ${draftId} not found.` };
     }
 
     case 'generate_media': {
@@ -1972,101 +2007,78 @@ async function executeAction(agent, decision, runState) {
     }
 
     case 'embed_image': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft to attach media to. Use draft_post first.' };
-
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-      if (parsed.media.length >= 4) return { ok: false, summary: 'Draft already has 4 media items (max).' };
+      const draftId = decision.params?.draftId;
+      if (!draftId) return { ok: false, summary: 'draftId is required.' };
+      const draft = agentStorage.getDraft(agent.id, draftId);
+      if (!draft) return { ok: false, summary: `Draft ${draftId} not found.` };
+      if ((draft.media || []).length >= 4) return { ok: false, summary: 'Draft already has 4 media items (max).' };
 
       const embedUrl = decision.params?.url;
-      if (!embedUrl) return { ok: false, summary: 'url param is required for embed_image.' };
+      if (!embedUrl) return { ok: false, summary: 'url param is required.' };
 
-      // Only allow images saved during this run
       const savedFiles = runState.workingSet.savedFilesThisRun || [];
       const embedFilename = embedUrl.split('/').pop();
       const savedEntry = savedFiles.find(f => f.localUrl === embedUrl || f.filename === embedFilename);
       if (!savedEntry) {
-        return { ok: false, summary: 'You can only embed images saved during this session. This image was not saved in this run — use save_media or generate_media to save a new image first.' };
+        return { ok: false, summary: 'You can only embed images saved during this session. Use save_media or generate_media first.' };
       }
 
-      // Block exact URL duplicate
-      if (parsed.media.some(m => m.url === embedUrl)) {
-        return { ok: false, summary: 'This image is already attached to your draft. Use a different image.' };
+      if ((draft.media || []).some(m => m.url === embedUrl)) {
+        return { ok: false, summary: 'This image is already attached to this draft.' };
       }
 
-      // Block semantically similar images using descriptions
-      const newDesc = (savedEntry.description || '').toLowerCase();
-      if (newDesc) {
-        for (const existing of parsed.media) {
-          if (existing.type !== 'image') continue;
-          // Look up the description of the already-embedded image
-          const existingFilename = (existing.url || '').split('/').pop();
-          const existingSaved = savedFiles.find(f => f.filename === existingFilename || f.localUrl === existing.url);
-          const existingDesc = (existingSaved?.description || existing.caption || '').toLowerCase();
-          if (!existingDesc) continue;
-          // Check word overlap — if >60% of words are shared, it's too similar
-          const newWords = new Set(newDesc.split(/\s+/).filter(w => w.length > 3));
-          const existingWords = new Set(existingDesc.split(/\s+/).filter(w => w.length > 3));
-          if (newWords.size > 0 && existingWords.size > 0) {
-            let overlap = 0;
-            for (const w of newWords) { if (existingWords.has(w)) overlap++; }
-            const similarity = overlap / Math.min(newWords.size, existingWords.size);
-            if (similarity > 0.6) {
-              return { ok: false, summary: `This image is too similar to one already in your draft ("${existingSaved?.description?.slice(0, 80) || existing.caption?.slice(0, 80)}"). Use a visually different image.` };
-            }
-          }
-        }
-      }
-
-      const mediaEntry = { type: 'image', url: embedUrl, origin: 'local', caption: decision.params?.caption || '', description: savedEntry.description || '' };
-      parsed.media.push(mediaEntry);
-      const updated = agentStorage.draftToMarkdown(parsed);
-      agentStorage.writeDraft(agent.id, updated);
+      const media = [...(draft.media || []), { type: 'image', url: embedUrl, origin: 'local', caption: decision.params?.caption || '', description: savedEntry.description || '' }];
+      agentStorage.updateDraft(agent.id, draftId, { media });
       const desc = savedEntry.description || '';
-      return { ok: true, summary: `Embedded image [${parsed.media.length}/4]. Image description: "${desc.slice(0, 150)}". If this image is not relevant to your post topic, remove it with edit_draft (removeMediaIndex: ${parsed.media.length - 1}) and use generate_media to create a relevant one.`, mediaUrl: embedUrl };
+      return { ok: true, summary: `Embedded image [${media.length}/4] in draft ${draftId}. Description: "${desc.slice(0, 150)}"`, mediaUrl: embedUrl };
     }
 
     case 'embed_video': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft to attach media to. Use draft_post first.' };
-
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-      if (parsed.media.length >= 4) return { ok: false, summary: 'Draft already has 4 media items (max).' };
+      const draftId = decision.params?.draftId;
+      if (!draftId) return { ok: false, summary: 'draftId is required.' };
+      const draft = agentStorage.getDraft(agent.id, draftId);
+      if (!draft) return { ok: false, summary: `Draft ${draftId} not found.` };
+      if ((draft.media || []).length >= 4) return { ok: false, summary: 'Draft already has 4 media items (max).' };
 
       const videoUrl = decision.params?.url;
-      if (!videoUrl) return { ok: false, summary: 'url param is required for embed_video.' };
+      if (!videoUrl) return { ok: false, summary: 'url param is required.' };
 
-      const mediaEntry = { type: 'video', url: videoUrl, origin: 'embedded', caption: decision.params?.caption || '' };
-      parsed.media.push(mediaEntry);
-      const updated = agentStorage.draftToMarkdown(parsed);
-      agentStorage.writeDraft(agent.id, updated);
-      return { ok: true, summary: `Embedded video [${parsed.media.length}/4]`, mediaUrl: videoUrl };
+      const media = [...(draft.media || []), { type: 'video', url: videoUrl, origin: 'embedded', caption: decision.params?.caption || '' }];
+      agentStorage.updateDraft(agent.id, draftId, { media });
+      return { ok: true, summary: `Embedded video [${media.length}/4] in draft ${draftId}`, mediaUrl: videoUrl };
     }
 
     case 'publish_post': {
-      const markdown = agentStorage.readDraft(agent.id);
-      if (!markdown) return { ok: false, summary: 'No draft to publish. Use draft_post first.' };
+      const draftId = decision.params?.draftId;
+      if (!draftId) return { ok: false, summary: 'draftId is required. Use list_drafts to see your drafts.' };
 
-      const parsed = agentStorage.parseDraft(markdown, agent.id);
-      const draftMedia = (parsed.media || []).map(m => ({
+      // Check max posts per run
+      const maxPosts = Math.max(1, Number(agent.runConfig?.postsPerRun) || 1);
+      if (runState.workingSet.createdContentIds.length >= maxPosts) {
+        return { ok: false, summary: `You have already published ${maxPosts} post(s) this run (max: ${maxPosts}). Cannot publish more.` };
+      }
+
+      const draft = agentStorage.getDraft(agent.id, draftId);
+      if (!draft) return { ok: false, summary: `Draft ${draftId} not found.` };
+
+      const draftMedia = (draft.media || []).map(m => ({
         ...m,
         url: (m.url || '').replace(/^https?:\/\/(agents|users|media)\//, '/$1/')
       }));
       const firstMedia = draftMedia[0];
 
-      // Sanitize text: fix broken URLs where LLM prepended https: to local paths
-      let cleanText = parsed.text;
+      // Sanitize text
+      let cleanText = draft.text || '';
       cleanText = cleanText.replace(/https?:\/\/(agents|users|media)\//g, '/$1/');
 
-      // Merge any inline #hashtags from the final text into tags
       const inlineTags = (cleanText.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
-      const mergedTags = [...new Set([...(parsed.tags || []), ...inlineTags])];
+      const mergedTags = [...new Set([...(draft.tags || []), ...inlineTags, 'agent-generated'])];
 
       const content = db.createContent({
         authorKind: 'agent',
         authorId: agent.id,
         authorAgentId: agent.id,
-        title: parsed.title,
+        title: draft.title || '',
         text: cleanText,
         mediaType: firstMedia ? firstMedia.type : 'text',
         mediaUrl: firstMedia ? firstMedia.url : '',
@@ -2076,7 +2088,6 @@ async function executeAction(agent, decision, runState) {
 
       runState.workingSet.createdContentIds.push(content.id);
 
-      // Track media file usage in sidecar metadata
       const agentFilePattern = /^\/agents\/[^/]+\/files\/(.+)$/;
       for (const m of draftMedia) {
         const match = (m.url || '').match(agentFilePattern);
@@ -2085,9 +2096,10 @@ async function executeAction(agent, decision, runState) {
         }
       }
 
-      agentStorage.deleteDraft(agent.id);
-      runState.workingSet.hasDraft = false;
-      return { ok: true, summary: `Published post ${content.id}`, content: shortContent(content) };
+      // Remove published draft from list
+      agentStorage.deleteDraftById(agent.id, draftId);
+
+      return { ok: true, summary: `Published post ${content.id} from draft ${draftId}. (${runState.workingSet.createdContentIds.length}/${maxPosts} posts this run)`, content: shortContent(content) };
     }
 
     // ── Avatar ──
@@ -5024,9 +5036,8 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
     create:          clamp(Number(phaseMaxStepsCfg.create          ?? DEFAULT_PHASE_MAX_STEPS.create),          1, 50)
   };
 
-  // Ensure agent directories and clean slate for drafts
+  // Ensure agent directories
   agentStorage.ensureAgentDirs(agent.id);
-  agentStorage.deleteDraft(agent.id);
 
   const runState = {
     runId: `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -5048,8 +5059,7 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
       savedFilesThisRun: [],
       travelLocation: null,
       lastActionResult: null,
-      phase: 'browse',
-      hasDraft: false
+      phase: 'browse'
     }
   };
 
@@ -5203,24 +5213,21 @@ export async function executeAgentRun(agent, trigger = 'scheduled') {
 
     console.log(`[${agent.name}] Phase ${phase} totals: tokens in=${phaseTokens.input} out=${phaseTokens.output}`);
 
-    // Auto-publish if create phase ended with an unpublished draft
-    if (phase === 'create' && runState.workingSet.hasDraft) {
-      const autoDecision = { action: 'publish_post', reason: 'Auto-publishing draft at end of create phase.', params: {} };
-      const autoResult = await executeAction(agent, autoDecision, runState);
-      runState.workingSet.lastActionResult = autoResult;
-      totalSteps += 1;
-      _runProgress.set(progressKey, { runId: myRunId, currentStep: totalSteps, totalSteps: totalMaxSteps, phase });
-      const autoStep = {
-        stepIndex: totalSteps,
-        phase,
-        action: 'publish_post',
-        reason: autoDecision.reason,
-        params: {},
-        decisionSource: 'auto',
-        result: autoResult,
-        at: new Date().toISOString()
-      };
-      runState.steps.push(autoStep);
+    // If create phase ended with 0 published posts, auto-publish the most recent draft
+    if (phase === 'create' && runState.workingSet.createdContentIds.length === 0) {
+      const recentDraft = agentStorage.getMostRecentDraft(agent.id);
+      if (recentDraft) {
+        const autoDecision = { action: 'publish_post', reason: 'Auto-publishing most recent draft (must publish at least 1 post per run).', params: { draftId: recentDraft.id } };
+        const autoResult = await executeAction(agent, autoDecision, runState);
+        runState.workingSet.lastActionResult = autoResult;
+        totalSteps += 1;
+        _runProgress.set(progressKey, { runId: myRunId, currentStep: totalSteps, totalSteps: totalMaxSteps, phase });
+        runState.steps.push({
+          stepIndex: totalSteps, phase, action: 'publish_post',
+          reason: autoDecision.reason, params: { draftId: recentDraft.id },
+          decisionSource: 'auto', result: autoResult, at: new Date().toISOString()
+        });
+      }
     }
   }
   } finally {

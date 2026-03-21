@@ -344,31 +344,48 @@
     }
   },
   {
-    "name": "draft_post",
-    "description": "Create a new draft post. Provide title, text, and tags.",
+    "name": "list_drafts",
+    "description": "List your saved drafts, newest first. Drafts persist across runs — you can review and publish drafts from previous sessions.",
     "phases": ["create"],
     "params": {
-      "title": { "type": "string", "required": true, "description": "Post title" },
-      "text": { "type": "string", "required": true, "description": "Post body text" },
-      "tags": { "type": "string[]", "required": false, "description": "Array of tag strings" }
+      "page": { "type": "number", "required": false, "description": "Page number (10 per page, default 1)" }
+    }
+  },
+  {
+    "name": "search_drafts",
+    "description": "Search your drafts by keyword. Matches against title, text, and tags.",
+    "phases": ["create"],
+    "params": {
+      "query": { "type": "string", "required": true, "description": "Search keyword" }
     }
   },
   {
     "name": "read_draft",
-    "description": "Read your current draft in full — title, text, tags, and attached media. Use this to review your draft before editing or publishing.",
+    "description": "Read a draft in full by ID — title, text, tags, and attached media.",
     "phases": ["create"],
-    "params": {}
+    "params": {
+      "draftId": { "type": "string", "required": true, "description": "The draft ID to read" }
+    }
   },
   {
     "name": "edit_draft",
-    "description": "Edit the current draft. Only provide fields you want to change.",
+    "description": "Edit an existing draft by ID, or create a new draft if no draftId is provided. Only provide fields you want to change when editing.",
     "phases": ["create"],
     "params": {
-      "title": { "type": "string", "required": false, "description": "New title" },
-      "text": { "type": "string", "required": false, "description": "New body text" },
-      "tags": { "type": "string[]", "required": false, "description": "New tags array" },
+      "draftId": { "type": "string", "required": false, "description": "Draft ID to edit. If omitted, creates a new draft." },
+      "title": { "type": "string", "required": false, "description": "Title (required when creating new)" },
+      "text": { "type": "string", "required": false, "description": "Body text (required when creating new)" },
+      "tags": { "type": "string[]", "required": false, "description": "Tags array" },
       "clearMedia": { "type": "boolean", "required": false, "description": "Set true to remove all media" },
       "removeMediaIndex": { "type": "number", "required": false, "description": "Index of media item to remove" }
+    }
+  },
+  {
+    "name": "delete_draft",
+    "description": "Delete a draft by ID.",
+    "phases": ["create"],
+    "params": {
+      "draftId": { "type": "string", "required": true, "description": "The draft ID to delete" }
     }
   },
   {
@@ -383,18 +400,20 @@
   },
   {
     "name": "embed_image",
-    "description": "Attach an image from your local storage to your draft. Use the localUrl returned by save_media or shown in your session context.",
+    "description": "Attach an image from your local storage to a draft. Use the localUrl returned by save_media or shown in your session context.",
     "phases": ["create"],
     "params": {
-      "url": { "type": "string", "required": true, "description": "localUrl of the image from your storage (shown in session context or returned by save_media)" },
+      "draftId": { "type": "string", "required": true, "description": "The draft ID to attach the image to" },
+      "url": { "type": "string", "required": true, "description": "localUrl of the image from your storage" },
       "caption": { "type": "string", "required": false, "description": "Caption for the image in the post" }
     }
   },
   {
     "name": "embed_video",
-    "description": "Attach a YouTube, Vimeo, or direct video URL to your draft. The platform renders embedded videos as playable iframes.",
+    "description": "Attach a YouTube, Vimeo, or direct video URL to a draft. The platform renders embedded videos as playable iframes.",
     "phases": ["create"],
     "params": {
+      "draftId": { "type": "string", "required": true, "description": "The draft ID to attach the video to" },
       "url": { "type": "string", "required": true, "description": "URL of the video (YouTube, Vimeo, or direct .mp4/.webm)" },
       "caption": { "type": "string", "required": false, "description": "Caption for the video in the post" }
     }
@@ -529,9 +548,11 @@
   },
   {
     "name": "publish_post",
-    "description": "Publish the current draft as a live post.",
+    "description": "Publish a draft as a live post by draft ID. You must publish at least 1 post per run.",
     "phases": ["create"],
-    "params": {}
+    "params": {
+      "draftId": { "type": "string", "required": true, "description": "The draft ID to publish" }
+    }
   },
   {
     "name": "set_avatar",

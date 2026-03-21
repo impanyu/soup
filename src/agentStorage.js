@@ -34,8 +34,81 @@ export function ensureAgentDirs(agentId) {
   fs.mkdirSync(draftsDir(agentId), { recursive: true });
 }
 
-// ─── Draft read/write/delete ────────────────────────────────────────────────────
+// ─── Draft list (persists across runs) ───────────────────────────────────────
 
+function draftsListPath(agentId) {
+  return path.join(draftsDir(agentId), 'drafts.json');
+}
+
+function loadDraftsList(agentId) {
+  const p = draftsListPath(agentId);
+  if (!fs.existsSync(p)) return [];
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return []; }
+}
+
+function saveDraftsList(agentId, drafts) {
+  ensureAgentDirs(agentId);
+  fs.writeFileSync(draftsListPath(agentId), JSON.stringify(drafts, null, 2), 'utf8');
+}
+
+export function createDraft(agentId, { title = '', text = '', tags = [], media = [] }) {
+  const drafts = loadDraftsList(agentId);
+  const id = `draft_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const draft = { id, title, text, tags, media, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  drafts.unshift(draft); // newest first
+  saveDraftsList(agentId, drafts);
+  return draft;
+}
+
+export function getDraft(agentId, draftId) {
+  return loadDraftsList(agentId).find(d => d.id === draftId) || null;
+}
+
+export function updateDraft(agentId, draftId, updates) {
+  const drafts = loadDraftsList(agentId);
+  const idx = drafts.findIndex(d => d.id === draftId);
+  if (idx === -1) return null;
+  if (updates.title !== undefined) drafts[idx].title = updates.title;
+  if (updates.text !== undefined) drafts[idx].text = updates.text;
+  if (updates.tags !== undefined) drafts[idx].tags = updates.tags;
+  if (updates.media !== undefined) drafts[idx].media = updates.media;
+  drafts[idx].updatedAt = new Date().toISOString();
+  saveDraftsList(agentId, drafts);
+  return drafts[idx];
+}
+
+export function deleteDraftById(agentId, draftId) {
+  const drafts = loadDraftsList(agentId);
+  const filtered = drafts.filter(d => d.id !== draftId);
+  saveDraftsList(agentId, filtered);
+  return filtered.length < drafts.length;
+}
+
+export function listDrafts(agentId, { page = 1, perPage = 10 } = {}) {
+  const drafts = loadDraftsList(agentId); // already newest first
+  const total = drafts.length;
+  const totalPages = Math.ceil(total / perPage) || 1;
+  const p = Math.max(1, Math.min(page, totalPages));
+  const start = (p - 1) * perPage;
+  return { drafts: drafts.slice(start, start + perPage), page: p, totalPages, totalItems: total };
+}
+
+export function searchDrafts(agentId, query) {
+  const q = (query || '').toLowerCase();
+  if (!q) return loadDraftsList(agentId);
+  return loadDraftsList(agentId).filter(d =>
+    (d.title || '').toLowerCase().includes(q) ||
+    (d.text || '').toLowerCase().includes(q) ||
+    (d.tags || []).some(t => t.toLowerCase().includes(q))
+  );
+}
+
+export function getMostRecentDraft(agentId) {
+  const drafts = loadDraftsList(agentId);
+  return drafts.length > 0 ? drafts[0] : null;
+}
+
+// Legacy single-draft compat (used by old code paths)
 export function writeDraft(agentId, markdown) {
   ensureAgentDirs(agentId);
   fs.writeFileSync(draftPath(agentId), markdown, 'utf8');
