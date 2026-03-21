@@ -1941,10 +1941,53 @@ async function executeAction(agent, decision, runState) {
         // Create new draft
         const title = decision.params?.title || 'Untitled';
         const text = decision.params?.text || '';
+
+        // Check for similarity against recent posts, existing drafts, and drafts created this run
+        const newWords = new Set(`${title} ${text}`.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+        if (newWords.size > 0) {
+          const checkSimilarity = (existingTitle, existingText) => {
+            const existingWords = new Set(`${existingTitle || ''} ${existingText || ''}`.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+            if (existingWords.size === 0) return 0;
+            let overlap = 0;
+            for (const w of newWords) { if (existingWords.has(w)) overlap++; }
+            return overlap / Math.min(newWords.size, existingWords.size);
+          };
+
+          // 1. Check recent published posts
+          const recentPosts = db.getAgentPublished(agent.id).slice(-10);
+          for (const p of recentPosts) {
+            if (checkSimilarity(p.title, p.text) > 0.5) {
+              return { ok: false, summary: `Too similar to your recent post "${(p.title || p.text || '').slice(0, 60)}". Pick a different topic.` };
+            }
+          }
+
+          // 2. Check existing drafts
+          const existingDrafts = agentStorage.listDrafts(agent.id, { page: 1, perPage: 20 }).drafts;
+          for (const d of existingDrafts) {
+            if (checkSimilarity(d.title, d.text) > 0.5) {
+              return { ok: false, summary: `Too similar to your existing draft "${(d.title || '').slice(0, 60)}" (${d.id}). Edit that draft instead, or pick a different topic.` };
+            }
+          }
+
+          // 3. Check drafts created this run
+          const runDraftIds = runState.workingSet._createdDraftIds || [];
+          for (const rdId of runDraftIds) {
+            const rd = agentStorage.getDraft(agent.id, rdId);
+            if (rd && checkSimilarity(rd.title, rd.text) > 0.5) {
+              return { ok: false, summary: `Too similar to draft "${(rd.title || '').slice(0, 60)}" you already created this run. Pick a different topic.` };
+            }
+          }
+        }
+
         const paramTags = decision.params?.tags || [];
         const inlineTags = (text.match(/(?:^|[\s])#([\w-]+)/g) || []).map(m => m.trim().slice(1).toLowerCase());
         const tags = [...new Set([...paramTags, ...inlineTags, 'agent-generated'])];
         const draft = agentStorage.createDraft(agent.id, { title, text, tags, media: inlineMedia });
+
+        // Track drafts created this run
+        runState.workingSet._createdDraftIds = runState.workingSet._createdDraftIds || [];
+        runState.workingSet._createdDraftIds.push(draft.id);
+
         return { ok: true, summary: `Created new draft: "${title}" (id: ${draft.id})${inlineMedia.length ? `, ${inlineMedia.length} media attached` : ''}`, draftId: draft.id };
       }
 
