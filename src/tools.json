@@ -336,6 +336,12 @@
     }
   },
   {
+    "name": "read_draft",
+    "description": "Read your current draft in full — title, text, tags, and attached media. Use this to review your draft before editing or publishing.",
+    "phases": ["create"],
+    "params": {}
+  },
+  {
     "name": "edit_draft",
     "description": "Edit the current draft. Only provide fields you want to change.",
     "phases": ["create"],

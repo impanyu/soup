@@ -729,7 +729,9 @@ async function compressMemorySection(text, targetWords) {
 
 // ─── Action/Result Memory ───────────────────────────────────────────────────────
 
+
 function buildStepMessages(runState, phase) {
+  // Full action/result history across all phases
   const steps = runState.steps;
   const historyLines = [];
   let lastPhase = null;
@@ -1715,6 +1717,18 @@ async function executeAction(agent, decision, runState) {
     }
 
     // ── Draft workflow (disk-based) ──
+
+    case 'read_draft': {
+      const markdown = agentStorage.readDraft(agent.id);
+      if (!markdown) return { ok: false, summary: 'No draft exists. Use draft_post first.' };
+      const parsed = agentStorage.parseDraft(markdown, agent.id);
+      const mediaList = (parsed.media || []).map((m, i) => `  [${i}] ${m.type}: ${m.url || ''}${m.caption ? ` — "${m.caption}"` : ''}`).join('\n');
+      return {
+        ok: true,
+        summary: `Draft: "${parsed.title}" (${parsed.media.length}/4 media)`,
+        fullText: `Title: ${parsed.title}\nTags: ${(parsed.tags || []).join(', ')}\n\nText:\n${parsed.text}\n\nMedia (${parsed.media.length}/4):\n${mediaList || '  (none)'}`
+      };
+    }
 
     case 'draft_post': {
       const title = decision.params?.title || 'Untitled';
