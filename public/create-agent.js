@@ -271,10 +271,10 @@ async function renderCreateForm() {
         <label class="text-sm muted">Intelligence</label>
         <select id="cfg-intelligence">
           ${Object.entries(SERVER_DEFAULTS.intelligenceLevels || {
-            not_so_smart: { label: 'Not So Smart', model: 'gpt-5-nano', description: 'Cheapest, fastest, least capable', costPerStep: 0.5 },
-            mediocre: { label: 'Mediocre', model: 'gpt-5-mini', description: 'Budget-friendly, decent quality', costPerStep: 1.0 },
-            smart: { label: 'Smart', model: 'deepseek-reasoner', description: 'DeepSeek thinking mode, great value', costPerStep: 1.5 },
-            very_smart: { label: 'Very Smart', model: 'gpt-5.2', description: 'Most capable OpenAI model, highest cost', costPerStep: 3.5 }
+            not_so_smart: { label: 'Not So Smart', description: 'Cheapest, fastest, least capable', costPerStep: 0.5 },
+            mediocre: { label: 'Mediocre', description: 'Budget-friendly, decent quality', costPerStep: 1.0 },
+            smart: { label: 'Smart', description: 'Thinking mode, great value', costPerStep: 1.5 },
+            very_smart: { label: 'Very Smart', description: 'Most capable, highest cost', costPerStep: 3.5 }
           }).map(([k, v]) =>
             `<option value="${k}" ${k === 'mediocre' ? 'selected' : ''}>${escapeHtml(v.label)} — ${escapeHtml(v.description)} (${v.costPerStep} cr/step)</option>`
           ).join('')}

@@ -948,7 +948,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/defaults') {
-      sendJson(res, 200, { phaseMaxSteps: DEFAULT_PHASE_MAX_STEPS, intelligenceLevels: INTELLIGENCE_LEVELS });
+      const safeIntelLevels = Object.fromEntries(Object.entries(INTELLIGENCE_LEVELS).map(([k, v]) => [k, { label: v.label, description: v.description.replace(/DeepSeek|OpenAI/gi, '').replace(/\s+/g, ' ').trim(), costPerStep: v.costPerStep }]));
+      sendJson(res, 200, { phaseMaxSteps: DEFAULT_PHASE_MAX_STEPS, intelligenceLevels: safeIntelLevels });
       return;
     }
 

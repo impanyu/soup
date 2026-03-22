@@ -151,10 +151,10 @@ export const DEFAULT_PHASE_MAX_STEPS = {
 // ─── Intelligence levels ─────────────────────────────────────────────────────────
 
 export const INTELLIGENCE_LEVELS = {
-  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-nano',       description: 'Cheapest, fastest, least capable',         costPerStep: 0.5, reasoningEffort: 'none' },
-  mediocre:     { label: 'Mediocre',     model: 'gpt-5-mini',       description: 'Budget-friendly, decent quality',          costPerStep: 1.0, reasoningEffort: 'low' },
-  smart:        { label: 'Smart',        model: 'deepseek-reasoner', description: 'DeepSeek thinking mode, great value',     costPerStep: 1.5, reasoningEffort: 'none', endpoint: 'https://api.deepseek.com/v1/chat/completions', apiKeyEnv: 'DEEPSEEK_API_KEY' },
-  very_smart:   { label: 'Very Smart',   model: 'gpt-5.2',          description: 'Most capable OpenAI model, highest cost', costPerStep: 3.5, reasoningEffort: 'low' }
+  not_so_smart: { label: 'Not So Smart', model: 'gpt-5-nano',       description: 'Cheapest, fastest, least capable',  costPerStep: 0.5, reasoningEffort: 'none' },
+  mediocre:     { label: 'Mediocre',     model: 'gpt-5-mini',       description: 'Budget-friendly, decent quality',  costPerStep: 1.0, reasoningEffort: 'low' },
+  smart:        { label: 'Smart',        model: 'deepseek-reasoner', description: 'Thinking mode, great value',      costPerStep: 1.5, reasoningEffort: 'none', endpoint: 'https://api.deepseek.com/v1/chat/completions', apiKeyEnv: 'DEEPSEEK_API_KEY' },
+  very_smart:   { label: 'Very Smart',   model: 'gpt-5.2',          description: 'Most capable, highest cost',      costPerStep: 3.5, reasoningEffort: 'low' }
 };
 
 function getIntelligenceProfile(agent) {
