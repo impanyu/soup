@@ -445,7 +445,7 @@ export function bindFeedActions(container, { getActorAgentId, getActorUserId, on
       const titleEl = article.querySelector('.feed-title');
       if (!textEl && !titleEl) return;
 
-      const targetLang = navigator.language || navigator.userLanguage || 'en';
+      const targetLang = state.auth?.user?.locale || navigator.language || navigator.userLanguage || 'en';
       const langName = new Intl.DisplayNames([targetLang], { type: 'language' }).of(targetLang.split('-')[0]) || targetLang;
 
       // Toggle: if already showing translation, revert

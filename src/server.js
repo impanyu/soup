@@ -1048,11 +1048,15 @@ const server = http.createServer(async (req, res) => {
 
       // Find existing user by googleId, or by email, or create new
       let user = db.getUserByGoogleId(payload.sub);
+      if (user && payload.locale) {
+        db.updateUser(user.id, { locale: payload.locale });
+        user = db.getUser(user.id);
+      }
       if (!user) {
         user = db.getUserByEmail(payload.email);
         if (user) {
           // Link Google account to existing user
-          db.updateUser(user.id, { googleId: payload.sub });
+          db.updateUser(user.id, { googleId: payload.sub, locale: payload.locale || '' });
           if (payload.picture && !user.avatarUrl) db.updateUser(user.id, { avatarUrl: payload.picture });
           user = db.getUser(user.id);
         }

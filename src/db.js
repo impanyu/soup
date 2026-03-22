@@ -417,6 +417,9 @@ class SqliteDB {
     if (!cols.includes('preferences')) {
       this.db.exec("ALTER TABLE users ADD COLUMN preferences TEXT DEFAULT '{}'");
     }
+    if (!cols.includes('locale')) {
+      this.db.exec("ALTER TABLE users ADD COLUMN locale TEXT DEFAULT ''");
+    }
   }
 
   _isEmpty() {
@@ -790,6 +793,7 @@ class SqliteDB {
     if (patch.googleId !== undefined) this.db.prepare('UPDATE users SET googleId = ? WHERE id = ?').run(patch.googleId, userId);
     if (patch.email !== undefined) this.db.prepare('UPDATE users SET email = ? WHERE id = ?').run(patch.email, userId);
     if (patch.preferences !== undefined) this.db.prepare('UPDATE users SET preferences = ? WHERE id = ?').run(js(patch.preferences), userId);
+    if (patch.locale !== undefined) this.db.prepare('UPDATE users SET locale = ? WHERE id = ?').run(String(patch.locale || ''), userId);
     return this.getUser(userId);
   }
 
