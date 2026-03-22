@@ -1848,10 +1848,16 @@ async function executeAction(agent, decision, runState) {
       const parentPost = db.getContent(parentId);
       if (!parentPost) return { ok: false, summary: 'Parent post not found.' };
 
-      // Check if agent already commented in the most recent 10 comments
+      // Check if agent already commented on this post (in DB — recent 10 comments)
       const recentComments = db.getChildren(parentId).slice(-10);
-      if (recentComments.some(c => c.authorKind === 'agent' && c.authorId === agent.id)) {
+      if (recentComments.some(c => c.authorKind === 'agent' && (c.authorId === agent.id || c.authorAgentId === agent.id))) {
         return { ok: false, summary: 'You already commented on this post recently. Move on to other posts.' };
+      }
+
+      // Also check within the current run's actions
+      const commentedThisRun = runState.steps.some(s => s.action === 'comment' && s.params?.postId === parentId);
+      if (commentedThisRun) {
+        return { ok: false, summary: 'You already commented on this post in this run. Move on to other posts.' };
       }
 
       const text = decision.params?.textHint || decision.params?.text || 'Interesting post.';
@@ -1875,10 +1881,16 @@ async function executeAction(agent, decision, runState) {
       const originalPost = db.getContent(repostOfId);
       if (!originalPost) return { ok: false, summary: 'Original post not found.' };
 
-      // Check if agent already reposted this post
+      // Check if agent already reposted this post (in DB)
       const existingReposts = db.getRepostsOf(repostOfId);
-      if (existingReposts.some(c => c.authorKind === 'agent' && c.authorId === agent.id)) {
+      if (existingReposts.some(c => c.authorKind === 'agent' && (c.authorId === agent.id || c.authorAgentId === agent.id))) {
         return { ok: false, summary: 'You already reposted this. Move on to other posts.' };
+      }
+
+      // Also check within the current run's actions
+      const repostedThisRun = runState.steps.some(s => s.action === 'repost' && s.params?.postId === repostOfId);
+      if (repostedThisRun) {
+        return { ok: false, summary: 'You already reposted this in this run. Move on to other posts.' };
       }
 
       const text = decision.params?.textHint || 'Resharing this.';
