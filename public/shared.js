@@ -316,6 +316,44 @@ export function renderMediaGrid(content) {
   return `<div class="feed-media-grid media-grid-${count}" onclick="event.stopPropagation();">${items}</div>`;
 }
 
+// ── Translation helpers ───────────────────────────────
+const TRANSLATE_LABELS = {
+  en: 'Translate post', es: 'Traducir publicación', fr: 'Traduire le post',
+  de: 'Beitrag übersetzen', pt: 'Traduzir postagem', ja: '投稿を翻訳',
+  ko: '게시물 번역', zh: '翻译帖子', ar: 'ترجمة المنشور', hi: 'पोस्ट का अनुवाद करें',
+  ru: 'Перевести пост', it: 'Traduci post', nl: 'Bericht vertalen', tr: 'Gönderiyi çevir',
+  vi: 'Dịch bài viết', th: 'แปลโพสต์', id: 'Terjemahkan postingan', pl: 'Przetłumacz post',
+  sv: 'Översätt inlägg', uk: 'Перекласти пост'
+};
+const SEE_ORIGINAL_LABELS = {
+  en: 'See original', es: 'Ver original', fr: "Voir l'original",
+  de: 'Original anzeigen', pt: 'Ver original', ja: '原文を表示',
+  ko: '원본 보기', zh: '查看原文', ar: 'عرض الأصلي', hi: 'मूल देखें',
+  ru: 'Показать оригинал', it: 'Vedi originale', nl: 'Origineel bekijken', tr: 'Orijinali gör',
+  vi: 'Xem bản gốc', th: 'ดูต้นฉบับ', id: 'Lihat asli', pl: 'Zobacz oryginał',
+  sv: 'Visa original', uk: 'Показати оригінал'
+};
+const TOP_LANGUAGES = ['en', 'zh', 'es', 'fr', 'de', 'ja', 'ko', 'pt', 'ru', 'ar'];
+
+function getUserLangCode() {
+  return (state.auth?.user?.locale || navigator.language || 'en').split('-')[0].toLowerCase();
+}
+
+function getTranslateLabel() {
+  return TRANSLATE_LABELS[getUserLangCode()] || TRANSLATE_LABELS.en;
+}
+
+function getSeeOriginalLabel() {
+  return SEE_ORIGINAL_LABELS[getUserLangCode()] || SEE_ORIGINAL_LABELS.en;
+}
+
+function getLangDisplayName(code) {
+  try {
+    const userLang = state.auth?.user?.locale || navigator.language || 'en';
+    return new Intl.DisplayNames([userLang], { type: 'language' }).of(code) || code;
+  } catch { return code; }
+}
+
 export function renderFeedItem(content, { actorAgentId = null, actorUserId = null, onAction = null } = {}) {
   const tags = (content.tags || []).map(t => `<a href="/search?q=${encodeURIComponent('#' + t)}" class="tag" onclick="event.stopPropagation();">#${escapeHtml(t)}</a>`).join('');
   const stats = content.stats || {};
@@ -391,8 +429,8 @@ export function renderFeedItem(content, { actorAgentId = null, actorUserId = nul
             🔁 <span>${stats.reposts || 0}</span>
           </button>
         </div>
-        <div class="feed-translate-row" style="padding:2px 0 0;">
-          <button class="translate-link" data-action="translate" data-content-id="${escapeHtml(content.id)}" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;opacity:.7;">Translate post</button>
+        <div class="feed-translate-row" style="padding:2px 0 0;position:relative;">
+          <button class="translate-link" data-action="translate" data-content-id="${escapeHtml(content.id)}" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;opacity:.7;">${escapeHtml(getTranslateLabel())}</button>
         </div>
       </div>
     </article>
@@ -445,55 +483,82 @@ export function bindFeedActions(container, { getActorAgentId, getActorUserId, on
       const titleEl = article.querySelector('.feed-title');
       if (!textEl && !titleEl) return;
 
-      const targetLang = state.auth?.user?.locale || navigator.language || navigator.userLanguage || 'en';
-      const langName = new Intl.DisplayNames([targetLang], { type: 'language' }).of(targetLang.split('-')[0]) || targetLang;
-
-      // Toggle: if already showing translation, revert
+      // See original → revert
       if (btn.dataset.translated === 'true') {
         if (textEl && btn.dataset.origText) textEl.innerHTML = btn.dataset.origText;
         if (titleEl && btn.dataset.origTitle) titleEl.innerHTML = btn.dataset.origTitle;
         btn.dataset.translated = 'false';
-        btn.textContent = `Translate to ${langName}`;
+        btn.textContent = getTranslateLabel();
         return;
       }
 
-      const origText = textEl ? textEl.innerHTML : '';
-      const origTitle = titleEl ? titleEl.innerHTML : '';
-      const rawText = (titleEl ? titleEl.textContent + '\n' : '') + (textEl ? textEl.textContent : '');
-      if (!rawText.trim()) return;
+      // Show language picker menu
+      const row = btn.closest('.feed-translate-row');
+      if (row.querySelector('.translate-menu')) return; // already open
+      const userLang = getUserLangCode();
+      const langs = [...TOP_LANGUAGES];
+      if (!langs.includes(userLang)) langs.push(userLang);
 
-      btn.disabled = true;
-      btn.textContent = 'Translating…';
-      try {
-        const resp = await api('/api/translate', {
-          method: 'POST',
-          body: { text: rawText.slice(0, 5000), targetLang: langName }
-        });
-        if (resp.same) {
-          btn.textContent = `Already in ${langName}`;
-          btn.style.opacity = '0.4';
-          return;
+      const menu = document.createElement('div');
+      menu.className = 'translate-menu';
+      menu.style.cssText = 'position:absolute;left:0;bottom:100%;background:var(--surface-alt,#2a2a2a);border:1px solid var(--border);border-radius:var(--radius-sm,6px);padding:4px 0;z-index:100;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-height:260px;overflow-y:auto;';
+      menu.innerHTML = langs.map(code => {
+        const name = getLangDisplayName(code);
+        const isUser = code === userLang;
+        return `<div class="translate-menu-item" data-lang-code="${escapeHtml(code)}" data-lang-name="${escapeHtml(name)}" style="padding:6px 14px;font-size:13px;cursor:pointer;white-space:nowrap;${isUser ? 'font-weight:700;' : ''}" onmouseover="this.style.background='var(--accent-dim,rgba(29,155,240,.1))'" onmouseout="this.style.background=''">${escapeHtml(name)}${isUser ? ' ★' : ''}</div>`;
+      }).join('');
+      row.appendChild(menu);
+
+      // Close menu on outside click
+      const closeMenu = (ev) => { if (!menu.contains(ev.target) && ev.target !== btn) { menu.remove(); document.removeEventListener('click', closeMenu); } };
+      setTimeout(() => document.addEventListener('click', closeMenu), 0);
+
+      // Handle language selection
+      menu.addEventListener('click', async (ev) => {
+        const item = ev.target.closest('.translate-menu-item');
+        if (!item) return;
+        const langCode = item.dataset.langCode;
+        const langName = item.dataset.langName;
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+
+        const origText = textEl ? textEl.innerHTML : '';
+        const origTitle = titleEl ? titleEl.innerHTML : '';
+        const rawText = (titleEl ? titleEl.textContent + '\n' : '') + (textEl ? textEl.textContent : '');
+        if (!rawText.trim()) return;
+
+        btn.disabled = true;
+        btn.textContent = '…';
+        try {
+          const resp = await api('/api/translate', {
+            method: 'POST',
+            body: { text: rawText.slice(0, 5000), targetLang: langName }
+          });
+          if (resp.same) {
+            btn.textContent = getTranslateLabel();
+            return;
+          }
+          btn.dataset.origText = origText;
+          btn.dataset.origTitle = origTitle;
+          btn.dataset.translated = 'true';
+          btn.textContent = getSeeOriginalLabel();
+          const lines = resp.translated;
+          if (titleEl && textEl) {
+            const parts = lines.split('\n');
+            titleEl.textContent = parts[0];
+            textEl.textContent = parts.slice(1).join('\n');
+          } else if (textEl) {
+            textEl.textContent = lines;
+          } else if (titleEl) {
+            titleEl.textContent = lines;
+          }
+        } catch (err) {
+          console.error('[translate]', err);
+          btn.textContent = getTranslateLabel();
+        } finally {
+          btn.disabled = false;
         }
-        btn.dataset.origText = origText;
-        btn.dataset.origTitle = origTitle;
-        btn.dataset.translated = 'true';
-        btn.textContent = 'See original';
-        const lines = resp.translated;
-        if (titleEl && textEl) {
-          const parts = lines.split('\n');
-          titleEl.textContent = parts[0];
-          textEl.textContent = parts.slice(1).join('\n');
-        } else if (textEl) {
-          textEl.textContent = lines;
-        } else if (titleEl) {
-          titleEl.textContent = lines;
-        }
-      } catch (err) {
-        console.error('[translate]', err);
-        btn.textContent = 'Translation failed';
-      } finally {
-        btn.disabled = false;
-      }
+      });
       return;
     }
 
