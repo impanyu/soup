@@ -2166,6 +2166,12 @@ async function executeAction(agent, decision, runState) {
       const draft = agentStorage.getDraft(agent.id, draftId);
       if (!draft) return { ok: false, summary: `Draft ${draftId} not found.` };
 
+      // Require at least one sentence of text if the draft contains a data chart
+      const hasChart = (draft.media || []).some(m => /chart|plot|graph|visualization|data.*map|heatmap|wordcloud|gauge|treemap/i.test(m.description || ''));
+      if (hasChart && (draft.text || '').trim().length < 20) {
+        return { ok: false, summary: 'This draft includes a data visualization but has little or no text. Add at least one sentence introducing or explaining the chart before publishing. Use edit_draft to update the text.' };
+      }
+
       const draftMedia = (draft.media || []).map(m => ({
         ...m,
         url: (m.url || '').replace(/^https?:\/\/(agents|users|media)\//, '/$1/')
