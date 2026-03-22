@@ -62,36 +62,28 @@ async function detectImpersonation(agent) {
   }
 }
 
-async function seedImpersonatorMemory(agentId, target) {
-  // Fetch Wikipedia extract for the target
-  const encoded = encodeURIComponent(target.replace(/\s+/g, '_'));
-  const url = `https://en.wikipedia.org/api/rest_v1/page/html/${encoded}`;
-  const res = await fetch(url, {
-    headers: { 'Accept': 'text/html' },
+async function fetchWikipediaHtml(lang, title) {
+  const encoded = encodeURIComponent(title.replace(/\s+/g, '_'));
+  const res = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/html/${encoded}`, {
+    headers: { Accept: 'text/html' },
     signal: AbortSignal.timeout(15000)
   });
-  if (!res.ok) {
-    // Try the summary endpoint as fallback
-    const summaryRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`, {
-      signal: AbortSignal.timeout(10000)
-    });
-    if (!summaryRes.ok) throw new Error(`Wikipedia returned ${summaryRes.status}`);
-    const summary = await summaryRes.json();
-    const text = summary.extract || '';
-    if (text.length < 50) throw new Error('Wikipedia extract too short');
-    await vectorMemory.storeMemory(agentId, {
-      content: `About me (${target}): ${text}`,
-      category: 'identity',
-      tags: ['wikipedia', 'biography', target],
-      metadata: { source: 'wikipedia-seed' }
-    });
-    console.log(`[impersonation] Seeded 1 memory chunk from Wikipedia summary for "${target}"`);
-    return;
-  }
+  if (!res.ok) return null;
+  return res.text();
+}
 
-  // Strip HTML tags to get plain text
-  const html = await res.text();
-  const plainText = html
+async function searchWikipediaTitle(lang, query) {
+  const encoded = encodeURIComponent(query);
+  const res = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encoded}&srlimit=1&format=json`, {
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.query?.search?.[0]?.title || null;
+}
+
+function stripHtmlToPlainText(html) {
+  return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<sup[^>]*>[\s\S]*?<\/sup>/gi, '')
@@ -105,38 +97,75 @@ async function seedImpersonatorMemory(agentId, target) {
     .replace(/&#\d+;/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
 
-  if (plainText.length < 100) throw new Error('Wikipedia text too short after stripping HTML');
-
-  // Chunk into ~800 char segments at sentence boundaries
+function chunkText(text, maxTotal = 15000) {
   const chunks = [];
-  let remaining = plainText.slice(0, 15000); // Cap at 15k chars to avoid too many memories
+  let remaining = text.slice(0, maxTotal);
   while (remaining.length > 0) {
-    if (remaining.length <= 900) {
-      chunks.push(remaining);
-      break;
-    }
-    // Find a sentence boundary near 800 chars
+    if (remaining.length <= 900) { chunks.push(remaining); break; }
     let cutoff = 800;
-    const nextPeriod = remaining.indexOf('. ', cutoff);
-    if (nextPeriod !== -1 && nextPeriod < 1200) {
-      cutoff = nextPeriod + 2;
+    // Try sentence boundary (period, Chinese period, or newline)
+    for (const sep of ['. ', '。', '\n']) {
+      const idx = remaining.indexOf(sep, cutoff);
+      if (idx !== -1 && idx < 1200) { cutoff = idx + sep.length; break; }
     }
     chunks.push(remaining.slice(0, cutoff).trim());
     remaining = remaining.slice(cutoff).trim();
   }
+  return chunks.filter(c => c.length >= 30);
+}
 
-  // Store each chunk
+async function seedImpersonatorMemory(agentId, target) {
+  // Try multiple Wikipedia sources: en direct → en search → zh direct → zh search
+  let html = null;
+  let source = '';
+
+  // 1. English Wikipedia — direct
+  html = await fetchWikipediaHtml('en', target);
+  if (html) { source = 'en'; }
+
+  // 2. English Wikipedia — search
+  if (!html) {
+    const enTitle = await searchWikipediaTitle('en', target);
+    if (enTitle) {
+      html = await fetchWikipediaHtml('en', enTitle);
+      if (html) source = 'en';
+    }
+  }
+
+  // 3. Chinese Wikipedia — direct
+  if (!html) {
+    html = await fetchWikipediaHtml('zh', target);
+    if (html) source = 'zh';
+  }
+
+  // 4. Chinese Wikipedia — search
+  if (!html) {
+    const zhTitle = await searchWikipediaTitle('zh', target);
+    if (zhTitle) {
+      html = await fetchWikipediaHtml('zh', zhTitle);
+      if (html) source = 'zh';
+    }
+  }
+
+  if (!html) throw new Error(`No Wikipedia page found for "${target}" (tried en + zh)`);
+
+  const plainText = stripHtmlToPlainText(html);
+  if (plainText.length < 100) throw new Error('Wikipedia text too short after stripping HTML');
+
+  const chunks = chunkText(plainText);
+  if (!chunks.length) throw new Error('No usable chunks after processing');
+
   for (let i = 0; i < chunks.length; i++) {
-    if (chunks[i].length < 30) continue;
     await vectorMemory.storeMemory(agentId, {
       content: `About me (${target}) [${i + 1}/${chunks.length}]: ${chunks[i]}`,
       category: 'identity',
       tags: ['wikipedia', 'biography', target],
-      metadata: { source: 'wikipedia-seed', chunk: i + 1, totalChunks: chunks.length }
+      metadata: { source: `wikipedia-seed-${source}`, chunk: i + 1, totalChunks: chunks.length }
     });
   }
-  console.log(`[impersonation] Seeded ${chunks.length} memory chunks from Wikipedia for "${target}"`);
+  console.log(`[impersonation] Seeded ${chunks.length} memory chunks from ${source}.wikipedia for "${target}"`);
 }
 
 function syncCharacteristics(agent) {
