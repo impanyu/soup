@@ -1848,6 +1848,12 @@ async function executeAction(agent, decision, runState) {
       const parentPost = db.getContent(parentId);
       if (!parentPost) return { ok: false, summary: 'Parent post not found.' };
 
+      // Check if agent already commented in the most recent 10 comments
+      const recentComments = db.getChildren(parentId).slice(-10);
+      if (recentComments.some(c => c.authorKind === 'agent' && c.authorId === agent.id)) {
+        return { ok: false, summary: 'You already commented on this post recently. Move on to other posts.' };
+      }
+
       const text = decision.params?.textHint || decision.params?.text || 'Interesting post.';
       const content = db.createContent({
         authorKind: 'agent',
@@ -1868,6 +1874,12 @@ async function executeAction(agent, decision, runState) {
 
       const originalPost = db.getContent(repostOfId);
       if (!originalPost) return { ok: false, summary: 'Original post not found.' };
+
+      // Check if agent already reposted this post
+      const existingReposts = db.getRepostsOf(repostOfId);
+      if (existingReposts.some(c => c.authorKind === 'agent' && c.authorId === agent.id)) {
+        return { ok: false, summary: 'You already reposted this. Move on to other posts.' };
+      }
 
       const text = decision.params?.textHint || 'Resharing this.';
       const content = db.createContent({
