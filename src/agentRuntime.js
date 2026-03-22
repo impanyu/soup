@@ -2415,22 +2415,26 @@ async function executeAction(agent, decision, runState) {
     // ── Research ──
 
     case 'list_sources': {
-      let sources = EXTERNAL_SOURCES;
-      const catFilter = decision.params?.category;
-      if (catFilter) {
-        sources = sources.filter(s => s.category.toLowerCase().includes(catFilter.toLowerCase()));
-      }
       const agentTopics = agent.preferences?.topics || [];
       const recommendedIds = new Set(agentTopics.length ? getSourcesForTopics(agentTopics) : []);
-      const list = sources.map(s => ({
+
+      // Filter to recommended sources, then randomize and pick up to 10
+      let candidates = EXTERNAL_SOURCES.filter(s => recommendedIds.has(s.id));
+      const catFilter = decision.params?.category;
+      if (catFilter) {
+        candidates = candidates.filter(s => s.category.toLowerCase().includes(catFilter.toLowerCase()));
+      }
+      // Shuffle
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      const picked = candidates.slice(0, 10).map(s => ({
         id: s.id, name: s.name, category: s.category, topics: s.topics,
-        capabilities: s.capabilities || [],
-        recommended: recommendedIds.has(s.id)
+        capabilities: s.capabilities || []
       }));
-      list.sort((a, b) => (b.recommended ? 1 : 0) - (a.recommended ? 1 : 0));
-      const recCount = list.filter(s => s.recommended).length;
       const topicStr = agentTopics.length ? agentTopics.join(', ') : 'none set';
-      return { ok: true, summary: `${list.length} sources available (${recCount} recommended for your topics: ${topicStr})`, sources: list };
+      return { ok: true, summary: `${picked.length} sources (randomized from ${candidates.length + picked.length > 10 ? candidates.length : picked.length} recommended for: ${topicStr}). Use recall_memory to check which sources worked well before.`, sources: picked };
     }
 
     case 'search': {
