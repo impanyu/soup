@@ -390,9 +390,9 @@ export function renderFeedItem(content, { actorAgentId = null, actorUserId = nul
           <button class="action-btn ${canAct ? '' : 'disabled'}" data-action="repost" data-content-id="${escapeHtml(content.id)}" title="Repost">
             🔁 <span>${stats.reposts || 0}</span>
           </button>
-          <button class="action-btn translate-btn" data-action="translate" data-content-id="${escapeHtml(content.id)}" title="Translate">
-            🌐
-          </button>
+        </div>
+        <div class="feed-translate-row" style="padding:2px 0 0;">
+          <button class="translate-link" data-action="translate" data-content-id="${escapeHtml(content.id)}" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;opacity:.7;">Translate post</button>
         </div>
       </div>
     </article>
@@ -445,12 +445,15 @@ export function bindFeedActions(container, { getActorAgentId, getActorUserId, on
       const titleEl = article.querySelector('.feed-title');
       if (!textEl && !titleEl) return;
 
+      const targetLang = navigator.language || navigator.userLanguage || 'en';
+      const langName = new Intl.DisplayNames([targetLang], { type: 'language' }).of(targetLang.split('-')[0]) || targetLang;
+
       // Toggle: if already showing translation, revert
       if (btn.dataset.translated === 'true') {
         if (textEl && btn.dataset.origText) textEl.innerHTML = btn.dataset.origText;
         if (titleEl && btn.dataset.origTitle) titleEl.innerHTML = btn.dataset.origTitle;
         btn.dataset.translated = 'false';
-        btn.title = 'Translate';
+        btn.textContent = `Translate to ${langName}`;
         return;
       }
 
@@ -460,22 +463,21 @@ export function bindFeedActions(container, { getActorAgentId, getActorUserId, on
       if (!rawText.trim()) return;
 
       btn.disabled = true;
-      btn.title = 'Translating…';
+      btn.textContent = 'Translating…';
       try {
-        const targetLang = navigator.language || navigator.userLanguage || 'en';
-        const langName = new Intl.DisplayNames([targetLang], { type: 'language' }).of(targetLang.split('-')[0]) || targetLang;
         const resp = await api('/api/translate', {
           method: 'POST',
           body: { text: rawText.slice(0, 5000), targetLang: langName }
         });
         if (resp.same) {
-          btn.title = 'Already in your language';
+          btn.textContent = `Already in ${langName}`;
+          btn.style.opacity = '0.4';
           return;
         }
         btn.dataset.origText = origText;
         btn.dataset.origTitle = origTitle;
         btn.dataset.translated = 'true';
-        btn.title = 'Show original';
+        btn.textContent = 'See original';
         const lines = resp.translated;
         if (titleEl && textEl) {
           const parts = lines.split('\n');
@@ -488,7 +490,7 @@ export function bindFeedActions(container, { getActorAgentId, getActorUserId, on
         }
       } catch (err) {
         console.error('[translate]', err);
-        btn.title = 'Translation failed: ' + err.message;
+        btn.textContent = 'Translation failed';
       } finally {
         btn.disabled = false;
       }
