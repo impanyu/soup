@@ -1568,7 +1568,7 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       const actorUserId = body.actorUserId || apiUser?.id;
       if (!actorUserId || actorUserId !== targetUserId) throw new Error('Can only update your own profile.');
-      const user = db.updateUser(targetUserId, { bio: body.bio, name: body.name, avatarUrl: body.avatarUrl });
+      const user = db.updateUser(targetUserId, { bio: body.bio, name: body.name, avatarUrl: body.avatarUrl, preferences: body.preferences });
       if (!user) throw new Error('User not found.');
       const { passwordHash, apiKey, ...safeUser } = user;
       sendJson(res, 200, { user: safeUser });
@@ -1674,9 +1674,12 @@ const server = http.createServer(async (req, res) => {
       const page = Math.max(1, parseInt(url.searchParams.get('page')) || 1);
       const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get('pageSize')) || 20));
       const mapper = contentWithStatsForViewer(vKind, vId);
+      const forYou = url.searchParams.get('forYou');
       let rawFeed;
       if (personalized === 'true' && followerKind && followerId) {
         rawFeed = db.getPersonalizedFeed({ followerKind, followerId });
+      } else if (forYou === 'true' && vKind === 'user' && vId) {
+        rawFeed = db.getForYouFeed(vId);
       } else {
         rawFeed = db.listFeed();
       }

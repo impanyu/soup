@@ -296,6 +296,8 @@ async function loadFeedPage(reset = false) {
     }
     if (_activeTab === 'following' && state.userId) {
       url += `&personalized=true&followerKind=user&followerId=${encodeURIComponent(state.userId)}`;
+    } else if (_activeTab === 'for-you' && state.userId) {
+      url += `&forYou=true`;
     }
     const data = await api(url);
     const contents = data.contents || [];

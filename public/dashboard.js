@@ -159,6 +159,85 @@ async function renderUserSection(user) {
 
 }
 
+// ── User Topics ────────────────────────────────────
+let _availableTopics = [];
+
+async function loadTopics() {
+  try {
+    const data = await api('/api/external-sources');
+    _availableTopics = data.topics || [];
+  } catch { /* empty fallback */ }
+}
+
+function renderUserTopics(user) {
+  const section = document.getElementById('user-topics-section');
+  if (!section || !_availableTopics.length) return;
+  section.style.display = '';
+  const selected = new Set(user.preferences?.topics || []);
+
+  section.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div>
+        <div style="font-weight:700;font-size:15px;">My Interests</div>
+        <div class="text-xs muted">Pick topics to personalize your "For you" feed</div>
+      </div>
+      <button class="btn btn-outline btn-xs" id="save-user-topics-btn">Save</button>
+    </div>
+    <input id="user-topic-filter" type="text" placeholder="Filter topics..." style="width:100%;padding:5px 10px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text);margin-bottom:6px;" />
+    <div id="user-topics-grid" style="display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow-y:auto;padding:8px;background:var(--bg-input);border-radius:var(--radius-sm);">
+      ${_availableTopics.map(t => `
+        <label class="topic-chip" data-topic-name="${escapeHtml(t)}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--radius-full);border:1px solid var(--border);cursor:pointer;font-size:13px;user-select:none;transition:all .15s;${selected.has(t) ? 'background:var(--accent-dim);border-color:var(--accent);color:var(--accent);' : ''}">
+          <input type="checkbox" value="${escapeHtml(t)}" ${selected.has(t) ? 'checked' : ''} style="width:auto;display:none;" class="user-topic-cb" />
+          ${escapeHtml(t)}
+        </label>
+      `).join('')}
+    </div>
+  `;
+
+  // Topic chip toggle styling
+  section.querySelectorAll('.user-topic-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const chip = cb.closest('.topic-chip');
+      if (cb.checked) {
+        chip.style.background = 'var(--accent-dim)';
+        chip.style.borderColor = 'var(--accent)';
+        chip.style.color = 'var(--accent)';
+      } else {
+        chip.style.background = '';
+        chip.style.borderColor = 'var(--border)';
+        chip.style.color = '';
+      }
+    });
+  });
+
+  // Filter
+  document.getElementById('user-topic-filter').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    section.querySelectorAll('.topic-chip').forEach(chip => {
+      chip.style.display = chip.dataset.topicName.includes(q) ? '' : 'none';
+    });
+  });
+
+  // Save
+  document.getElementById('save-user-topics-btn').addEventListener('click', async () => {
+    const topics = [...section.querySelectorAll('.user-topic-cb:checked')].map(cb => cb.value);
+    const btn = document.getElementById('save-user-topics-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      const currentPrefs = user.preferences || {};
+      await api(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        body: { actorUserId: user.id, preferences: { ...currentPrefs, topics } }
+      });
+      state.auth.user.preferences = { ...currentPrefs, topics };
+      showToast(`Saved ${topics.length} topic(s)!`);
+    } catch (err) { showToast(err.message); }
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  });
+}
+
 // ── Agents grid ────────────────────────────────────
 // Track active polling intervals per agent — cleared on re-render or pause
 const _pollIntervals = new Map();
@@ -690,8 +769,10 @@ async function bootstrap() {
   if (!user) { window.location.href = '/login?next=/dashboard'; return; }
   renderNavBar({ active: 'dashboard', user });
   document.getElementById('user-section').innerHTML = '<div class="spinner"></div>';
+  await loadTopics();
   await loadAgents();
   renderUserSection(user);
+  renderUserTopics(user);
   startAgentRefresh();
 
   // Search bar

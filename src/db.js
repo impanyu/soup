@@ -414,6 +414,9 @@ class SqliteDB {
     if (!cols.includes('email')) {
       this.db.exec('ALTER TABLE users ADD COLUMN email TEXT');
     }
+    if (!cols.includes('preferences')) {
+      this.db.exec("ALTER TABLE users ADD COLUMN preferences TEXT DEFAULT '{}'");
+    }
   }
 
   _isEmpty() {
@@ -772,7 +775,10 @@ class SqliteDB {
   }
 
   getUser(userId) {
-    return this.db.prepare('SELECT * FROM users WHERE id = ?').get(userId) || null;
+    const row = this.db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (!row) return null;
+    row.preferences = jp(row.preferences) || {};
+    return row;
   }
 
   updateUser(userId, patch) {
@@ -783,6 +789,7 @@ class SqliteDB {
     if (patch.avatarUrl !== undefined) this.db.prepare('UPDATE users SET avatarUrl = ? WHERE id = ?').run(String(patch.avatarUrl || ''), userId);
     if (patch.googleId !== undefined) this.db.prepare('UPDATE users SET googleId = ? WHERE id = ?').run(patch.googleId, userId);
     if (patch.email !== undefined) this.db.prepare('UPDATE users SET email = ? WHERE id = ?').run(patch.email, userId);
+    if (patch.preferences !== undefined) this.db.prepare('UPDATE users SET preferences = ? WHERE id = ?').run(js(patch.preferences), userId);
     return this.getUser(userId);
   }
 
@@ -1034,6 +1041,67 @@ class SqliteDB {
     // Fetch all top-level content and filter by followed authors
     const all = this.db.prepare("SELECT * FROM contents WHERE (parentId IS NULL OR parentId = '') ORDER BY createdAt DESC").all().map(hydrateContent);
     return all.filter(c => followedSet.has(`${c.authorKind}:${c.authorId}`));
+  }
+
+  /**
+   * "For you" feed: returns posts matching at least one of:
+   * 1. Author is followed by the user
+   * 2. Someone the user follows also follows the author
+   * 3. Author's topics overlap with user's topics by >= 3
+   */
+  getForYouFeed(userId) {
+    const user = this.getUser(userId);
+    if (!user) return this.listFeed();
+    const userTopics = new Set(user.preferences?.topics || []);
+
+    // 1. Who does the user follow?
+    const myFollows = this.db.prepare('SELECT followeeKind, followeeId FROM follows WHERE followerKind = ? AND followerId = ?').all('user', userId);
+    const followedSet = new Set(myFollows.map(f => `${f.followeeKind}:${f.followeeId}`));
+
+    // If user has no follows and no topics, fall back to full feed
+    if (!myFollows.length && !userTopics.size) return this.listFeed();
+
+    // 2. Who do my followees follow? (friends-of-friends)
+    const fofSet = new Set();
+    for (const f of myFollows) {
+      const theirFollows = this.db.prepare('SELECT followeeKind, followeeId FROM follows WHERE followerKind = ? AND followerId = ?').all(f.followeeKind, f.followeeId);
+      for (const tf of theirFollows) fofSet.add(`${tf.followeeKind}:${tf.followeeId}`);
+    }
+
+    // 3. Cache author topics lookups
+    const authorTopicsCache = new Map();
+    const getAuthorTopics = (kind, id) => {
+      const key = `${kind}:${id}`;
+      if (authorTopicsCache.has(key)) return authorTopicsCache.get(key);
+      let topics = [];
+      if (kind === 'agent') {
+        const a = this.getAgent(id);
+        topics = a?.preferences?.topics || [];
+      } else if (kind === 'user') {
+        const u = this.getUser(id);
+        topics = u?.preferences?.topics || [];
+      }
+      authorTopicsCache.set(key, topics);
+      return topics;
+    };
+
+    const all = this.db.prepare("SELECT * FROM contents WHERE (parentId IS NULL OR parentId = '') ORDER BY createdAt DESC").all().map(hydrateContent);
+    return all.filter(c => {
+      const authorKey = `${c.authorKind}:${c.authorId}`;
+      // Rule 1: user follows the author
+      if (followedSet.has(authorKey)) return true;
+      // Rule 2: someone user follows also follows the author
+      if (fofSet.has(authorKey)) return true;
+      // Rule 3: topic overlap >= 3
+      if (userTopics.size > 0) {
+        const authorTopics = getAuthorTopics(c.authorKind, c.authorId);
+        let overlap = 0;
+        for (const t of authorTopics) {
+          if (userTopics.has(t)) { overlap++; if (overlap >= 3) return true; }
+        }
+      }
+      return false;
+    });
   }
 
   getChildren(contentId) {
