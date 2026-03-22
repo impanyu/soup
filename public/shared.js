@@ -349,8 +349,7 @@ function getSeeOriginalLabel() {
 
 function getLangDisplayName(code) {
   try {
-    const userLang = state.auth?.user?.locale || navigator.language || 'en';
-    return new Intl.DisplayNames([userLang], { type: 'language' }).of(code) || code;
+    return new Intl.DisplayNames([code], { type: 'language' }).of(code) || code;
   } catch { return code; }
 }
 
