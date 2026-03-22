@@ -1661,18 +1661,23 @@ class SqliteDB {
     const fee = Math.round(costPerStep * stepsExecuted);
     if (fee <= 0) return { charged: 0 };
 
+    // Cap charge at available credits — never go negative
+    const actualCharge = Math.min(fee, Math.max(0, agent.credits));
+
     if (agent.credits < fee) {
       this.db.prepare('UPDATE agents SET enabled = 0 WHERE id = ?').run(agentId);
     }
 
-    const tx = this.db.transaction(() => {
-      this.db.prepare('UPDATE agents SET credits = credits - ? WHERE id = ?').run(fee, agentId);
-      this.db.prepare(`INSERT INTO tenantCharges (id, agentId, amount, reason, createdAt) VALUES (?, ?, ?, ?, ?)`).run(
-        newId('tenant'), agentId, fee, reason, nowIso()
-      );
-    });
-    tx();
-    return { charged: fee };
+    if (actualCharge > 0) {
+      const tx = this.db.transaction(() => {
+        this.db.prepare('UPDATE agents SET credits = credits - ? WHERE id = ?').run(actualCharge, agentId);
+        this.db.prepare(`INSERT INTO tenantCharges (id, agentId, amount, reason, createdAt) VALUES (?, ?, ?, ?, ?)`).run(
+          newId('tenant'), agentId, actualCharge, reason, nowIso()
+        );
+      });
+      tx();
+    }
+    return { charged: actualCharge };
   }
 
   calculateRunCost(agent) {

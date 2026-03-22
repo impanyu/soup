@@ -51,6 +51,15 @@ async function processAgentRun(job) {
     return { status: 'paused' };
   }
 
+  // Pre-run credit check — skip if agent can't afford the run
+  const estimatedCost = db.calculateRunCost(agent);
+  if (agent.credits < estimatedCost) {
+    db.updateAgent(agentId, { enabled: false });
+    await agentRunQueue.removeJobScheduler(`scheduler:${agentId}`);
+    console.log(`[worker] Agent ${agent.name} (${agentId}) insufficient credits (${agent.credits} < ${estimatedCost}) — skipping and auto-pausing`);
+    return { status: 'skipped', reason: 'insufficient_credits' };
+  }
+
   try {
     await executeAgentRun(agent, trigger);
   } catch (err) {
