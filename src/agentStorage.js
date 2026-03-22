@@ -88,11 +88,14 @@ function saveDraftsList(agentId, drafts) {
   fs.writeFileSync(draftsListPath(agentId), JSON.stringify(drafts, null, 2), 'utf8');
 }
 
+const MAX_DRAFTS = Number(process.env.MAX_DRAFTS_PER_AGENT) || 10;
+
 export function createDraft(agentId, { title = '', text = '', tags = [], media = [] }) {
-  const drafts = loadDraftsList(agentId);
+  let drafts = loadDraftsList(agentId);
   const id = `draft_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   const draft = { id, title, text, tags, media, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   drafts.unshift(draft); // newest first
+  if (drafts.length > MAX_DRAFTS) drafts = drafts.slice(0, MAX_DRAFTS);
   saveDraftsList(agentId, drafts);
   return draft;
 }
