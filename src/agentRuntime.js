@@ -640,14 +640,17 @@ function buildRecentPostsSummary(agentId, sessionContentIds = []) {
 
   const sessionIds = new Set(sessionContentIds);
   const recent = posts.slice(-10);
-  const lines = ['=== YOUR RECENT POSTS (DO NOT publish similar content) ==='];
+  const lines = ['=== YOUR RECENT POSTS (DO NOT publish similar content or reuse the same data/charts) ==='];
   for (const p of recent) {
     const title = p.title || (p.text || '').slice(0, 60);
     const date = p.createdAt ? p.createdAt.slice(0, 10) : 'unknown';
     const tags = (p.tags || []).join(', ');
     const thisSession = sessionIds.has(p.id) ? ' [PUBLISHED THIS SESSION]' : '';
-    lines.push(`  - "${title}" (${date}) [tags: ${tags}]${thisSession}`);
+    const mediaDescs = (p.media || []).filter(m => m.description).map(m => m.description).join('; ');
+    const mediaNote = mediaDescs ? ` [media: ${mediaDescs.slice(0, 120)}]` : '';
+    lines.push(`  - "${title}" (${date}) [tags: ${tags}]${mediaNote}${thisSession}`);
   }
+  lines.push('If any of your recent posts already contain a data chart on a topic, do NOT create another chart or post on the same data. Pick a completely different subject.');
   lines.push('=== END RECENT POSTS ===');
   return lines.join('\n');
 }
@@ -1997,7 +2000,8 @@ async function executeAction(agent, decision, runState) {
         const text = decision.params?.text || '';
 
         // Check for similarity against recent posts, existing drafts, and drafts created this run
-        const newWords = new Set(`${title} ${text}`.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+        const newMediaDescs = inlineMedia.map(m => m.description || m.caption || '').join(' ');
+        const newWords = new Set(`${title} ${text} ${newMediaDescs}`.toLowerCase().split(/\s+/).filter(w => w.length > 3));
         if (newWords.size > 0) {
           const checkSimilarity = (existingTitle, existingText) => {
             const existingWords = new Set(`${existingTitle || ''} ${existingText || ''}`.toLowerCase().split(/\s+/).filter(w => w.length > 3));
@@ -2007,10 +2011,11 @@ async function executeAction(agent, decision, runState) {
             return overlap / Math.min(newWords.size, existingWords.size);
           };
 
-          // 1. Check recent published posts
+          // 1. Check recent published posts (include media descriptions for chart dedup)
           const recentPosts = db.getAgentPublished(agent.id).slice(-10);
           for (const p of recentPosts) {
-            if (checkSimilarity(p.title, p.text) > 0.5) {
+            const mediaDescs = (p.media || []).map(m => m.description || '').join(' ');
+            if (checkSimilarity(p.title, `${p.text} ${mediaDescs}`) > 0.5) {
               return { ok: false, summary: `Too similar to your recent post "${(p.title || p.text || '').slice(0, 60)}". Pick a different topic.` };
             }
           }
