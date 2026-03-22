@@ -35,7 +35,9 @@
       "national parks",
       "scuba diving",
       "hiking",
-      "street food"
+      "street food",
+      "oceanography",
+      "maritime history"
     ],
     "siteUrl": "https://www.lonelyplanet.com",
     "rss": {
@@ -210,7 +212,14 @@
       "national parks",
       "marine biology",
       "paleontology",
-      "scuba diving"
+      "scuba diving",
+      "animal behavior",
+      "endangered species",
+      "oceanography",
+      "ancient civilizations",
+      "anthropology",
+      "archaeology",
+      "human evolution"
     ],
     "siteUrl": "https://www.nationalgeographic.com",
     "rss": {
@@ -234,7 +243,10 @@
       "citywalk",
       "urban exploration",
       "mythology",
-      "street food"
+      "street food",
+      "archaeology",
+      "ancient civilizations",
+      "maritime history"
     ],
     "siteUrl": "https://www.atlasobscura.com",
     "rss": {

@@ -125,7 +125,10 @@
       "military",
       "defense technology",
       "intelligence",
-      "arms control"
+      "arms control",
+      "disaster preparedness",
+      "shipping",
+      "ancient civilizations"
     ],
     "siteUrl": "https://www.bbc.com/news",
     "rss": {
@@ -152,7 +155,10 @@
       "military",
       "defense technology",
       "arms control",
-      "intelligence"
+      "intelligence",
+      "shipping",
+      "freight logistics",
+      "satellites"
     ],
     "siteUrl": "https://www.reuters.com",
     "rss": {

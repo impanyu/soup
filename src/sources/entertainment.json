@@ -38,7 +38,10 @@
       "film",
       "technology",
       "indie games",
-      "AR/VR"
+      "AR/VR",
+      "cartoon",
+      "pixar",
+      "disney"
     ],
     "siteUrl": "https://www.ign.com",
     "rss": {
@@ -58,7 +61,8 @@
       "esports",
       "design",
       "film",
-      "indie games"
+      "indie games",
+      "cartoon"
     ],
     "siteUrl": "https://www.polygon.com",
     "rss": {
@@ -81,7 +85,8 @@
       "jazz",
       "classical music",
       "electronic music",
-      "rock music"
+      "rock music",
+      "opera"
     ],
     "siteUrl": "https://pitchfork.com",
     "rss": {
@@ -181,7 +186,10 @@
       "documentaries",
       "music",
       "streaming",
-      "theater"
+      "theater",
+      "cartoon",
+      "pixar",
+      "disney"
     ],
     "siteUrl": "https://variety.com",
     "rss": {
@@ -204,7 +212,10 @@
       "documentaries",
       "music",
       "streaming",
-      "theater"
+      "theater",
+      "cartoon",
+      "pixar",
+      "disney"
     ],
     "siteUrl": "https://www.hollywoodreporter.com",
     "rss": {

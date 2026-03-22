@@ -62,7 +62,8 @@
       "geology",
       "science",
       "data science",
-      "nuclear physics"
+      "nuclear physics",
+      "disaster preparedness"
     ],
     "search": {
       "endpoint": "https://earthquake.usgs.gov/fdsnws/event/1/query",
@@ -364,7 +365,9 @@
     "topics": [
       "space",
       "engineering",
-      "technology"
+      "technology",
+      "rocket science",
+      "satellites"
     ],
     "search": {
       "endpoint": "https://api.spacexdata.com/v4/launches",
@@ -387,7 +390,8 @@
     "topics": [
       "space",
       "asteroids",
-      "science"
+      "science",
+      "satellites"
     ],
     "search": {
       "endpoint": "https://api.nasa.gov/neo/rest/v1/feed",
@@ -414,7 +418,8 @@
       "space",
       "astronomy",
       "science",
-      "education"
+      "education",
+      "mars colonization"
     ],
     "search": {
       "endpoint": "https://api.le-systeme-solaire.net/rest/bodies/",
@@ -690,7 +695,8 @@
       "marine",
       "waves",
       "surfing",
-      "marine biology"
+      "marine biology",
+      "oceanography"
     ],
     "search": {
       "endpoint": "https://marine-api.open-meteo.com/v1/marine",
@@ -718,7 +724,8 @@
       "water",
       "hydrology",
       "USA",
-      "marine biology"
+      "marine biology",
+      "oceanography"
     ],
     "search": {
       "endpoint": "https://waterservices.usgs.gov/nwis/iv/",
@@ -1146,7 +1153,8 @@
     "topics": [
       "gaming",
       "pokemon",
-      "entertainment"
+      "entertainment",
+      "cartoon"
     ],
     "search": {
       "endpoint": "https://pokeapi.co/api/v2/pokemon",
@@ -1193,7 +1201,10 @@
     "topics": [
       "books",
       "literature",
-      "education"
+      "education",
+      "childrens books",
+      "anthropology",
+      "archaeology"
     ],
     "search": {
       "endpoint": "https://openlibrary.org/search.json",
@@ -1217,7 +1228,8 @@
     "topics": [
       "anime",
       "entertainment",
-      "media"
+      "media",
+      "cartoon"
     ],
     "search": {
       "endpoint": "https://api.jikan.moe/v4/top/anime",
@@ -1241,7 +1253,8 @@
     "topics": [
       "entertainment",
       "TV",
-      "media"
+      "media",
+      "cartoon"
     ],
     "search": {
       "endpoint": "https://api.tvmaze.com/shows",
@@ -1293,7 +1306,10 @@
       "cinema",
       "tv shows",
       "documentaries",
-      "streaming"
+      "streaming",
+      "cartoon",
+      "pixar",
+      "disney"
     ],
     "dataType": "structured",
     "requiresKey": false,
@@ -1652,7 +1668,10 @@
     "topics": [
       "space",
       "space exploration",
-      "technology"
+      "technology",
+      "rocket science",
+      "satellites",
+      "mars colonization"
     ],
     "dataType": "structured",
     "category": "Data APIs",
@@ -1706,7 +1725,10 @@
       "history",
       "cultural studies",
       "sculpture",
-      "calligraphy"
+      "calligraphy",
+      "ancient civilizations",
+      "archaeology",
+      "anthropology"
     ],
     "dataType": "structured",
     "category": "Data APIs",
@@ -1916,7 +1938,8 @@
     "name": "Dog Breeds API",
     "topics": [
       "pets",
-      "science"
+      "science",
+      "animal behavior"
     ],
     "dataType": "structured",
     "category": "Data APIs",
@@ -1928,7 +1951,8 @@
     "name": "Cat Breeds API",
     "topics": [
       "pets",
-      "science"
+      "science",
+      "animal behavior"
     ],
     "dataType": "structured",
     "category": "Data APIs",
@@ -1984,6 +2008,46 @@
       "geopolitics",
       "world news",
       "intelligence"
+    ],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "digimon-api",
+    "name": "Digimon API",
+    "category": "Data APIs",
+    "topics": [
+      "cartoon",
+      "anime",
+      "kids education"
+    ],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "disney-api",
+    "name": "Disney Characters API",
+    "category": "Data APIs",
+    "topics": [
+      "cartoon",
+      "disney",
+      "pixar",
+      "kids education"
+    ],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "usgs-volcanoes",
+    "name": "USGS Volcano Data",
+    "category": "Data APIs",
+    "topics": [
+      "geology",
+      "disaster preparedness",
+      "science"
     ],
     "dataType": "structured",
     "requiresKey": false,

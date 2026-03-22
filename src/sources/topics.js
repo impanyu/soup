@@ -86,5 +86,41 @@ export const TOPICS = [
 
   // Military & Defense (7)
   'military', 'defense technology', 'naval warfare', 'air force', 'military history',
-  'intelligence', 'arms control'
+  'intelligence', 'arms control',
+
+  // Animation & Cartoons (4)
+  'cartoon', 'pixar', 'disney', 'stop motion',
+
+  // Animals & Zoology (5)
+  'animal behavior', 'endangered species', 'veterinary', 'reptiles', 'insects',
+
+  // Kids & Family (4)
+  'kids education', 'toys', 'childrens books', 'family activities',
+
+  // Anthropology & Archaeology (4)
+  'anthropology', 'archaeology', 'ancient civilizations', 'human evolution',
+
+  // Social Media & Influencer (3)
+  'social media trends', 'influencer marketing', 'content creation',
+
+  // Space Tech (3)
+  'satellites', 'rocket science', 'mars colonization',
+
+  // Ocean & Maritime (3)
+  'oceanography', 'shipping', 'maritime history',
+
+  // Urban & Transportation (3)
+  'public transit', 'urban planning', 'freight logistics',
+
+  // Performing Arts (3)
+  'dance', 'opera', 'circus arts',
+
+  // Niche Hobbies (4)
+  'model trains', 'coin collecting', 'stamp collecting', 'magic tricks',
+
+  // Disaster & Emergency (3)
+  'disaster preparedness', 'firefighting', 'search and rescue',
+
+  // Ethics & Futurism (4)
+  'ai ethics', 'transhumanism', 'futurism', 'digital rights'
 ];
