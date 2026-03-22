@@ -1164,10 +1164,19 @@ const server = http.createServer(async (req, res) => {
       const currentAgent = db.getAgent(agentId);
       const prevEnabled = currentAgent?.enabled;
 
-      // Lock name for impersonator agents
+      // Lock name for impersonator agents — run detection first if not yet flagged
       let newName = body.name;
-      if (newName && currentAgent?.runConfig?.impersonateTarget && newName !== currentAgent.name) {
-        newName = undefined; // silently ignore name change for impersonators
+      if (newName && newName !== currentAgent.name) {
+        if (currentAgent?.runConfig?.impersonateTarget) {
+          newName = undefined; // already flagged — silently ignore
+        } else {
+          // Not yet flagged — run detection on current agent to check
+          await detectImpersonation(currentAgent);
+          const refreshed = db.getAgent(agentId);
+          if (refreshed?.runConfig?.impersonateTarget) {
+            newName = undefined; // just detected — silently ignore
+          }
+        }
       }
 
       const agent = db.updateAgent(agentId, {
