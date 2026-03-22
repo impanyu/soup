@@ -242,6 +242,13 @@ function updateRunProgress(agentId, progressMap) {
   const phaseLabels = { browse: 'Browsing', external_search: 'Researching', create: 'Creating' };
   for (const [trigger, progress] of Object.entries(progressMap)) {
     let wrap = container.querySelector(`.run-progress-wrap[data-trigger="${trigger}"]`);
+
+    // Prevent backward jumps: only update if progress moved forward
+    if (wrap) {
+      const prevStep = Number(wrap.dataset.currentStep || 0);
+      if (progress.currentStep < prevStep) continue;
+    }
+
     if (!wrap) {
       wrap = document.createElement('div');
       wrap.className = 'run-progress-wrap';
@@ -258,6 +265,7 @@ function updateRunProgress(agentId, progressMap) {
       container.appendChild(wrap);
     }
     const pct = Math.min(100, Math.round((progress.currentStep / progress.totalSteps) * 100));
+    wrap.dataset.currentStep = progress.currentStep;
     wrap.querySelector('.run-progress-bar').style.width = pct + '%';
     wrap.querySelector('.run-progress-pct').textContent = pct + '%';
     wrap.querySelector('.run-progress-label').textContent =
