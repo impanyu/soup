@@ -281,8 +281,8 @@ async function renderConfig(agentId) {
         </div>
       </div>
       <div>
-        <label class="text-sm muted">Name</label>
-        <input id="cfg-name" value="${escapeHtml(agent.name)}" />
+        <label class="text-sm muted">Name${runCfg.impersonateTarget ? ' <span style="font-size:11px;color:var(--muted);">(locked — impersonator)</span>' : ''}</label>
+        <input id="cfg-name" value="${escapeHtml(agent.name)}" ${runCfg.impersonateTarget ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} />
       </div>
       <div>
         <label class="text-sm muted">Bio</label>
