@@ -163,6 +163,8 @@ async function renderUserSection(user) {
 // Track active polling intervals per agent — cleared on re-render or pause
 const _pollIntervals = new Map();
 let _globalRunChecker = null;
+let _agentSearchQuery = '';
+let _agentRefreshTimer = null;
 
 function clearAgentPoll(agentId) {
   const id = _pollIntervals.get(agentId);
@@ -293,7 +295,19 @@ function renderAgentsGrid() {
     return;
   }
 
-  grid.innerHTML = state.agents.map(agent => {
+  // Filter by search query
+  const q = _agentSearchQuery.toLowerCase();
+  const filtered = q
+    ? state.agents.filter(a => (a.name || '').toLowerCase().includes(q) || (a.bio || '').toLowerCase().includes(q))
+    : state.agents;
+
+  if (q && !filtered.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><p class="muted">No agents match "${escapeHtml(_agentSearchQuery)}"</p></div>`;
+    startGlobalRunChecker();
+    return;
+  }
+
+  grid.innerHTML = filtered.map(agent => {
     const level = ACTIVENESS_LEVELS[agent.activenessLevel] || { label: agent.activenessLevel, color: '#71767b', interval: '?', fee: 0 };
     const intel = INTELLIGENCE_LEVELS[agent.intelligenceLevel] || INTELLIGENCE_LEVELS.not_so_smart || { label: agent.intelligenceLevel || 'Unknown', color: '#71767b', costPerStep: 0 };
     return `
@@ -495,12 +509,54 @@ function renderAgentsGrid() {
 }
 
 // ── Data loaders ──────────────────────────────────
-async function loadAgents() {
+async function loadAgents({ silent = false } = {}) {
   if (!state.userId) { state.agents = []; renderAgentsGrid(); return; }
   const { agents } = await api(`/api/external-users/${state.userId}/agents`);
-  state.agents = agents;
-  if (!state.selectedAgentId && agents.length) state.selectedAgentId = agents[0].id;
-  renderAgentsGrid();
+
+  if (silent) {
+    // Update credits and status in-place without full re-render
+    let needsFullRender = false;
+    for (const agent of agents) {
+      const prev = state.agents.find(a => a.id === agent.id);
+      if (!prev) { needsFullRender = true; break; }
+
+      // Update credits display
+      const creditsEl = document.querySelector(`.agent-credits[data-agent-id="${agent.id}"]`);
+      if (creditsEl && creditsEl.textContent !== formatCredits(agent.credits)) {
+        creditsEl.textContent = formatCredits(agent.credits);
+      }
+
+      // Update countdown timer target
+      const countdownEl = document.querySelector(`.next-run-countdown[data-next-at]`);
+      if (countdownEl && agent.nextActionAt !== prev.nextActionAt) {
+        countdownEl.dataset.nextAt = agent.enabled ? (agent.nextActionAt || '') : '';
+        countdownEl.dataset.paused = String(!agent.enabled);
+      }
+
+      // If enabled/paused status changed, need full re-render
+      if (prev.enabled !== agent.enabled) needsFullRender = true;
+    }
+    // If agent count changed, need full re-render
+    if (agents.length !== state.agents.length) needsFullRender = true;
+
+    state.agents = agents;
+    if (needsFullRender) renderAgentsGrid();
+  } else {
+    state.agents = agents;
+    if (!state.selectedAgentId && agents.length) state.selectedAgentId = agents[0].id;
+    renderAgentsGrid();
+  }
+}
+
+function startAgentRefresh() {
+  if (_agentRefreshTimer) return;
+  _agentRefreshTimer = setInterval(() => {
+    loadAgents({ silent: true }).catch(() => {});
+  }, 10000);
+}
+
+function stopAgentRefresh() {
+  if (_agentRefreshTimer) { clearInterval(_agentRefreshTimer); _agentRefreshTimer = null; }
 }
 
 async function refreshAll() {
@@ -636,6 +692,16 @@ async function bootstrap() {
   document.getElementById('user-section').innerHTML = '<div class="spinner"></div>';
   await loadAgents();
   renderUserSection(user);
+  startAgentRefresh();
+
+  // Search bar
+  const searchInput = document.getElementById('agent-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      _agentSearchQuery = searchInput.value.trim();
+      renderAgentsGrid();
+    });
+  }
 
   document.getElementById('signout-btn')?.addEventListener('click', async () => {
     await logout();
@@ -651,18 +717,23 @@ bootstrap().catch(err => {
 // Handle mobile browser bfcache restore and tab visibility changes
 window.addEventListener('pageshow', (e) => {
   if (e.persisted) {
-    // Page restored from bfcache — restart polling
     clearAllPolls();
     stopGlobalRunChecker();
     startGlobalRunChecker();
+    stopAgentRefresh();
+    startAgentRefresh();
   }
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    // Tab became visible again — restart polling
     clearAllPolls();
     stopGlobalRunChecker();
     startGlobalRunChecker();
+    stopAgentRefresh();
+    startAgentRefresh();
+    loadAgents({ silent: true }).catch(() => {});
+  } else {
+    stopAgentRefresh();
   }
 });
