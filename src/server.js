@@ -42,10 +42,17 @@ async function detectImpersonation(agent) {
 
     const currentRunConfig = agent.runConfig || {};
     if (parsed.isImpersonator && parsed.target) {
+      const wasAlreadyImpersonator = !!currentRunConfig.impersonateTarget;
       db.updateAgent(agent.id, { runConfig: { ...currentRunConfig, impersonateTarget: parsed.target } });
       console.log(`[impersonation] Agent "${name}" detected as impersonator of "${parsed.target}"`);
+
+      // Fetch Wikipedia info and store in long-term memory (only on first detection)
+      if (!wasAlreadyImpersonator) {
+        seedImpersonatorMemory(agent.id, parsed.target).catch(err => {
+          console.warn(`[impersonation] Wikipedia seed failed for "${parsed.target}": ${err.message}`);
+        });
+      }
     } else if (currentRunConfig.impersonateTarget) {
-      // Clear old impersonation if no longer detected
       const { impersonateTarget, ...rest } = currentRunConfig;
       db.updateAgent(agent.id, { runConfig: rest });
       console.log(`[impersonation] Agent "${name}" no longer detected as impersonator`);
@@ -53,6 +60,83 @@ async function detectImpersonation(agent) {
   } catch (err) {
     console.warn(`[impersonation] Detection failed for "${name}": ${err.message}`);
   }
+}
+
+async function seedImpersonatorMemory(agentId, target) {
+  // Fetch Wikipedia extract for the target
+  const encoded = encodeURIComponent(target.replace(/\s+/g, '_'));
+  const url = `https://en.wikipedia.org/api/rest_v1/page/html/${encoded}`;
+  const res = await fetch(url, {
+    headers: { 'Accept': 'text/html' },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!res.ok) {
+    // Try the summary endpoint as fallback
+    const summaryRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`, {
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!summaryRes.ok) throw new Error(`Wikipedia returned ${summaryRes.status}`);
+    const summary = await summaryRes.json();
+    const text = summary.extract || '';
+    if (text.length < 50) throw new Error('Wikipedia extract too short');
+    await vectorMemory.storeMemory(agentId, {
+      content: `About me (${target}): ${text}`,
+      category: 'identity',
+      tags: ['wikipedia', 'biography', target],
+      metadata: { source: 'wikipedia-seed' }
+    });
+    console.log(`[impersonation] Seeded 1 memory chunk from Wikipedia summary for "${target}"`);
+    return;
+  }
+
+  // Strip HTML tags to get plain text
+  const html = await res.text();
+  const plainText = html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<sup[^>]*>[\s\S]*?<\/sup>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\[\d+\]/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#\d+;/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (plainText.length < 100) throw new Error('Wikipedia text too short after stripping HTML');
+
+  // Chunk into ~800 char segments at sentence boundaries
+  const chunks = [];
+  let remaining = plainText.slice(0, 15000); // Cap at 15k chars to avoid too many memories
+  while (remaining.length > 0) {
+    if (remaining.length <= 900) {
+      chunks.push(remaining);
+      break;
+    }
+    // Find a sentence boundary near 800 chars
+    let cutoff = 800;
+    const nextPeriod = remaining.indexOf('. ', cutoff);
+    if (nextPeriod !== -1 && nextPeriod < 1200) {
+      cutoff = nextPeriod + 2;
+    }
+    chunks.push(remaining.slice(0, cutoff).trim());
+    remaining = remaining.slice(cutoff).trim();
+  }
+
+  // Store each chunk
+  for (let i = 0; i < chunks.length; i++) {
+    if (chunks[i].length < 30) continue;
+    await vectorMemory.storeMemory(agentId, {
+      content: `About me (${target}) [${i + 1}/${chunks.length}]: ${chunks[i]}`,
+      category: 'identity',
+      tags: ['wikipedia', 'biography', target],
+      metadata: { source: 'wikipedia-seed', chunk: i + 1, totalChunks: chunks.length }
+    });
+  }
+  console.log(`[impersonation] Seeded ${chunks.length} memory chunks from Wikipedia for "${target}"`);
 }
 
 function syncCharacteristics(agent) {
@@ -1077,9 +1161,17 @@ const server = http.createServer(async (req, res) => {
       if (!actorUserId) throw new Error('actorUserId or API key is required.');
       requireOwner(actorUserId, agentId);
 
-      const prevEnabled = db.getAgent(agentId)?.enabled;
+      const currentAgent = db.getAgent(agentId);
+      const prevEnabled = currentAgent?.enabled;
+
+      // Lock name for impersonator agents
+      let newName = body.name;
+      if (newName && currentAgent?.runConfig?.impersonateTarget && newName !== currentAgent.name) {
+        newName = undefined; // silently ignore name change for impersonators
+      }
+
       const agent = db.updateAgent(agentId, {
-        name: body.name,
+        name: newName,
         bio: body.bio,
         activenessLevel: body.activenessLevel,
         intelligenceLevel: body.intelligenceLevel,
