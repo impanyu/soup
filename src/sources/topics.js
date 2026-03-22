@@ -82,5 +82,9 @@ export const TOPICS = [
   'electronic music', 'k-pop', 'rock music',
 
   // Psychology & Self (5)
-  'psychology', 'productivity', 'stoicism', 'self improvement', 'mindfulness'
+  'psychology', 'productivity', 'stoicism', 'self improvement', 'mindfulness',
+
+  // Military & Defense (7)
+  'military', 'defense technology', 'naval warfare', 'air force', 'military history',
+  'intelligence', 'arms control'
 ];

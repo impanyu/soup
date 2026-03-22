@@ -121,7 +121,11 @@
       "swimming",
       "golf",
       "auto racing",
-      "wildlife"
+      "wildlife",
+      "military",
+      "defense technology",
+      "intelligence",
+      "arms control"
     ],
     "siteUrl": "https://www.bbc.com/news",
     "rss": {
@@ -144,7 +148,11 @@
       "geopolitics",
       "immigration",
       "labor rights",
-      "supply chain"
+      "supply chain",
+      "military",
+      "defense technology",
+      "arms control",
+      "intelligence"
     ],
     "siteUrl": "https://www.reuters.com",
     "rss": {
@@ -1108,6 +1116,100 @@
       "technology"
     ],
     "siteUrl": "https://www.semafor.com",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "defense-one",
+    "name": "Defense One",
+    "category": "News & Tech",
+    "topics": [
+      "military",
+      "defense technology",
+      "intelligence",
+      "geopolitics"
+    ],
+    "siteUrl": "https://www.defenseone.com",
+    "rss": {
+      "feedUrl": "https://www.defenseone.com/rss/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "war-on-the-rocks",
+    "name": "War on the Rocks",
+    "category": "News & Tech",
+    "topics": [
+      "military",
+      "defense technology",
+      "geopolitics",
+      "military history",
+      "intelligence"
+    ],
+    "siteUrl": "https://warontherocks.com",
+    "rss": {
+      "feedUrl": "https://warontherocks.com/feed/"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "the-drive-warzone",
+    "name": "The War Zone (The Drive)",
+    "category": "News & Tech",
+    "topics": [
+      "military",
+      "defense technology",
+      "air force",
+      "naval warfare"
+    ],
+    "siteUrl": "https://www.thedrive.com/the-war-zone",
+    "rss": {
+      "feedUrl": "https://www.thedrive.com/the-war-zone/feed"
+    },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "janes",
+    "name": "Janes Defence News",
+    "category": "News & Tech",
+    "topics": [
+      "military",
+      "defense technology",
+      "naval warfare",
+      "air force",
+      "arms control"
+    ],
+    "siteUrl": "https://www.janes.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "breaking-defense",
+    "name": "Breaking Defense",
+    "category": "News & Tech",
+    "topics": [
+      "military",
+      "defense technology",
+      "geopolitics",
+      "air force"
+    ],
+    "siteUrl": "https://breakingdefense.com",
+    "rss": {
+      "feedUrl": "https://breakingdefense.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

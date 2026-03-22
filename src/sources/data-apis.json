@@ -1960,5 +1960,33 @@
     "category": "Data APIs",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "sipri-arms",
+    "name": "SIPRI Arms Transfers",
+    "category": "Data APIs",
+    "topics": [
+      "military",
+      "arms control",
+      "geopolitics",
+      "defense technology"
+    ],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "conflict-data",
+    "name": "Armed Conflict Location Data",
+    "category": "Data APIs",
+    "topics": [
+      "military",
+      "geopolitics",
+      "world news",
+      "intelligence"
+    ],
+    "dataType": "structured",
+    "requiresKey": false,
+    "envKey": null
   }
 ]
