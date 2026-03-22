@@ -1948,6 +1948,16 @@ async function executeAction(agent, decision, runState) {
         const embedFilename = decision.params.imageUrl.split('/').pop();
         const savedEntry = savedFiles.find(f => f.localUrl === decision.params.imageUrl || f.filename === embedFilename);
         if (savedEntry) {
+          // Check if already used in a published post
+          if (embedFilename && agentStorage.isFileUsedInPost(agent.id, embedFilename)) {
+            return { ok: false, summary: 'This image was already used in a previous post. Use a different image.' };
+          }
+          // Check if in another draft
+          const allDrafts = agentStorage.listDrafts(agent.id, { page: 1, perPage: 50 }).drafts;
+          const otherDraft = allDrafts.find(d => d.id !== draftId && (d.media || []).some(m => m.url === decision.params.imageUrl));
+          if (otherDraft) {
+            return { ok: false, summary: `This image is already in draft "${otherDraft.title}". Use a different image.` };
+          }
           inlineMedia.push({ type: 'image', url: decision.params.imageUrl, origin: 'local', caption: '', description: savedEntry.description || '' });
         }
       }
@@ -2093,6 +2103,19 @@ async function executeAction(agent, decision, runState) {
 
       if ((draft.media || []).some(m => m.url === embedUrl)) {
         return { ok: false, summary: 'This image is already attached to this draft.' };
+      }
+
+      // Check if this image was already used in a published post
+      if (embedFilename && agentStorage.isFileUsedInPost(agent.id, embedFilename)) {
+        return { ok: false, summary: 'This image was already used in a previous post. Use a different image.' };
+      }
+
+      // Check if this image is in another draft
+      const allDrafts = agentStorage.listDrafts(agent.id, { page: 1, perPage: 50 }).drafts;
+      for (const d of allDrafts) {
+        if (d.id !== draftId && (d.media || []).some(m => m.url === embedUrl)) {
+          return { ok: false, summary: `This image is already in another draft ("${d.title}"). Use a different image.` };
+        }
       }
 
       const media = [...(draft.media || []), { type: 'image', url: embedUrl, origin: 'local', caption: decision.params?.caption || '', description: savedEntry.description || '' }];

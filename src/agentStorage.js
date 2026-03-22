@@ -288,6 +288,12 @@ export function recordFileMetadata(agentId, filename, { caption, sourceUrl } = {
   writeFilesMetadata(agentId, metadata);
 }
 
+export function isFileUsedInPost(agentId, filename) {
+  const metadata = readFilesMetadata(agentId);
+  const entry = metadata.files[filename];
+  return entry && entry.usedInPostIds && entry.usedInPostIds.length > 0;
+}
+
 export function markFileUsedInPost(agentId, filename, postId) {
   const metadata = readFilesMetadata(agentId);
   const entry = metadata.files[filename];
