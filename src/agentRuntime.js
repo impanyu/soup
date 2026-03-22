@@ -1134,13 +1134,12 @@ You ARE **${impersonateTarget}**. Everything you do on this platform is from the
 ### Research priority
 1. **FIRST**: Search for the latest news about ${impersonateTarget} directly — their name, their company/org, their recent statements, interviews, controversies, product launches. Use 1-4 word queries like "${impersonateTarget}", "${impersonateTarget} news", "${impersonateTarget} latest".
 2. **THEN**: Search for topics ${impersonateTarget} cares about — their known areas of expertise and interest.
-3. **Read articles** about ${impersonateTarget} with fetch_by_url. Note key facts, quotes, positions, and communication style.
+3. **Read articles** about ${impersonateTarget} with fetch_by_url.
 
-### Build your persona with long-term memory
-- **IMPORTANT**: Use store_memory to save everything you learn about ${impersonateTarget} — their views, communication style, recent positions, key quotes, personality traits, catchphrases, areas of expertise, and how they respond to different topics.
-- Before each run, use recall_memory to review what you know about ${impersonateTarget}. Build on this knowledge over time.
-- Categories to use: "persona" for personality/style traits, "position" for their views on topics, "fact" for biographical facts, "quote" for notable things they said.
-- Over time, your memory becomes a detailed profile of ${impersonateTarget} that makes your impersonation more authentic.
+### Long-term memory
+In addition to saving interesting findings like any agent, you can also use store_memory to save personal/organizational info about ${impersonateTarget} — their views, communication style, key quotes, biographical facts, personality traits. This helps you stay in character more naturally over time.
+
+When you want to know more about who you are: first recall_memory to check what you already know. If you can not find the info you need, search external sources for it, and once you find it, store it in your long-term memory so you have it next time.
 
 ### Writing
 - Write posts from ${impersonateTarget}'s first-person perspective. React to news about yourself/your organization.
@@ -2249,6 +2248,9 @@ async function executeAction(agent, decision, runState) {
     case 'save_media': {
       const mediaUrl = decision.params?.url;
       if (!mediaUrl) return { ok: false, summary: 'url param is required.' };
+      if (agentStorage.hasMediaBeenSaved(agent.id, mediaUrl)) {
+        return { ok: false, summary: `You have already saved this media in a previous run: ${mediaUrl}. Try a different image.` };
+      }
       const description = decision.params?.description || decision.params?.caption || '';
       if (!description) return { ok: false, summary: 'description param is required — describe what this media shows and why it is useful.' };
 
@@ -2268,6 +2270,7 @@ async function executeAction(agent, decision, runState) {
           }
         }
 
+        agentStorage.recordMediaSaved(agent.id, mediaUrl);
         runState.workingSet.savedFilesThisRun.push({ filename: result.filename, localUrl, description: aiDescription || description });
 
         return {
@@ -2447,9 +2450,13 @@ async function executeAction(agent, decision, runState) {
     case 'fetch_by_url': {
       const url = decision.params?.url;
       if (!url) return { ok: false, summary: 'url is required.' };
+      if (agentStorage.hasUrlBeenFetched(agent.id, url)) {
+        return { ok: false, summary: `You have already read this article in a previous run: ${url}. Try a different article.` };
+      }
       try {
         const knownSource = getSourceByDomain(url);
         const item = await fetchByUrl(url, knownSource);
+        agentStorage.recordUrlFetched(agent.id, url);
         const result = { ok: true, summary: `Read article from ${url}`, article: item };
         if (item.images?.length > 0) {
           result.summary += ` — found ${item.images.length} image(s). Use save_media to save any you want for your post.`;

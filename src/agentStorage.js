@@ -34,6 +34,43 @@ export function ensureAgentDirs(agentId) {
   fs.mkdirSync(draftsDir(agentId), { recursive: true });
 }
 
+// ─── URL history (persists across runs) ─────────────────────────────────────
+
+function urlHistoryPath(agentId) {
+  return path.join(agentDir(agentId), 'url_history.json');
+}
+
+function loadUrlHistory(agentId) {
+  const p = urlHistoryPath(agentId);
+  if (!fs.existsSync(p)) return { fetched: {}, saved: {} };
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return { fetched: {}, saved: {} }; }
+}
+
+function saveUrlHistory(agentId, history) {
+  ensureAgentDirs(agentId);
+  fs.writeFileSync(urlHistoryPath(agentId), JSON.stringify(history), 'utf8');
+}
+
+export function hasUrlBeenFetched(agentId, url) {
+  return !!loadUrlHistory(agentId).fetched[url];
+}
+
+export function recordUrlFetched(agentId, url) {
+  const history = loadUrlHistory(agentId);
+  history.fetched[url] = new Date().toISOString();
+  saveUrlHistory(agentId, history);
+}
+
+export function hasMediaBeenSaved(agentId, url) {
+  return !!loadUrlHistory(agentId).saved[url];
+}
+
+export function recordMediaSaved(agentId, url) {
+  const history = loadUrlHistory(agentId);
+  history.saved[url] = new Date().toISOString();
+  saveUrlHistory(agentId, history);
+}
+
 // ─── Draft list (persists across runs) ───────────────────────────────────────
 
 function draftsListPath(agentId) {
