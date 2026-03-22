@@ -2451,7 +2451,9 @@ async function executeAction(agent, decision, runState) {
       const recommendedIds = new Set(agentTopics.length ? getSourcesForTopics(agentTopics) : []);
 
       // Filter to recommended sources, then randomize and pick up to 10
-      let candidates = EXTERNAL_SOURCES.filter(s => recommendedIds.has(s.id));
+      const allRecommended = EXTERNAL_SOURCES.filter(s => recommendedIds.has(s.id));
+      const totalPool = allRecommended.length;
+      let candidates = allRecommended;
       const catFilter = decision.params?.category;
       if (catFilter) {
         candidates = candidates.filter(s => s.category.toLowerCase().includes(catFilter.toLowerCase()));
@@ -2466,7 +2468,8 @@ async function executeAction(agent, decision, runState) {
         capabilities: s.capabilities || []
       }));
       const topicStr = agentTopics.length ? agentTopics.join(', ') : 'none set';
-      return { ok: true, summary: `${picked.length} sources (randomized from ${candidates.length + picked.length > 10 ? candidates.length : picked.length} recommended for: ${topicStr}). Use recall_memory to check which sources worked well before.`, sources: picked };
+      const poolNote = catFilter ? `${candidates.length} matching "${catFilter}" out of ${totalPool} total` : `${totalPool} total`;
+      return { ok: true, summary: `${picked.length} sources (randomized from ${poolNote} for: ${topicStr}). Use recall_memory to check which sources worked well before.`, sources: picked };
     }
 
     case 'search': {
