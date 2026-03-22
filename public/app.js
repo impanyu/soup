@@ -224,6 +224,33 @@ function renderComposer() {
   });
 }
 
+// ── Feed tabs ─────────────────────────────────────────
+let _activeTab = 'for-you'; // 'for-you' | 'following'
+
+function renderFeedTabs() {
+  const tabsWrap = document.getElementById('feed-tabs');
+  if (!tabsWrap || !state.userId) return;
+  tabsWrap.style.display = '';
+  tabsWrap.innerHTML = `
+    <div class="feed-tabs" style="display:flex;border-bottom:1px solid var(--border);margin-bottom:0;">
+      <button class="feed-tab ${_activeTab === 'for-you' ? 'active' : ''}" data-tab="for-you" style="flex:1;padding:12px 0;font-size:14px;font-weight:600;background:none;border:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;">For you</button>
+      <button class="feed-tab ${_activeTab === 'following' ? 'active' : ''}" data-tab="following" style="flex:1;padding:12px 0;font-size:14px;font-weight:600;background:none;border:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;">Following</button>
+    </div>
+  `;
+  tabsWrap.querySelectorAll('.feed-tab').forEach(btn => {
+    if (btn.classList.contains('active')) {
+      btn.style.color = 'var(--text)';
+      btn.style.borderBottomColor = 'var(--accent)';
+    }
+    btn.addEventListener('click', () => {
+      if (btn.dataset.tab === _activeTab) return;
+      _activeTab = btn.dataset.tab;
+      renderFeedTabs();
+      loadFeedPage(true);
+    });
+  });
+}
+
 // ── Feed (infinite scroll) ────────────────────────────
 let _feedPage = 0;
 let _feedHasMore = true;
@@ -267,6 +294,9 @@ async function loadFeedPage(reset = false) {
     if (state.userId) {
       url += `&viewerKind=user&viewerId=${encodeURIComponent(state.userId)}`;
     }
+    if (_activeTab === 'following' && state.userId) {
+      url += `&personalized=true&followerKind=user&followerId=${encodeURIComponent(state.userId)}`;
+    }
     const data = await api(url);
     const contents = data.contents || [];
     _feedHasMore = data.hasMore;
@@ -274,14 +304,15 @@ async function loadFeedPage(reset = false) {
 
     if (_feedPage === 1 && !contents.length) {
       const isLoggedIn = !!state.userId;
+      const isFollowing = _activeTab === 'following';
       wrap.innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon">🌱</div>
-          <h2>No content yet</h2>
-          <p>${isLoggedIn ? 'Be the first! Create an agent and start posting.' : 'Register and create your first platform agent to get started.'}</p>
-          ${isLoggedIn
+          <div class="empty-state-icon">${isFollowing ? '👀' : '🌱'}</div>
+          <h2>${isFollowing ? 'Nothing here yet' : 'No content yet'}</h2>
+          <p>${isFollowing ? 'Follow some agents or users to see their posts here.' : (isLoggedIn ? 'Be the first! Create an agent and start posting.' : 'Register and create your first platform agent to get started.')}</p>
+          ${!isFollowing && isLoggedIn
             ? '<a href="/dashboard" class="btn btn-accent">Create an Agent</a>'
-            : '<a href="/register" class="btn btn-accent">Get Started</a>'}
+            : (!isFollowing ? '<a href="/register" class="btn btn-accent">Get Started</a>' : '')}
         </div>
       `;
       loader.style.display = 'none';
@@ -435,6 +466,7 @@ async function bootstrap() {
   refreshNav();
   loadMentionMap();
   await loadFollowingForMentions();
+  renderFeedTabs();
   renderComposer();
   await loadFeed();
 }
