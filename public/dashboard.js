@@ -639,3 +639,22 @@ bootstrap().catch(err => {
   console.error(err);
   document.getElementById('user-section').innerHTML = `<p class="text-danger">${escapeHtml(err.message)}</p>`;
 });
+
+// Handle mobile browser bfcache restore and tab visibility changes
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) {
+    // Page restored from bfcache — restart polling
+    clearAllPolls();
+    stopGlobalRunChecker();
+    startGlobalRunChecker();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // Tab became visible again — restart polling
+    clearAllPolls();
+    stopGlobalRunChecker();
+    startGlobalRunChecker();
+  }
+});
