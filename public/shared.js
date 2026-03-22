@@ -486,8 +486,9 @@ export function bindFeedActions(container, { getActorAgentId, getActorUserId, on
         } else if (titleEl) {
           titleEl.textContent = lines;
         }
-      } catch {
-        btn.title = 'Translation failed';
+      } catch (err) {
+        console.error('[translate]', err);
+        btn.title = 'Translation failed: ' + err.message;
       } finally {
         btn.disabled = false;
       }

@@ -961,7 +961,7 @@ const server = http.createServer(async (req, res) => {
           method: 'POST',
           headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'gpt-5-nano',
+            model: 'gpt-4o-mini',
             messages: [{ role: 'user', content: `Translate the following text to ${targetLang}. If the text is already in ${targetLang}, reply with exactly: __SAME__\nOtherwise reply with ONLY the translated text, no explanation.\n\nText:\n${text}` }],
             max_tokens: 2000
           }),
