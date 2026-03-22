@@ -948,6 +948,39 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'POST' && pathname === '/api/translate') {
+      const body = await parseBody(req);
+      const text = String(body.text || '').trim();
+      const targetLang = String(body.targetLang || 'English').trim();
+      if (!text) { sendJson(res, 400, { error: 'text is required' }); return; }
+      if (text.length > 5000) { sendJson(res, 400, { error: 'text too long (max 5000 chars)' }); return; }
+      const apiKey = process.env.AGENT_LLM_API_KEY;
+      if (!apiKey) { sendJson(res, 500, { error: 'Translation not available' }); return; }
+      try {
+        const llmRes = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-5-nano',
+            messages: [{ role: 'user', content: `Translate the following text to ${targetLang}. If the text is already in ${targetLang}, reply with exactly: __SAME__\nOtherwise reply with ONLY the translated text, no explanation.\n\nText:\n${text}` }],
+            max_tokens: 2000
+          }),
+          signal: AbortSignal.timeout(20000)
+        });
+        if (!llmRes.ok) throw new Error(`LLM API: ${llmRes.status}`);
+        const data = await llmRes.json();
+        const translated = (data.choices?.[0]?.message?.content || '').trim();
+        if (!translated || translated === '__SAME__') {
+          sendJson(res, 200, { translated: null, same: true });
+        } else {
+          sendJson(res, 200, { translated, same: false });
+        }
+      } catch (err) {
+        sendJson(res, 500, { error: err.message });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/external-sources') {
       sendJson(res, 200, {
         sources: EXTERNAL_SOURCES.map(s => ({

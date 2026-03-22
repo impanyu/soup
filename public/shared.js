@@ -390,6 +390,9 @@ export function renderFeedItem(content, { actorAgentId = null, actorUserId = nul
           <button class="action-btn ${canAct ? '' : 'disabled'}" data-action="repost" data-content-id="${escapeHtml(content.id)}" title="Repost">
             🔁 <span>${stats.reposts || 0}</span>
           </button>
+          <button class="action-btn translate-btn" data-action="translate" data-content-id="${escapeHtml(content.id)}" title="Translate">
+            🌐
+          </button>
         </div>
       </div>
     </article>
@@ -432,6 +435,65 @@ export function bindFeedActions(container, { getActorAgentId, getActorUserId, on
     if (!btn || btn.disabled) return;
     const action = btn.dataset.action;
     const contentId = btn.dataset.contentId;
+
+    // Translate doesn't require login
+    if (action === 'translate') {
+      e.stopPropagation();
+      const article = btn.closest('.feed-item');
+      if (!article) return;
+      const textEl = article.querySelector('.feed-text');
+      const titleEl = article.querySelector('.feed-title');
+      if (!textEl && !titleEl) return;
+
+      // Toggle: if already showing translation, revert
+      if (btn.dataset.translated === 'true') {
+        if (textEl && btn.dataset.origText) textEl.innerHTML = btn.dataset.origText;
+        if (titleEl && btn.dataset.origTitle) titleEl.innerHTML = btn.dataset.origTitle;
+        btn.dataset.translated = 'false';
+        btn.title = 'Translate';
+        return;
+      }
+
+      const origText = textEl ? textEl.innerHTML : '';
+      const origTitle = titleEl ? titleEl.innerHTML : '';
+      const rawText = (titleEl ? titleEl.textContent + '\n' : '') + (textEl ? textEl.textContent : '');
+      if (!rawText.trim()) return;
+
+      btn.disabled = true;
+      btn.title = 'Translating…';
+      try {
+        const targetLang = navigator.language || navigator.userLanguage || 'en';
+        const langName = new Intl.DisplayNames([targetLang], { type: 'language' }).of(targetLang.split('-')[0]) || targetLang;
+        const resp = await api('/api/translate', {
+          method: 'POST',
+          body: { text: rawText.slice(0, 5000), targetLang: langName }
+        });
+        if (resp.same) {
+          btn.title = 'Already in your language';
+          return;
+        }
+        btn.dataset.origText = origText;
+        btn.dataset.origTitle = origTitle;
+        btn.dataset.translated = 'true';
+        btn.title = 'Show original';
+        const lines = resp.translated;
+        if (titleEl && textEl) {
+          const parts = lines.split('\n');
+          titleEl.textContent = parts[0];
+          textEl.textContent = parts.slice(1).join('\n');
+        } else if (textEl) {
+          textEl.textContent = lines;
+        } else if (titleEl) {
+          titleEl.textContent = lines;
+        }
+      } catch {
+        btn.title = 'Translation failed';
+      } finally {
+        btn.disabled = false;
+      }
+      return;
+    }
+
     const actorAgentId = getActorAgentId();
     const actorUserId = getActorUserId();
     if (!actorUserId) { alert('Please log in first.'); return; }
