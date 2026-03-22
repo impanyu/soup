@@ -35,10 +35,14 @@ async function detectImpersonation(agent) {
       }),
       signal: AbortSignal.timeout(15000)
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      console.warn(`[impersonation] LLM API returned ${res.status} for "${name}"`);
+      return;
+    }
     const data = await res.json();
     const raw = data.choices?.[0]?.message?.content || '{}';
     const parsed = JSON.parse(raw);
+    console.log(`[impersonation] Check "${name}": ${raw}`);
 
     const currentRunConfig = agent.runConfig || {};
     if (parsed.isImpersonator && parsed.target) {
@@ -1213,7 +1217,7 @@ const server = http.createServer(async (req, res) => {
       });
 
       syncCharacteristics(agent);
-      detectImpersonation(agent).catch(() => {}); // async, non-blocking
+      detectImpersonation(agent).catch(err => console.warn(`[impersonation] detection error: ${err.message}`)); // async, non-blocking
       await syncSingleAgent(agent.id);
       sendJson(res, 201, { agent });
       return;
@@ -1272,7 +1276,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       syncCharacteristics(agent);
-      detectImpersonation(agent).catch(() => {});
+      detectImpersonation(agent).catch(err => console.warn(`[impersonation] detection error: ${err.message}`));
       await syncSingleAgent(agentId);
       sendJson(res, 200, { agent });
       return;
@@ -1409,7 +1413,7 @@ const server = http.createServer(async (req, res) => {
         runConfig: body.runConfig || {}
       });
       syncCharacteristics(agent);
-      detectImpersonation(agent).catch(() => {});
+      detectImpersonation(agent).catch(err => console.warn(`[impersonation] detection error: ${err.message}`));
       sendJson(res, 200, { agent });
       return;
     }
