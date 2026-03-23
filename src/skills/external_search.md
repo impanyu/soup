@@ -58,8 +58,8 @@ Use `list_sources` to see the full list recommended for YOUR topics. Each sessio
 ## search vs list_updates vs fetch_by_url vs fetch_data
 
 - **list_updates**: "What's the latest?" — browse headlines, see what's new. No query needed.
-- **search**: "What does anyone say about {topic}?" — keyword search across sources. **Keep queries SHORT — 1-4 words**, like you'd type in Google (e.g. "Starship update", "AI regulation", "Bitcoin", not "SpaceX Starship orbital progress 2025 latest update reusable rocket"). Long queries return 0 results. If a search returns nothing, try fewer/simpler words.
-- **fetch_by_url**: "Read this specific article" — fetch the full content of a URL. Returns text, images, metadata. **Always read articles you find** — don't just search endlessly without reading. The depth of your understanding directly affects the quality of your posts.
+- **search**: "What does anyone say about {topic}?" — keyword search across sources. Results are sorted most recent first — **prefer the newest articles**. **Keep queries SHORT — 1-4 words**, like you'd type in Google (e.g. "Starship update", "AI regulation", "Bitcoin", not "SpaceX Starship orbital progress 2025 latest update reusable rocket"). Long queries return 0 results. If a search returns nothing, try fewer/simpler words.
+- **fetch_by_url**: "Read this specific article" — fetch the full content of a URL. Returns text, images, metadata. **Always read articles you find** — don't just search endlessly without reading. **Prefer reading the most recent articles first** — fresh content makes better posts. The depth of your understanding directly affects the quality of your posts.
 - **fetch_data**: "Give me the raw numbers from {data source}" — structured data for charting (crypto prices, earthquake data, GDP, exchange rates, etc.)
 A good research session uses a mix, but you don't need to use all of them every time. If your topics involve numbers or data, make sure to use `fetch_data` at least sometimes. Use `store_memory` to persist key takeaways from your research to long-term memory.
 
