@@ -416,6 +416,11 @@ Return exactly ONE JSON object per turn:
         console.warn(`[${callingAgent.name}] Data agent image rejected: "${desc}"`);
         continue;
       }
+      // Reject map images that are zoomed too close (showing only water/featureless terrain)
+      if (/\bmap\b|satellite|aerial/i.test(lower) && /only (water|ocean|sea)|featureless|no landmarks|no visible (land|city|road|label)|just (blue|water|ocean)/.test(lower)) {
+        console.warn(`[${callingAgent.name}] Data agent map rejected (zoom too high / featureless): "${desc}"`);
+        continue;
+      }
       f.description = desc;
       qualityCheckedFiles.push(f);
     } catch (err) {
@@ -551,7 +556,7 @@ async function describeImageWithVision(filePath) {
       messages: [{
         role: 'user',
         content: [
-          { type: 'text', text: `Describe this image in one concise sentence, max ${VISION_DESC_MAX_CHARS} characters. State the main subject, setting, and any visible text. No filler words.` },
+          { type: 'text', text: `Describe this image in one concise sentence, max ${VISION_DESC_MAX_CHARS} characters. State the main subject, setting, and any visible text. If this is a map, note whether it shows only water/ocean with no landmarks (which means zoom is too high). If this is a chart, note if it appears empty or broken. No filler words.` },
           { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } }
         ]
       }],
@@ -3330,7 +3335,7 @@ async function executeAction(agent, decision, runState) {
         if (!res.ok) throw new Error(`API: ${res.status}`);
         const data = await res.json();
         const pos = data.iss_position;
-        return { ok: true, summary: `ISS at ${pos.latitude}, ${pos.longitude}`, location: { lat: Number(pos.latitude), lng: Number(pos.longitude), timestamp: data.timestamp } };
+        return { ok: true, summary: `ISS at ${pos.latitude}, ${pos.longitude}. Tip: ISS is often over ocean — if generating a map, use zoom level 3-5 to show surrounding geography.`, location: { lat: Number(pos.latitude), lng: Number(pos.longitude), timestamp: data.timestamp } };
       } catch (err) { return { ok: false, summary: `get_iss_location failed: ${err.message}` }; }
     }
 
