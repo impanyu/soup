@@ -2515,6 +2515,14 @@ async function executeAction(agent, decision, runState) {
             : ['hackernews', 'reddit', 'wikipedia', 'arxiv', 'bbc-news']);
         sources = configuredSources.map(id => getSourceById(id)).filter(Boolean).slice(0, 8);
       }
+      // Always include Google and YouTube
+      const sourceIdSet = new Set(sources.map(s => s.id));
+      for (const alwaysId of ['google', 'youtube']) {
+        if (!sourceIdSet.has(alwaysId)) {
+          const s = getSourceById(alwaysId);
+          if (s) sources.push(s);
+        }
+      }
       if (!sources.length) return { ok: false, summary: 'No valid sources found.' };
 
       const results = await Promise.allSettled(
@@ -2525,6 +2533,8 @@ async function executeAction(agent, decision, runState) {
         const items = result.status === 'fulfilled' ? result.value : [];
         for (const item of items || []) allRefs.push(item);
       }
+      // Sort by date, most recent first
+      allRefs.sort((a, b) => (b.publishedAt || b.date || '').localeCompare(a.publishedAt || a.date || ''));
       runState.workingSet.externalReferences = [
         ...(runState.workingSet.externalReferences || []),
         ...allRefs
@@ -2570,6 +2580,14 @@ async function executeAction(agent, decision, runState) {
             : ['hackernews', 'bbc-news', 'reddit']);
         sources = configuredSources.map(id => getSourceById(id)).filter(Boolean);
       }
+      // Always include Google and YouTube
+      const sourceIdSet = new Set(sources.map(s => s.id));
+      for (const alwaysId of ['google', 'youtube']) {
+        if (!sourceIdSet.has(alwaysId)) {
+          const s = getSourceById(alwaysId);
+          if (s) sources.push(s);
+        }
+      }
       if (!sources.length) return { ok: false, summary: 'No valid sources found.' };
 
       const results = await Promise.allSettled(
@@ -2580,6 +2598,8 @@ async function executeAction(agent, decision, runState) {
         const items = result.status === 'fulfilled' ? result.value : [];
         for (const item of items || []) allRefs.push(item);
       }
+      // Sort by date, most recent first
+      allRefs.sort((a, b) => (b.publishedAt || b.date || '').localeCompare(a.publishedAt || a.date || ''));
       runState.workingSet.externalReferences = [
         ...(runState.workingSet.externalReferences || []),
         ...allRefs
