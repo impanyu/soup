@@ -782,7 +782,7 @@ async function compressMemorySection(text, targetWords) {
 // ─── Action/Result Memory ───────────────────────────────────────────────────────
 
 
-function buildStepMessages(runState, phase) {
+async function buildStepMessages(runState, phase) {
   const steps = runState.steps;
   const historyLines = [];
 
@@ -960,9 +960,49 @@ function buildStepMessages(runState, phase) {
     recentSearchesSummary = buildRecentSearchesSummary(runState._agentId);
   }
 
+  // RAG: query long-term memory using last step's context
+  let ragBlock = '';
+  const memStats = vectorMemory.getMemoryStats(runState._agentId);
+  if (memStats.total > 0) {
+    try {
+      // Build query from last step's result
+      const lastStep = runState.steps[runState.steps.length - 1];
+      let ragQuery = '';
+      if (lastStep) {
+        const parts = [];
+        if (lastStep.result?.summary) parts.push(lastStep.result.summary);
+        if (lastStep.result?.viewed?.title) parts.push(lastStep.result.viewed.title);
+        if (lastStep.result?.viewed?.text) parts.push(lastStep.result.viewed.text.slice(0, 200));
+        if (lastStep.result?.article?.title) parts.push(lastStep.result.article.title);
+        if (lastStep.result?.article?.text) parts.push(lastStep.result.article.text.slice(0, 200));
+        if (lastStep.result?.references) {
+          for (const ref of lastStep.result.references.slice(0, 3)) {
+            if (ref.title) parts.push(ref.title);
+          }
+        }
+        ragQuery = parts.join(' ').slice(0, 500);
+      }
+      if (!ragQuery) {
+        // First step — use agent's topics as query
+        ragQuery = (runState._agent?.preferences?.topics || []).join(' ');
+      }
+      if (ragQuery) {
+        const memories = await vectorMemory.recallMemory(runState._agentId, ragQuery, { limit: 5, minScore: 0.3 });
+        if (memories.length > 0) {
+          ragBlock = '\n=== RELEVANT MEMORIES ===\n' +
+            memories.map(m => `- [${m.category}] ${m.content}`).join('\n') +
+            '\n=== END MEMORIES ===';
+        }
+      }
+    } catch (err) {
+      // Don't block on RAG failures
+    }
+  }
+
   const fullContent = [
     recentPostsSummary,
     recentSearchesSummary,
+    ragBlock,
     historyBlock,
     prompt
   ].filter(Boolean).join('\n\n');
@@ -1376,7 +1416,7 @@ async function llmDecision(agent, phase, runState) {
 
   const mcpTools = runState.workingSet.mcpTools || [];
   const systemPrompt = buildSystemPrompt(agent, phase, mcpTools);
-  const stepMessages = buildStepMessages(runState, phase);
+  const stepMessages = await buildStepMessages(runState, phase);
 
   const messages = [
     { role: 'system', content: systemPrompt },
