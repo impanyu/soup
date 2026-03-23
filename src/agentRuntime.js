@@ -402,9 +402,36 @@ Return exactly ONE JSON object per turn:
     return { ok: true, summary: `Data agent completed but produced no files. ${results.map(r => r.description).filter(Boolean).join('; ') || 'No results.'}`, files: [] };
   }
 
+  // Quality-check each generated image via vision before saving
+  const qualityCheckedFiles = [];
+  for (const f of files) {
+    try {
+      const desc = await describeImageWithVision(f.diskPath);
+      if (!desc || desc.length < 10) {
+        console.warn(`[${callingAgent.name}] Data agent image rejected: vision returned empty description`);
+        continue;
+      }
+      const lower = desc.toLowerCase();
+      if (/blank|empty|no data|no content|error|broken|failed|loading|placeholder/.test(lower)) {
+        console.warn(`[${callingAgent.name}] Data agent image rejected: "${desc}"`);
+        continue;
+      }
+      f.description = desc;
+      qualityCheckedFiles.push(f);
+    } catch (err) {
+      // If vision check fails, keep the file (don't block on vision errors)
+      console.warn(`[${callingAgent.name}] Vision check failed, keeping file: ${err.message}`);
+      qualityCheckedFiles.push(f);
+    }
+  }
+
+  if (qualityCheckedFiles.length === 0) {
+    return { ok: false, summary: 'Data agent generated chart(s) but they were empty or broken. Try a different query or chart type.' };
+  }
+
   // Auto-copy files to the calling agent's storage
   const savedFiles = [];
-  for (const f of files) {
+  for (const f of qualityCheckedFiles) {
     try {
       const copied = await agentStorage.downloadToAgentStorage(callingAgent.id, f.localUrl);
       const localUrl = `/agents/${callingAgent.id}/files/${copied.filename}`;
@@ -417,7 +444,7 @@ Return exactly ONE JSON object per turn:
   }
 
   if (savedFiles.length === 0) {
-    return { ok: true, summary: `Data agent generated ${files.length} file(s) but failed to save them to your storage.`, files: [] };
+    return { ok: true, summary: `Data agent generated ${qualityCheckedFiles.length} file(s) but failed to save them to your storage.`, files: [] };
   }
 
   return {
