@@ -383,6 +383,26 @@ export async function fetchApiSource(source, query, limit = 5) {
   return normalizeResults(source, json, limit);
 }
 
+// ── Date extraction from text/URL ──
+
+function extractDateFromText(text, url) {
+  if (!text && !url) return '';
+  const combined = `${url || ''} ${text || ''}`;
+  // ISO date in URL: /2026/03/23/ or /2026-03-23
+  const urlDate = combined.match(/\/(\d{4})\/(\d{2})\/(\d{2})/);
+  if (urlDate) return `${urlDate[1]}-${urlDate[2]}-${urlDate[3]}`;
+  const urlDash = combined.match(/\/(\d{4})-(\d{2})-(\d{2})/);
+  if (urlDash) return `${urlDash[1]}-${urlDash[2]}-${urlDash[3]}`;
+  // "Mar 15, 2026" or "March 15, 2026"
+  const months = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
+  const textDate = (text || '').match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/i);
+  if (textDate) return `${textDate[3]}-${months[textDate[1].slice(0,3).toLowerCase()]}-${String(textDate[2]).padStart(2,'0')}`;
+  // "15 Mar 2026"
+  const textDate2 = (text || '').match(/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})\b/i);
+  if (textDate2) return `${textDate2[3]}-${months[textDate2[2].slice(0,3).toLowerCase()]}-${String(textDate2[1]).padStart(2,'0')}`;
+  return '';
+}
+
 // ── DuckDuckGo HTML search (used for web search + site-search) ──
 
 function parseDdgResults(html, sourceId, limit) {
@@ -404,7 +424,8 @@ function parseDdgResults(html, sourceId, limit) {
     if (uddgMatch) url = decodeURIComponent(uddgMatch[1]);
     // Skip ad links and empty titles
     if (url.startsWith('http') && !url.includes('duckduckgo.com/y.js') && title.length > 0) {
-      results.push({ source: sourceId, title, snippet: snippets[i] || '', url });
+      const publishedAt = extractDateFromText(snippets[i] || '', url);
+      results.push({ source: sourceId, title, snippet: snippets[i] || '', url, publishedAt: publishedAt || undefined });
     }
     i++;
   }
