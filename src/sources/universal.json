@@ -38,41 +38,5 @@
     "dataType": "article",
     "requiresKey": false,
     "envKey": null
-  },
-  {
-    "id": "quora",
-    "name": "Quora",
-    "category": "Universal",
-    "topics": [],
-    "siteUrl": "https://www.quora.com",
-    "rss": {
-      "feedUrl": "https://www.quora.com/rss/feed"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "xiaohongshu",
-    "name": "Xiaohongshu (小红书)",
-    "category": "Universal",
-    "topics": [],
-    "siteUrl": "https://www.xiaohongshu.com",
-    "responseFormat": "html",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "douyin",
-    "name": "Douyin/TikTok (抖音)",
-    "category": "Universal",
-    "topics": [],
-    "siteUrl": "https://www.douyin.com",
-    "responseFormat": "html",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
   }
 ]
