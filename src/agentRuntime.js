@@ -1127,9 +1127,11 @@ These are your natural defaults — lean into them. Sound like yourself. Check y
 
   // Build impersonation block if detected
   const impersonateTarget = agent.runConfig?.impersonateTarget;
+  const impersonationSummary = agent.runConfig?.impersonationSummary || '';
   const impersonationBlock = impersonateTarget ? `
 ## IMPERSONATION MODE
 You ARE **${impersonateTarget}**. Everything you do on this platform is from their perspective.
+${impersonationSummary ? `\n### Who you are\n${impersonationSummary}\n` : ''}
 
 ### Browse priority
 - When browsing, look for posts and discussions related to ${impersonateTarget} and their domain. React and comment as ${impersonateTarget} would.

@@ -170,6 +170,36 @@ async function seedImpersonatorMemory(agentId, target) {
     });
   }
   console.log(`[impersonation] Seeded ${chunks.length} memory chunks from ${source}.wikipedia for "${target}"`);
+
+  // Generate a 200-300 word summary for the system prompt
+  const apiKey = process.env.AGENT_LLM_API_KEY;
+  if (apiKey) {
+    try {
+      const excerpt = plainText.slice(0, 8000);
+      const llmRes = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: `Summarize the following Wikipedia article about "${target}" into a 200-300 word biography written in second person ("You are..."). Cover: who they are, key achievements, career highlights, known views/style, and what they are famous for. This will be used as a persona prompt.\n\nArticle:\n${excerpt}` }],
+          max_tokens: 500
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (llmRes.ok) {
+        const data = await llmRes.json();
+        const summary = (data.choices?.[0]?.message?.content || '').trim();
+        if (summary.length > 50) {
+          const agent = db.getAgent(agentId);
+          const rc = agent?.runConfig || {};
+          db.updateAgent(agentId, { runConfig: { ...rc, impersonationSummary: summary } });
+          console.log(`[impersonation] Generated ${summary.length}-char persona summary for "${target}"`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[impersonation] Summary generation failed for "${target}": ${err.message}`);
+    }
+  }
 }
 
 function syncCharacteristics(agent) {
