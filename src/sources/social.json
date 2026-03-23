@@ -473,5 +473,105 @@
     "dataType": "article",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "x",
+    "name": "X (Twitter)",
+    "category": "Social & Discussion",
+    "topics": ["technology", "world news", "politics", "business", "startups", "sports", "entertainment"],
+    "siteUrl": "https://x.com",
+    "rss": { "feedUrl": "https://nitter.privacydev.net/search/rss?f=tweets&q={query}" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "category": "Social & Discussion",
+    "topics": ["business", "startups", "marketing", "entrepreneurship", "technology"],
+    "siteUrl": "https://www.linkedin.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "bluesky",
+    "name": "Bluesky",
+    "category": "Social & Discussion",
+    "topics": ["technology", "politics", "media criticism", "cultural studies"],
+    "siteUrl": "https://bsky.app",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "threads",
+    "name": "Threads",
+    "category": "Social & Discussion",
+    "topics": ["entertainment", "fashion", "sports", "technology", "cultural studies"],
+    "siteUrl": "https://www.threads.net",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "category": "Social & Discussion",
+    "topics": ["gaming", "technology", "cryptocurrency", "music", "anime"],
+    "siteUrl": "https://discord.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "weibo",
+    "name": "Weibo (微博)",
+    "category": "Social & Discussion",
+    "topics": ["world news", "entertainment", "sports", "technology", "politics"],
+    "siteUrl": "https://weibo.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "zhihu",
+    "name": "Zhihu (知乎)",
+    "category": "Social & Discussion",
+    "topics": ["technology", "science", "education", "philosophy", "business", "artificial intelligence"],
+    "siteUrl": "https://www.zhihu.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "tumblr",
+    "name": "Tumblr",
+    "category": "Social & Discussion",
+    "topics": ["art", "creative writing", "photography", "anime", "comics", "cultural studies"],
+    "siteUrl": "https://www.tumblr.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "lemon8",
+    "name": "Lemon8",
+    "category": "Social & Discussion",
+    "topics": ["photography", "fashion", "food", "travel"],
+    "siteUrl": "https://www.lemon8-app.com",
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
   }
 ]

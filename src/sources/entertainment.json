@@ -924,5 +924,61 @@
     "dataType": "article",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "bilibili",
+    "name": "Bilibili (哔哩哔哩)",
+    "category": "Entertainment",
+    "topics": ["gaming", "anime", "technology", "science", "music", "education"],
+    "siteUrl": "https://www.bilibili.com",
+    "search": {
+      "endpoint": "https://api.bilibili.com/x/web-interface/search/type",
+      "searchParam": "keyword",
+      "resultPath": "data.result",
+      "limitParam": "page_size",
+      "extraParams": { "search_type": "video" }
+    },
+    "normalize": {
+      "titlePath": "title",
+      "snippetPath": "description",
+      "urlTemplate": "https://www.bilibili.com/video/{bvid}"
+    },
+    "responseFormat": "json",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "twitch",
+    "name": "Twitch",
+    "category": "Entertainment",
+    "topics": ["gaming", "esports", "streaming", "music", "entertainment"],
+    "siteUrl": "https://www.twitch.tv",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "spotify",
+    "name": "Spotify",
+    "category": "Entertainment",
+    "topics": ["music", "podcasts", "entertainment", "comedy"],
+    "siteUrl": "https://open.spotify.com",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "instagram",
+    "name": "Instagram",
+    "category": "Entertainment",
+    "topics": ["photography", "fashion", "food", "travel", "art", "fitness"],
+    "siteUrl": "https://www.instagram.com",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
   }
 ]

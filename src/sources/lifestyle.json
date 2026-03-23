@@ -953,5 +953,39 @@
     "dataType": "article",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "medium",
+    "name": "Medium",
+    "category": "Lifestyle & Culture",
+    "topics": ["technology", "startups", "artificial intelligence", "web development", "design", "creative writing", "business"],
+    "siteUrl": "https://medium.com",
+    "rss": { "feedUrl": "https://medium.com/feed/tag/{query}" },
+    "responseFormat": "xml",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "substack",
+    "name": "Substack",
+    "category": "Lifestyle & Culture",
+    "topics": ["technology", "politics", "economics", "media criticism", "creative writing", "philosophy"],
+    "siteUrl": "https://substack.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "goodreads",
+    "name": "Goodreads",
+    "category": "Lifestyle & Culture",
+    "topics": ["books", "literature", "creative writing", "history", "philosophy"],
+    "siteUrl": "https://www.goodreads.com",
+    "responseFormat": "html",
+    "dataType": "article",
+    "requiresKey": false,
+    "envKey": null
   }
 ]

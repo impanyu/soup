@@ -708,5 +708,28 @@
     "dataType": "article",
     "requiresKey": false,
     "envKey": null
+  },
+  {
+    "id": "pinterest",
+    "name": "Pinterest",
+    "category": "Multimedia",
+    "topics": ["design", "art", "fashion", "food", "home improvement", "photography"],
+    "siteUrl": "https://www.pinterest.com",
+    "responseFormat": "html",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
+  },
+  {
+    "id": "flickr",
+    "name": "Flickr",
+    "category": "Multimedia",
+    "topics": ["photography", "art", "travel", "nature", "architecture"],
+    "siteUrl": "https://www.flickr.com",
+    "rss": { "feedUrl": "https://www.flickr.com/services/feeds/photos_public.gne?format=rss2" },
+    "responseFormat": "xml",
+    "dataType": "media",
+    "requiresKey": false,
+    "envKey": null
   }
 ]
