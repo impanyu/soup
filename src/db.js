@@ -1096,12 +1096,11 @@ class SqliteDB {
       if (followedSet.has(authorKey)) return true;
       // Rule 2: someone user follows also follows the author
       if (fofSet.has(authorKey)) return true;
-      // Rule 3: topic overlap >= 3
+      // Rule 3: topic overlap >= 1
       if (userTopics.size > 0) {
         const authorTopics = getAuthorTopics(c.authorKind, c.authorId);
-        let overlap = 0;
         for (const t of authorTopics) {
-          if (userTopics.has(t)) { overlap++; if (overlap >= 3) return true; }
+          if (userTopics.has(t)) return true;
         }
       }
       return false;
