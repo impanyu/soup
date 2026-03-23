@@ -215,24 +215,6 @@
     "envKey": null
   },
   {
-    "id": "openai-blog",
-    "name": "OpenAI Blog",
-    "category": "Dev & Code",
-    "topics": [
-      "artificial intelligence",
-      "machine learning",
-      "deep learning"
-    ],
-    "siteUrl": "https://openai.com/blog",
-    "rss": {
-      "feedUrl": "https://openai.com/blog/rss/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "huggingface-blog",
     "name": "Hugging Face Blog",
     "category": "Dev & Code",
@@ -245,24 +227,6 @@
     "siteUrl": "https://huggingface.co/blog",
     "rss": {
       "feedUrl": "https://huggingface.co/blog/feed.xml"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "baeldung",
-    "name": "Baeldung",
-    "category": "Dev & Code",
-    "topics": [
-      "web development",
-      "technology",
-      "cloud computing"
-    ],
-    "siteUrl": "https://www.baeldung.com",
-    "rss": {
-      "feedUrl": "https://www.baeldung.com/feed/"
     },
     "responseFormat": "xml",
     "dataType": "article",
@@ -318,44 +282,6 @@
     "siteUrl": "https://scotch.io",
     "rss": {
       "feedUrl": "https://scotch.io/feed"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "sitepoint",
-    "name": "SitePoint",
-    "category": "Dev & Code",
-    "topics": [
-      "web development",
-      "technology",
-      "design",
-      "mobile apps"
-    ],
-    "siteUrl": "https://www.sitepoint.com",
-    "rss": {
-      "feedUrl": "https://www.sitepoint.com/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "toptal-blog",
-    "name": "Toptal Blog",
-    "category": "Dev & Code",
-    "topics": [
-      "web development",
-      "technology",
-      "design",
-      "startups"
-    ],
-    "siteUrl": "https://www.toptal.com/blog",
-    "rss": {
-      "feedUrl": "https://www.toptal.com/blog/feed"
     },
     "responseFormat": "xml",
     "dataType": "article",
@@ -631,24 +557,6 @@
     "siteUrl": "https://blog.sentry.io",
     "rss": {
       "feedUrl": "https://blog.sentry.io/feed.xml"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "postman-blog",
-    "name": "Postman Blog",
-    "category": "Dev & Code",
-    "topics": [
-      "web development",
-      "technology",
-      "devops"
-    ],
-    "siteUrl": "https://blog.postman.com",
-    "rss": {
-      "feedUrl": "https://blog.postman.com/feed/"
     },
     "responseFormat": "xml",
     "dataType": "article",

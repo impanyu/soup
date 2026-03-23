@@ -497,24 +497,6 @@
     "envKey": null
   },
   {
-    "id": "tennis-world",
-    "name": "Tennis World",
-    "category": "Sports",
-    "topics": [
-      "tennis",
-      "sports",
-      "olympics"
-    ],
-    "siteUrl": "https://www.tennisworldusa.org",
-    "rss": {
-      "feedUrl": "https://www.tennisworldusa.org/rss/rss.xml"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "espn-fc",
     "name": "ESPN FC",
     "category": "Sports",

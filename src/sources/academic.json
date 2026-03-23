@@ -252,25 +252,6 @@
     "envKey": null
   },
   {
-    "id": "stanford-news",
-    "name": "Stanford News",
-    "category": "Academic & Research",
-    "topics": [
-      "technology",
-      "science",
-      "education",
-      "artificial intelligence"
-    ],
-    "siteUrl": "https://news.stanford.edu",
-    "rss": {
-      "feedUrl": "https://news.stanford.edu/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "phd-comics",
     "name": "PhD Comics",
     "category": "Academic & Research",
@@ -340,38 +321,6 @@
     "rss": {
       "feedUrl": "https://philpapers.org/recent.rss"
     },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "ssrn",
-    "name": "SSRN",
-    "category": "Academic & Research",
-    "topics": [
-      "economics",
-      "law",
-      "finance",
-      "sociology"
-    ],
-    "siteUrl": "https://www.ssrn.com",
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "researchgate",
-    "name": "ResearchGate",
-    "category": "Academic & Research",
-    "topics": [
-      "science",
-      "biology",
-      "education",
-      "mathematics"
-    ],
-    "siteUrl": "https://www.researchgate.net",
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -565,25 +514,6 @@
     "envKey": null
   },
   {
-    "id": "oecd",
-    "name": "OECD",
-    "category": "Academic & Research",
-    "topics": [
-      "economics",
-      "education",
-      "environment",
-      "politics"
-    ],
-    "siteUrl": "https://www.oecd.org",
-    "rss": {
-      "feedUrl": "https://www.oecd.org/newsroom/index.xml"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "imf-blog",
     "name": "IMF Blog",
     "category": "Academic & Research",
@@ -755,25 +685,6 @@
     "envKey": null
   },
   {
-    "id": "europeana-blog",
-    "name": "Europeana Blog",
-    "category": "Academic & Research",
-    "topics": [
-      "history",
-      "cultural studies",
-      "art",
-      "education"
-    ],
-    "siteUrl": "https://www.europeana.eu/en/blog",
-    "rss": {
-      "feedUrl": "https://www.europeana.eu/en/blog/rss"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "khan-academy-blog",
     "name": "Khan Academy Blog",
     "category": "Academic & Research",
@@ -805,25 +716,6 @@
     "siteUrl": "https://blog.coursera.org",
     "rss": {
       "feedUrl": "https://blog.coursera.org/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "edx-blog",
-    "name": "edX Blog",
-    "category": "Academic & Research",
-    "topics": [
-      "education",
-      "technology",
-      "science",
-      "artificial intelligence"
-    ],
-    "siteUrl": "https://www.edx.org/blog",
-    "rss": {
-      "feedUrl": "https://www.edx.org/blog/feed"
     },
     "responseFormat": "xml",
     "dataType": "article",

@@ -636,21 +636,6 @@
     "envKey": null
   },
   {
-    "id": "bun-blog",
-    "name": "Bun Blog",
-    "category": "Tech & Dev",
-    "topics": [
-      "web development",
-      "technology",
-      "devops"
-    ],
-    "siteUrl": "https://bun.sh/blog",
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "deno-blog",
     "name": "Deno Blog",
     "category": "Tech & Dev",
@@ -691,21 +676,6 @@
       "technology"
     ],
     "siteUrl": "https://turbo.build/blog",
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "playwright-blog",
-    "name": "Playwright Blog",
-    "category": "Tech & Dev",
-    "topics": [
-      "web development",
-      "technology",
-      "devops"
-    ],
-    "siteUrl": "https://playwright.dev/blog",
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

@@ -1,24 +1,5 @@
 [
   {
-    "id": "medlineplus",
-    "name": "MedlinePlus",
-    "category": "Health & Wellness",
-    "topics": [
-      "health",
-      "nutrition",
-      "fitness",
-      "mental health"
-    ],
-    "siteUrl": "https://medlineplus.gov",
-    "rss": {
-      "feedUrl": "https://medlineplus.gov/feeds/topic.xml"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "who-news",
     "name": "WHO News",
     "category": "Health & Wellness",
@@ -238,30 +219,6 @@
     "envKey": null
   },
   {
-    "id": "johns-hopkins-health",
-    "name": "Johns Hopkins Health",
-    "category": "Health & Wellness",
-    "topics": [
-      "health",
-      "medical research",
-      "public health",
-      "science",
-      "cancer",
-      "diabetes",
-      "cardiology",
-      "rare diseases",
-      "immunology"
-    ],
-    "siteUrl": "https://www.hopkinsmedicine.org",
-    "rss": {
-      "feedUrl": "https://www.hopkinsmedicine.org/news/media/releases/rss"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "mount-sinai-blog",
     "name": "Mount Sinai Blog",
     "category": "Health & Wellness",
@@ -325,25 +282,6 @@
     "siteUrl": "https://www.medicalnewstoday.com",
     "rss": {
       "feedUrl": "https://rss.medicalnewstoday.com/featurednews.xml"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "verywell-health",
-    "name": "Verywell Health",
-    "category": "Health & Wellness",
-    "topics": [
-      "health",
-      "mental health",
-      "fitness",
-      "nutrition"
-    ],
-    "siteUrl": "https://www.verywellhealth.com",
-    "rss": {
-      "feedUrl": "https://www.verywellhealth.com/rss"
     },
     "responseFormat": "xml",
     "dataType": "article",
@@ -428,25 +366,6 @@
     "envKey": null
   },
   {
-    "id": "shape-magazine",
-    "name": "Shape Magazine",
-    "category": "Health & Wellness",
-    "topics": [
-      "fitness",
-      "health",
-      "nutrition",
-      "yoga"
-    ],
-    "siteUrl": "https://www.shape.com",
-    "rss": {
-      "feedUrl": "https://www.shape.com/rss"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "bicycling",
     "name": "Bicycling",
     "category": "Health & Wellness",
@@ -497,25 +416,6 @@
     "siteUrl": "https://www.healthshots.com",
     "rss": {
       "feedUrl": "https://www.healthshots.com/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "goodrx-health",
-    "name": "GoodRx Health",
-    "category": "Health & Wellness",
-    "topics": [
-      "health",
-      "public health",
-      "medical research",
-      "nutrition"
-    ],
-    "siteUrl": "https://www.goodrx.com/health-topic",
-    "rss": {
-      "feedUrl": "https://www.goodrx.com/blog/feed/"
     },
     "responseFormat": "xml",
     "dataType": "article",
@@ -700,28 +600,6 @@
     "siteUrl": "https://www.cdc.gov",
     "rss": {
       "feedUrl": "https://tools.cdc.gov/api/v2/resources/media/rss"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "verywell-mind",
-    "name": "Verywell Mind",
-    "category": "Health & Wellness",
-    "topics": [
-      "mental health",
-      "meditation",
-      "neuroscience",
-      "health",
-      "psychology",
-      "mindfulness",
-      "self improvement"
-    ],
-    "siteUrl": "https://www.verywellmind.com",
-    "rss": {
-      "feedUrl": "https://www.verywellmind.com/rss"
     },
     "responseFormat": "xml",
     "dataType": "article",

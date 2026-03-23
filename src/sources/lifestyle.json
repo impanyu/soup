@@ -150,27 +150,6 @@
     "envKey": null
   },
   {
-    "id": "treehugger",
-    "name": "Treehugger",
-    "category": "Lifestyle",
-    "topics": [
-      "sustainability",
-      "environment",
-      "gardening",
-      "renewable energy",
-      "electric vehicles",
-      "carbon capture"
-    ],
-    "siteUrl": "https://www.treehugger.com",
-    "rss": {
-      "feedUrl": "https://www.treehugger.com/feeds/all"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "bon-appetit",
     "name": "Bon Appétit",
     "category": "Lifestyle",
@@ -298,28 +277,6 @@
     "envKey": null
   },
   {
-    "id": "serious-eats",
-    "name": "Serious Eats",
-    "category": "Lifestyle",
-    "topics": [
-      "food",
-      "cooking",
-      "nutrition",
-      "fermentation",
-      "barbecue",
-      "tea",
-      "coffee"
-    ],
-    "siteUrl": "https://www.seriouseats.com",
-    "rss": {
-      "feedUrl": "https://www.seriouseats.com/feed"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "architectural-digest",
     "name": "Architectural Digest",
     "category": "Lifestyle",
@@ -378,44 +335,6 @@
     "envKey": null
   },
   {
-    "id": "the-spruce",
-    "name": "The Spruce",
-    "category": "Lifestyle",
-    "topics": [
-      "home improvement",
-      "gardening",
-      "cooking",
-      "pets"
-    ],
-    "siteUrl": "https://www.thespruce.com",
-    "rss": {
-      "feedUrl": "https://www.thespruce.com/feed"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "better-homes-gardens",
-    "name": "Better Homes and Gardens",
-    "category": "Lifestyle",
-    "topics": [
-      "home improvement",
-      "gardening",
-      "cooking",
-      "design"
-    ],
-    "siteUrl": "https://www.bhg.com",
-    "rss": {
-      "feedUrl": "https://www.bhg.com/rss/all.rss/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "hgtv",
     "name": "HGTV",
     "category": "Lifestyle",
@@ -450,26 +369,6 @@
     "siteUrl": "https://www.eater.com",
     "rss": {
       "feedUrl": "https://www.eater.com/rss/index.xml"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "food52",
-    "name": "Food52",
-    "category": "Lifestyle",
-    "topics": [
-      "food",
-      "cooking",
-      "home improvement",
-      "baking",
-      "vegan"
-    ],
-    "siteUrl": "https://food52.com",
-    "rss": {
-      "feedUrl": "https://food52.com/blog/feed"
     },
     "responseFormat": "xml",
     "dataType": "article",
@@ -534,26 +433,6 @@
     "siteUrl": "https://www.cntraveler.com",
     "rss": {
       "feedUrl": "https://www.cntraveler.com/feed/rss"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "travel-leisure",
-    "name": "Travel + Leisure",
-    "category": "Lifestyle",
-    "topics": [
-      "travel",
-      "food",
-      "photography",
-      "city life",
-      "citywalk"
-    ],
-    "siteUrl": "https://www.travelandleisure.com",
-    "rss": {
-      "feedUrl": "https://www.travelandleisure.com/feed/"
     },
     "responseFormat": "xml",
     "dataType": "article",
@@ -796,46 +675,6 @@
     "envKey": null
   },
   {
-    "id": "martha-stewart",
-    "name": "Martha Stewart",
-    "category": "Lifestyle",
-    "topics": [
-      "cooking",
-      "gardening",
-      "home improvement",
-      "food",
-      "baking"
-    ],
-    "siteUrl": "https://www.marthastewart.com",
-    "rss": {
-      "feedUrl": "https://www.marthastewart.com/rss/all.rss/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "real-simple",
-    "name": "Real Simple",
-    "category": "Lifestyle",
-    "topics": [
-      "home improvement",
-      "food",
-      "health",
-      "fashion",
-      "minimalism"
-    ],
-    "siteUrl": "https://www.realsimple.com",
-    "rss": {
-      "feedUrl": "https://www.realsimple.com/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "inhabitat",
     "name": "Inhabitat",
     "category": "Lifestyle",
@@ -936,31 +775,22 @@
     "envKey": null
   },
   {
-    "id": "mydomaine",
-    "name": "MyDomaine",
-    "category": "Lifestyle",
-    "topics": [
-      "home improvement",
-      "design",
-      "fashion",
-      "gardening"
-    ],
-    "siteUrl": "https://www.mydomaine.com",
-    "rss": {
-      "feedUrl": "https://www.mydomaine.com/feed"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "medium",
     "name": "Medium",
     "category": "Lifestyle & Culture",
-    "topics": ["technology", "startups", "artificial intelligence", "web development", "design", "creative writing", "business"],
+    "topics": [
+      "technology",
+      "startups",
+      "artificial intelligence",
+      "web development",
+      "design",
+      "creative writing",
+      "business"
+    ],
     "siteUrl": "https://medium.com",
-    "rss": { "feedUrl": "https://medium.com/feed/tag/{query}" },
+    "rss": {
+      "feedUrl": "https://medium.com/feed/tag/{query}"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -970,7 +800,14 @@
     "id": "substack",
     "name": "Substack",
     "category": "Lifestyle & Culture",
-    "topics": ["technology", "politics", "economics", "media criticism", "creative writing", "philosophy"],
+    "topics": [
+      "technology",
+      "politics",
+      "economics",
+      "media criticism",
+      "creative writing",
+      "philosophy"
+    ],
     "siteUrl": "https://substack.com",
     "responseFormat": "html",
     "dataType": "article",
@@ -981,7 +818,13 @@
     "id": "goodreads",
     "name": "Goodreads",
     "category": "Lifestyle & Culture",
-    "topics": ["books", "literature", "creative writing", "history", "philosophy"],
+    "topics": [
+      "books",
+      "literature",
+      "creative writing",
+      "history",
+      "philosophy"
+    ],
     "siteUrl": "https://www.goodreads.com",
     "responseFormat": "html",
     "dataType": "article",

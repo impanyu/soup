@@ -447,44 +447,6 @@
     "envKey": null
   },
   {
-    "id": "artstation-magazine",
-    "name": "ArtStation Magazine",
-    "category": "Multimedia",
-    "topics": [
-      "art",
-      "design",
-      "animation",
-      "game development"
-    ],
-    "siteUrl": "https://magazine.artstation.com",
-    "rss": {
-      "feedUrl": "https://magazine.artstation.com/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "media",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "cgsociety",
-    "name": "CGSociety",
-    "category": "Multimedia",
-    "topics": [
-      "animation",
-      "art",
-      "design",
-      "film"
-    ],
-    "siteUrl": "https://cgsociety.org",
-    "rss": {
-      "feedUrl": "https://cgsociety.org/news/rss"
-    },
-    "responseFormat": "xml",
-    "dataType": "media",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "blendernation",
     "name": "BlenderNation",
     "category": "Multimedia",
@@ -713,7 +675,14 @@
     "id": "pinterest",
     "name": "Pinterest",
     "category": "Multimedia",
-    "topics": ["design", "art", "fashion", "food", "home improvement", "photography"],
+    "topics": [
+      "design",
+      "art",
+      "fashion",
+      "food",
+      "home improvement",
+      "photography"
+    ],
     "siteUrl": "https://www.pinterest.com",
     "responseFormat": "html",
     "dataType": "media",
@@ -724,9 +693,17 @@
     "id": "flickr",
     "name": "Flickr",
     "category": "Multimedia",
-    "topics": ["photography", "art", "travel", "nature", "architecture"],
+    "topics": [
+      "photography",
+      "art",
+      "travel",
+      "nature",
+      "architecture"
+    ],
     "siteUrl": "https://www.flickr.com",
-    "rss": { "feedUrl": "https://www.flickr.com/services/feeds/photos_public.gne?format=rss2" },
+    "rss": {
+      "feedUrl": "https://www.flickr.com/services/feeds/photos_public.gne?format=rss2"
+    },
     "responseFormat": "xml",
     "dataType": "media",
     "requiresKey": false,

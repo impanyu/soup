@@ -535,24 +535,6 @@
     "envKey": null
   },
   {
-    "id": "spin-magazine",
-    "name": "Spin Magazine",
-    "category": "Entertainment",
-    "topics": [
-      "music",
-      "cultural studies",
-      "art"
-    ],
-    "siteUrl": "https://www.spin.com",
-    "rss": {
-      "feedUrl": "https://www.spin.com/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "vulture",
     "name": "Vulture",
     "category": "Entertainment",
@@ -671,25 +653,6 @@
     "envKey": null
   },
   {
-    "id": "crunchyroll-news",
-    "name": "Crunchyroll News",
-    "category": "Entertainment",
-    "topics": [
-      "anime",
-      "comics",
-      "streaming",
-      "cultural studies"
-    ],
-    "siteUrl": "https://www.crunchyroll.com/news",
-    "rss": {
-      "feedUrl": "https://www.crunchyroll.com/newsrss"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "myanimelist-news",
     "name": "MyAnimeList News",
     "category": "Entertainment",
@@ -785,28 +748,6 @@
     "envKey": null
   },
   {
-    "id": "entertainment-weekly",
-    "name": "Entertainment Weekly",
-    "category": "Entertainment",
-    "topics": [
-      "film",
-      "movie",
-      "cinema",
-      "tv shows",
-      "music",
-      "streaming",
-      "books"
-    ],
-    "siteUrl": "https://ew.com",
-    "rss": {
-      "feedUrl": "https://ew.com/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "slashfilm",
     "name": "SlashFilm",
     "category": "Entertainment",
@@ -888,25 +829,6 @@
     "envKey": null
   },
   {
-    "id": "giant-bomb",
-    "name": "Giant Bomb",
-    "category": "Entertainment",
-    "topics": [
-      "gaming",
-      "esports",
-      "streaming",
-      "podcasts"
-    ],
-    "siteUrl": "https://www.giantbomb.com",
-    "rss": {
-      "feedUrl": "https://www.giantbomb.com/feeds/mashup/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "dualshockers",
     "name": "DualShockers",
     "category": "Entertainment",
@@ -929,14 +851,23 @@
     "id": "bilibili",
     "name": "Bilibili (哔哩哔哩)",
     "category": "Entertainment",
-    "topics": ["gaming", "anime", "technology", "science", "music", "education"],
+    "topics": [
+      "gaming",
+      "anime",
+      "technology",
+      "science",
+      "music",
+      "education"
+    ],
     "siteUrl": "https://www.bilibili.com",
     "search": {
       "endpoint": "https://api.bilibili.com/x/web-interface/search/type",
       "searchParam": "keyword",
       "resultPath": "data.result",
       "limitParam": "page_size",
-      "extraParams": { "search_type": "video" }
+      "extraParams": {
+        "search_type": "video"
+      }
     },
     "normalize": {
       "titlePath": "title",
@@ -952,7 +883,13 @@
     "id": "twitch",
     "name": "Twitch",
     "category": "Entertainment",
-    "topics": ["gaming", "esports", "streaming", "music", "entertainment"],
+    "topics": [
+      "gaming",
+      "esports",
+      "streaming",
+      "music",
+      "entertainment"
+    ],
     "siteUrl": "https://www.twitch.tv",
     "responseFormat": "html",
     "dataType": "media",
@@ -963,7 +900,12 @@
     "id": "spotify",
     "name": "Spotify",
     "category": "Entertainment",
-    "topics": ["music", "podcasts", "entertainment", "comedy"],
+    "topics": [
+      "music",
+      "podcasts",
+      "entertainment",
+      "comedy"
+    ],
     "siteUrl": "https://open.spotify.com",
     "responseFormat": "html",
     "dataType": "media",
@@ -974,7 +916,14 @@
     "id": "instagram",
     "name": "Instagram",
     "category": "Entertainment",
-    "topics": ["photography", "fashion", "food", "travel", "art", "fitness"],
+    "topics": [
+      "photography",
+      "fashion",
+      "food",
+      "travel",
+      "art",
+      "fitness"
+    ],
     "siteUrl": "https://www.instagram.com",
     "responseFormat": "html",
     "dataType": "media",

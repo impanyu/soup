@@ -3,7 +3,12 @@
     "id": "coincap",
     "name": "CoinCap",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance",
+      "investing"
+    ],
     "siteUrl": "https://coincap.io",
     "search": {
       "endpoint": "https://api.coincap.io/v2/assets",
@@ -25,9 +30,16 @@
     "id": "yahoo-finance",
     "name": "Yahoo Finance",
     "category": "Finance & Crypto",
-    "topics": ["finance", "investing", "business", "economics"],
+    "topics": [
+      "finance",
+      "investing",
+      "business",
+      "economics"
+    ],
     "siteUrl": "https://finance.yahoo.com",
-    "rss": { "feedUrl": "https://finance.yahoo.com/news/rssindex" },
+    "rss": {
+      "feedUrl": "https://finance.yahoo.com/news/rssindex"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -37,9 +49,16 @@
     "id": "marketwatch",
     "name": "MarketWatch",
     "category": "Finance & Crypto",
-    "topics": ["finance", "investing", "economics", "business"],
+    "topics": [
+      "finance",
+      "investing",
+      "economics",
+      "business"
+    ],
     "siteUrl": "https://www.marketwatch.com",
-    "rss": { "feedUrl": "https://feeds.marketwatch.com/marketwatch/topstories/" },
+    "rss": {
+      "feedUrl": "https://feeds.marketwatch.com/marketwatch/topstories/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -49,9 +68,15 @@
     "id": "coindesk",
     "name": "CoinDesk",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance"
+    ],
     "siteUrl": "https://www.coindesk.com",
-    "rss": { "feedUrl": "https://www.coindesk.com/arc/outboundfeeds/rss/" },
+    "rss": {
+      "feedUrl": "https://www.coindesk.com/arc/outboundfeeds/rss/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -61,9 +86,16 @@
     "id": "financial-times",
     "name": "Financial Times",
     "category": "Finance & Crypto",
-    "topics": ["finance", "business", "economics", "world news"],
+    "topics": [
+      "finance",
+      "business",
+      "economics",
+      "world news"
+    ],
     "siteUrl": "https://www.ft.com",
-    "rss": { "feedUrl": "https://www.ft.com/?format=rss" },
+    "rss": {
+      "feedUrl": "https://www.ft.com/?format=rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -73,7 +105,12 @@
     "id": "coingecko",
     "name": "CoinGecko",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance",
+      "investing"
+    ],
     "siteUrl": "https://www.coingecko.com",
     "search": {
       "endpoint": "https://api.coingecko.com/api/v3/search",
@@ -95,21 +132,16 @@
     "id": "seeking-alpha",
     "name": "Seeking Alpha",
     "category": "Finance & Crypto",
-    "topics": ["investing", "stock market", "finance", "personal finance"],
+    "topics": [
+      "investing",
+      "stock market",
+      "finance",
+      "personal finance"
+    ],
     "siteUrl": "https://seekingalpha.com",
-    "rss": { "feedUrl": "https://seekingalpha.com/market_currents.xml" },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "investopedia",
-    "name": "Investopedia",
-    "category": "Finance & Crypto",
-    "topics": ["personal finance", "investing", "stock market", "economics"],
-    "siteUrl": "https://www.investopedia.com",
-    "rss": { "feedUrl": "https://www.investopedia.com/feedbuilder/feed/getfeed?feedName=rss_headline" },
+    "rss": {
+      "feedUrl": "https://seekingalpha.com/market_currents.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -119,9 +151,16 @@
     "id": "bloomberg-markets",
     "name": "Bloomberg Markets",
     "category": "Finance & Crypto",
-    "topics": ["finance", "investing", "economics", "business"],
+    "topics": [
+      "finance",
+      "investing",
+      "economics",
+      "business"
+    ],
     "siteUrl": "https://www.bloomberg.com",
-    "rss": { "feedUrl": "https://feeds.bloomberg.com/markets/news.rss" },
+    "rss": {
+      "feedUrl": "https://feeds.bloomberg.com/markets/news.rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -131,9 +170,15 @@
     "id": "cointelegraph",
     "name": "Cointelegraph",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance"
+    ],
     "siteUrl": "https://cointelegraph.com",
-    "rss": { "feedUrl": "https://cointelegraph.com/rss" },
+    "rss": {
+      "feedUrl": "https://cointelegraph.com/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -143,9 +188,16 @@
     "id": "motley-fool",
     "name": "Motley Fool",
     "category": "Finance & Crypto",
-    "topics": ["investing", "stock market", "personal finance", "business"],
+    "topics": [
+      "investing",
+      "stock market",
+      "personal finance",
+      "business"
+    ],
     "siteUrl": "https://www.fool.com",
-    "rss": { "feedUrl": "https://www.fool.com/feeds/index.aspx" },
+    "rss": {
+      "feedUrl": "https://www.fool.com/feeds/index.aspx"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -155,13 +207,20 @@
     "id": "alpha-vantage",
     "name": "Alpha Vantage",
     "category": "Finance & Crypto",
-    "topics": ["stock market", "finance", "investing", "data science"],
+    "topics": [
+      "stock market",
+      "finance",
+      "investing",
+      "data science"
+    ],
     "siteUrl": "https://www.alphavantage.co",
     "search": {
       "endpoint": "https://www.alphavantage.co/query",
       "searchParam": "keywords",
       "resultPath": "bestMatches",
-      "extraParams": { "function": "SYMBOL_SEARCH" }
+      "extraParams": {
+        "function": "SYMBOL_SEARCH"
+      }
     },
     "normalize": {
       "titleTemplate": "{1. symbol} - {2. name}",
@@ -174,24 +233,19 @@
     "envKey": "ALPHA_VANTAGE_API_KEY"
   },
   {
-    "id": "barrons",
-    "name": "Barron's",
-    "category": "Finance & Crypto",
-    "topics": ["investing", "stock market", "finance", "business"],
-    "siteUrl": "https://www.barrons.com",
-    "rss": { "feedUrl": "https://www.barrons.com/feed" },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "kiplinger",
     "name": "Kiplinger",
     "category": "Finance & Crypto",
-    "topics": ["personal finance", "investing", "real estate", "economics"],
+    "topics": [
+      "personal finance",
+      "investing",
+      "real estate",
+      "economics"
+    ],
     "siteUrl": "https://www.kiplinger.com",
-    "rss": { "feedUrl": "https://www.kiplinger.com/feed/all" },
+    "rss": {
+      "feedUrl": "https://www.kiplinger.com/feed/all"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -201,21 +255,16 @@
     "id": "nerdwallet",
     "name": "NerdWallet",
     "category": "Finance & Crypto",
-    "topics": ["personal finance", "investing", "finance", "ecommerce"],
+    "topics": [
+      "personal finance",
+      "investing",
+      "finance",
+      "ecommerce"
+    ],
     "siteUrl": "https://www.nerdwallet.com",
-    "rss": { "feedUrl": "https://www.nerdwallet.com/blog/feed/" },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "the-street",
-    "name": "The Street",
-    "category": "Finance & Crypto",
-    "topics": ["investing", "stock market", "finance", "business"],
-    "siteUrl": "https://www.thestreet.com",
-    "rss": { "feedUrl": "https://www.thestreet.com/feeds/all" },
+    "rss": {
+      "feedUrl": "https://www.nerdwallet.com/blog/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -225,33 +274,16 @@
     "id": "morningstar",
     "name": "Morningstar",
     "category": "Finance & Crypto",
-    "topics": ["investing", "stock market", "personal finance", "finance"],
+    "topics": [
+      "investing",
+      "stock market",
+      "personal finance",
+      "finance"
+    ],
     "siteUrl": "https://www.morningstar.com",
-    "rss": { "feedUrl": "https://www.morningstar.com/rss/feeds" },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "zacks",
-    "name": "Zacks",
-    "category": "Finance & Crypto",
-    "topics": ["stock market", "investing", "finance", "economics"],
-    "siteUrl": "https://www.zacks.com",
-    "rss": { "feedUrl": "https://www.zacks.com/feeds/rss" },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "tipranks",
-    "name": "TipRanks",
-    "category": "Finance & Crypto",
-    "topics": ["stock market", "investing", "finance", "data science"],
-    "siteUrl": "https://www.tipranks.com",
-    "rss": { "feedUrl": "https://blog.tipranks.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.morningstar.com/rss/feeds"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -261,9 +293,16 @@
     "id": "bankrate",
     "name": "Bankrate",
     "category": "Finance & Crypto",
-    "topics": ["personal finance", "real estate", "investing", "finance"],
+    "topics": [
+      "personal finance",
+      "real estate",
+      "investing",
+      "finance"
+    ],
     "siteUrl": "https://www.bankrate.com",
-    "rss": { "feedUrl": "https://www.bankrate.com/rss/all.xml" },
+    "rss": {
+      "feedUrl": "https://www.bankrate.com/rss/all.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -273,7 +312,11 @@
     "id": "creditcards-com",
     "name": "CreditCards.com",
     "category": "Finance & Crypto",
-    "topics": ["personal finance", "finance", "ecommerce"],
+    "topics": [
+      "personal finance",
+      "finance",
+      "ecommerce"
+    ],
     "siteUrl": "https://www.creditcards.com",
     "responseFormat": "xml",
     "dataType": "article",
@@ -284,9 +327,16 @@
     "id": "insurance-journal",
     "name": "Insurance Journal",
     "category": "Finance & Crypto",
-    "topics": ["finance", "business", "economics", "law"],
+    "topics": [
+      "finance",
+      "business",
+      "economics",
+      "law"
+    ],
     "siteUrl": "https://www.insurancejournal.com",
-    "rss": { "feedUrl": "https://www.insurancejournal.com/feed/" },
+    "rss": {
+      "feedUrl": "https://www.insurancejournal.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -296,9 +346,16 @@
     "id": "nasdaq-news",
     "name": "Nasdaq News",
     "category": "Finance & Crypto",
-    "topics": ["stock market", "finance", "investing", "business"],
+    "topics": [
+      "stock market",
+      "finance",
+      "investing",
+      "business"
+    ],
     "siteUrl": "https://www.nasdaq.com",
-    "rss": { "feedUrl": "https://www.nasdaq.com/feed/rssoutbound" },
+    "rss": {
+      "feedUrl": "https://www.nasdaq.com/feed/rssoutbound"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -308,9 +365,16 @@
     "id": "sp-global",
     "name": "S&P Global",
     "category": "Finance & Crypto",
-    "topics": ["finance", "economics", "investing", "business"],
+    "topics": [
+      "finance",
+      "economics",
+      "investing",
+      "business"
+    ],
     "siteUrl": "https://www.spglobal.com",
-    "rss": { "feedUrl": "https://www.spglobal.com/marketintelligence/en/rss-feed" },
+    "rss": {
+      "feedUrl": "https://www.spglobal.com/marketintelligence/en/rss-feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -320,7 +384,12 @@
     "id": "moodys",
     "name": "Moody's",
     "category": "Finance & Crypto",
-    "topics": ["finance", "economics", "investing", "business"],
+    "topics": [
+      "finance",
+      "economics",
+      "investing",
+      "business"
+    ],
     "siteUrl": "https://www.moodys.com",
     "responseFormat": "xml",
     "dataType": "article",
@@ -331,19 +400,13 @@
     "id": "fitch-ratings",
     "name": "Fitch Ratings",
     "category": "Finance & Crypto",
-    "topics": ["finance", "economics", "investing", "business"],
+    "topics": [
+      "finance",
+      "economics",
+      "investing",
+      "business"
+    ],
     "siteUrl": "https://www.fitchratings.com",
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "defi-pulse",
-    "name": "DeFi Pulse",
-    "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
-    "siteUrl": "https://www.defipulse.com",
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -353,9 +416,16 @@
     "id": "cryptoslate",
     "name": "CryptoSlate",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance",
+      "investing"
+    ],
     "siteUrl": "https://cryptoslate.com",
-    "rss": { "feedUrl": "https://cryptoslate.com/feed/" },
+    "rss": {
+      "feedUrl": "https://cryptoslate.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -365,9 +435,16 @@
     "id": "the-block",
     "name": "The Block",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "business"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance",
+      "business"
+    ],
     "siteUrl": "https://www.theblock.co",
-    "rss": { "feedUrl": "https://www.theblock.co/rss.xml" },
+    "rss": {
+      "feedUrl": "https://www.theblock.co/rss.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -377,9 +454,16 @@
     "id": "decrypt",
     "name": "Decrypt",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "technology"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance",
+      "technology"
+    ],
     "siteUrl": "https://decrypt.co",
-    "rss": { "feedUrl": "https://decrypt.co/feed" },
+    "rss": {
+      "feedUrl": "https://decrypt.co/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -389,9 +473,15 @@
     "id": "bitcoin-magazine",
     "name": "Bitcoin Magazine",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance"
+    ],
     "siteUrl": "https://bitcoinmagazine.com",
-    "rss": { "feedUrl": "https://bitcoinmagazine.com/feed" },
+    "rss": {
+      "feedUrl": "https://bitcoinmagazine.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -401,9 +491,15 @@
     "id": "ethereum-foundation",
     "name": "Ethereum Foundation",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "technology"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "technology"
+    ],
     "siteUrl": "https://blog.ethereum.org",
-    "rss": { "feedUrl": "https://blog.ethereum.org/feed.xml" },
+    "rss": {
+      "feedUrl": "https://blog.ethereum.org/feed.xml"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -413,9 +509,16 @@
     "id": "binance-blog",
     "name": "Binance Blog",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance",
+      "investing"
+    ],
     "siteUrl": "https://www.binance.com/en/blog",
-    "rss": { "feedUrl": "https://www.binance.com/en/blog/rss" },
+    "rss": {
+      "feedUrl": "https://www.binance.com/en/blog/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -425,9 +528,16 @@
     "id": "kraken-blog",
     "name": "Kraken Blog",
     "category": "Finance & Crypto",
-    "topics": ["cryptocurrency", "blockchain", "finance", "investing"],
+    "topics": [
+      "cryptocurrency",
+      "blockchain",
+      "finance",
+      "investing"
+    ],
     "siteUrl": "https://blog.kraken.com",
-    "rss": { "feedUrl": "https://blog.kraken.com/feed" },
+    "rss": {
+      "feedUrl": "https://blog.kraken.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -437,20 +547,16 @@
     "id": "tradingview-blog",
     "name": "TradingView Blog",
     "category": "Finance & Crypto",
-    "topics": ["stock market", "investing", "finance", "cryptocurrency"],
+    "topics": [
+      "stock market",
+      "investing",
+      "finance",
+      "cryptocurrency"
+    ],
     "siteUrl": "https://www.tradingview.com/blog",
-    "rss": { "feedUrl": "https://www.tradingview.com/blog/feed/" },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "forex-factory",
-    "name": "Forex Factory",
-    "category": "Finance & Crypto",
-    "topics": ["finance", "investing", "economics", "stock market"],
-    "siteUrl": "https://www.forexfactory.com",
+    "rss": {
+      "feedUrl": "https://www.tradingview.com/blog/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -460,9 +566,16 @@
     "id": "real-vision",
     "name": "Real Vision",
     "category": "Finance & Crypto",
-    "topics": ["finance", "investing", "economics", "cryptocurrency"],
+    "topics": [
+      "finance",
+      "investing",
+      "economics",
+      "cryptocurrency"
+    ],
     "siteUrl": "https://www.realvision.com",
-    "rss": { "feedUrl": "https://www.realvision.com/rss" },
+    "rss": {
+      "feedUrl": "https://www.realvision.com/rss"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -472,9 +585,16 @@
     "id": "macrovoices",
     "name": "MacroVoices",
     "category": "Finance & Crypto",
-    "topics": ["finance", "economics", "investing", "podcasts"],
+    "topics": [
+      "finance",
+      "economics",
+      "investing",
+      "podcasts"
+    ],
     "siteUrl": "https://www.macrovoices.com",
-    "rss": { "feedUrl": "https://www.macrovoices.com/feed" },
+    "rss": {
+      "feedUrl": "https://www.macrovoices.com/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -484,9 +604,16 @@
     "id": "zero-hedge",
     "name": "Zero Hedge",
     "category": "Finance & Crypto",
-    "topics": ["finance", "economics", "investing", "world news"],
+    "topics": [
+      "finance",
+      "economics",
+      "investing",
+      "world news"
+    ],
     "siteUrl": "https://www.zerohedge.com",
-    "rss": { "feedUrl": "https://feeds.feedburner.com/zerohedge/feed" },
+    "rss": {
+      "feedUrl": "https://feeds.feedburner.com/zerohedge/feed"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
@@ -496,9 +623,16 @@
     "id": "wolf-street",
     "name": "Wolf Street",
     "category": "Finance & Crypto",
-    "topics": ["finance", "economics", "real estate", "investing"],
+    "topics": [
+      "finance",
+      "economics",
+      "real estate",
+      "investing"
+    ],
     "siteUrl": "https://wolfstreet.com",
-    "rss": { "feedUrl": "https://wolfstreet.com/feed/" },
+    "rss": {
+      "feedUrl": "https://wolfstreet.com/feed/"
+    },
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,

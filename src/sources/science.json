@@ -318,44 +318,6 @@
     "envKey": null
   },
   {
-    "id": "cosmos-magazine",
-    "name": "Cosmos Magazine",
-    "category": "Science & Nature",
-    "topics": [
-      "science",
-      "space",
-      "physics",
-      "biology"
-    ],
-    "siteUrl": "https://cosmosmagazine.com",
-    "rss": {
-      "feedUrl": "https://cosmosmagazine.com/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "the-conversation-science",
-    "name": "The Conversation - Science",
-    "category": "Science & Nature",
-    "topics": [
-      "science",
-      "climate",
-      "biology",
-      "education"
-    ],
-    "siteUrl": "https://theconversation.com/us/science",
-    "rss": {
-      "feedUrl": "https://theconversation.com/us/science/articles.atom"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "science-news",
     "name": "Science News",
     "category": "Science & Nature",
@@ -563,63 +525,6 @@
     "envKey": null
   },
   {
-    "id": "physics-today",
-    "name": "Physics Today",
-    "category": "Science & Nature",
-    "topics": [
-      "physics",
-      "quantum computing",
-      "science",
-      "mathematics"
-    ],
-    "siteUrl": "https://physicstoday.scitation.org",
-    "rss": {
-      "feedUrl": "https://physicstoday.scitation.org/action/showFeed?type=etoc&feed=rss&jc=pto"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "biology-letters",
-    "name": "Biology Letters",
-    "category": "Science & Nature",
-    "topics": [
-      "biology",
-      "genetics",
-      "ecology",
-      "science"
-    ],
-    "siteUrl": "https://royalsocietypublishing.org/journal/rsbl",
-    "rss": {
-      "feedUrl": "https://royalsocietypublishing.org/action/showFeed?type=etoc&feed=rss&jc=rsbl"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "cell-press",
-    "name": "Cell Press",
-    "category": "Science & Nature",
-    "topics": [
-      "biology",
-      "genetics",
-      "neuroscience",
-      "medical research"
-    ],
-    "siteUrl": "https://www.cell.com",
-    "rss": {
-      "feedUrl": "https://www.cell.com/cell/rss"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "pnas",
     "name": "PNAS",
     "category": "Science & Nature",
@@ -716,25 +621,6 @@
     "envKey": null
   },
   {
-    "id": "bulletin-atomic-scientists",
-    "name": "Bulletin of the Atomic Scientists",
-    "category": "Science & Nature",
-    "topics": [
-      "science",
-      "physics",
-      "climate",
-      "politics"
-    ],
-    "siteUrl": "https://thebulletin.org",
-    "rss": {
-      "feedUrl": "https://thebulletin.org/feed/"
-    },
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
     "id": "environmental-health-news",
     "name": "Environmental Health News",
     "category": "Science & Nature",
@@ -764,21 +650,6 @@
       "climate"
     ],
     "siteUrl": "https://www.nationalgeographic.com/science",
-    "responseFormat": "xml",
-    "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
-  },
-  {
-    "id": "acs-news",
-    "name": "ACS Chemistry News",
-    "category": "Science & Nature",
-    "topics": [
-      "chemistry",
-      "science",
-      "biotechnology"
-    ],
-    "siteUrl": "https://www.acs.org/pressroom",
     "responseFormat": "xml",
     "dataType": "article",
     "requiresKey": false,
