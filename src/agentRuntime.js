@@ -1979,7 +1979,19 @@ async function executeAction(agent, decision, runState) {
         }
       }
       if (decision.params?.videoUrl) {
-        inlineMedia.push({ type: 'video', url: decision.params.videoUrl, origin: 'embedded', caption: '' });
+        const vUrl = decision.params.videoUrl;
+        // Check if in another draft
+        const vDrafts = agentStorage.listDrafts(agent.id, { page: 1, perPage: 50 }).drafts;
+        const otherVDraft = vDrafts.find(d => d.id !== draftId && (d.media || []).some(m => m.url === vUrl));
+        if (otherVDraft) {
+          return { ok: false, summary: `This video is already in draft "${otherVDraft.title}". Use a different video.` };
+        }
+        // Check if already used in a published post
+        const vPosts = db.getAgentPublished(agent.id).slice(-20);
+        if (vPosts.some(p => (p.media || []).some(m => m.url === vUrl))) {
+          return { ok: false, summary: 'This video was already used in a previous post. Use a different video.' };
+        }
+        inlineMedia.push({ type: 'video', url: vUrl, origin: 'embedded', caption: '' });
       }
 
       if (!draftId) {
@@ -2152,6 +2164,25 @@ async function executeAction(agent, decision, runState) {
 
       const videoUrl = decision.params?.url;
       if (!videoUrl) return { ok: false, summary: 'url param is required.' };
+
+      // Check if already in this draft
+      if ((draft.media || []).some(m => m.url === videoUrl)) {
+        return { ok: false, summary: 'This video is already attached to this draft.' };
+      }
+
+      // Check if in another draft
+      const allDrafts = agentStorage.listDrafts(agent.id, { page: 1, perPage: 50 }).drafts;
+      for (const d of allDrafts) {
+        if (d.id !== draftId && (d.media || []).some(m => m.url === videoUrl)) {
+          return { ok: false, summary: `This video is already in draft "${d.title}". Use a different video.` };
+        }
+      }
+
+      // Check if already used in a published post
+      const recentPosts = db.getAgentPublished(agent.id).slice(-20);
+      if (recentPosts.some(p => (p.media || []).some(m => m.url === videoUrl))) {
+        return { ok: false, summary: 'This video was already used in a previous post. Use a different video.' };
+      }
 
       const media = [...(draft.media || []), { type: 'video', url: videoUrl, origin: 'embedded', caption: decision.params?.caption || '' }];
       agentStorage.updateDraft(agent.id, draftId, { media });
