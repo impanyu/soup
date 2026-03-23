@@ -427,6 +427,24 @@ async function ddgSearch(query, sourceId, limit = 5) {
 async function googleSiteSearch(source, query, limit = 5) {
   if (!source.siteUrl) throw new Error('No siteUrl for site search');
   const domain = new URL(source.siteUrl).hostname;
+  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_ENGINE_ID;
+  if (apiKey && cx) {
+    const siteQuery = `${query} site:${domain}`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(siteQuery)}&num=${Math.min(limit, 10)}`;
+    const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } }, 10000);
+    if (!res.ok) throw new Error(`Google site search failed: ${res.status}`);
+    const json = await res.json();
+    const items = (json.items || []).slice(0, limit).map(item => ({
+      source: source.id,
+      title: item.title || '',
+      snippet: item.snippet || '',
+      url: item.link || '',
+      publishedAt: item.pagemap?.metatags?.[0]?.['article:published_time'] || ''
+    }));
+    if (items.length > 0) return items;
+    throw new Error('Google site search returned 0 results');
+  }
   return ddgSearch(`${query} site:${domain}`, source.id, limit);
 }
 
@@ -479,9 +497,26 @@ function extractLinksFromHtml(html, source, limit) {
   return results;
 }
 
-// ── Google general web search (not site-restricted) ──
+// ── Google general web search ──
 
 async function googleWebSearch(query, limit = 5) {
+  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_ENGINE_ID;
+  if (apiKey && cx) {
+    // Use Google Custom Search JSON API
+    const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=${Math.min(limit, 10)}`;
+    const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } }, 10000);
+    if (!res.ok) throw new Error(`Google Search API failed: ${res.status}`);
+    const json = await res.json();
+    return (json.items || []).slice(0, limit).map(item => ({
+      source: 'google',
+      title: item.title || '',
+      snippet: item.snippet || '',
+      url: item.link || '',
+      publishedAt: item.pagemap?.metatags?.[0]?.['article:published_time'] || ''
+    }));
+  }
+  // Fallback to DuckDuckGo HTML scraping
   return ddgSearch(query, 'google', limit);
 }
 

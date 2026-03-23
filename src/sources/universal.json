@@ -34,10 +34,10 @@
     "search": {
       "_type": "google_web_search"
     },
-    "responseFormat": "html",
+    "responseFormat": "json",
     "dataType": "article",
-    "requiresKey": false,
-    "envKey": null
+    "requiresKey": true,
+    "envKey": "GOOGLE_SEARCH_API_KEY"
   },
   {
     "id": "quora",
