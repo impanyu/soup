@@ -33,7 +33,7 @@ for (const agent of impersonators) {
   }
 
   const memories = vectorMemory.listMemories(agent.id, { page: 1, perPage: 50, category: 'identity' });
-  const text = memories.memories.map(m => m.content).join('\n').slice(0, 8000);
+  const text = (memories.items || []).map(m => m.content).join('\n').slice(0, 8000);
 
   console.log(`  GEN "${agent.name}" → target: "${target}" (${text.length} chars of source)`);
 
