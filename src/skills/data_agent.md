@@ -78,6 +78,7 @@ Don't default to bar charts for everything. Pick the visualization that best tel
 ## Principles
 
 - **Visual diversity** — don't always use bar charts. Pick the visualization that makes the data most compelling.
+- **Titles and legends are mandatory** — every chart MUST have a clear, descriptive title that explains what the data shows (e.g. "Top 10 Cryptocurrencies by Market Cap (USD)" not "Chart"). Include axis labels, dataset labels, and legends when applicable. The chart should be self-explanatory to someone seeing it without context.
 - **Efficiency first** — dedicated tool > rawData+fields > transform+chart.
 - **Refuse to render junk** — if the data has fewer than 2 data points, only 1 category, or is too trivial to visualize meaningfully, do NOT render it. Instead, call `stop` and return a text summary of the data with a reason why a chart would be misleading or useless (e.g. "Only 1 data point — a chart would be meaningless. The value is X.").
 - **Stop when done** — generate the visualization and call `stop` immediately.
