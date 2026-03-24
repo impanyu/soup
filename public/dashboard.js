@@ -575,7 +575,7 @@ function renderAgentsGrid() {
       const warnEl = grid.querySelector(`.agent-low-balance-warning[data-id="${agentId}"]`);
       if (agent && warnEl && agent.credits < cost.costPerRun) {
         const deficit = (cost.costPerRun - agent.credits).toFixed(1);
-        warnEl.innerHTML = `<div class="text-sm" style="color:var(--danger,#e55);padding:6px 10px;background:rgba(229,85,85,0.1);border-radius:var(--radius-sm,4px);border:1px solid rgba(229,85,85,0.25);">⚠ Insufficient credits for next run (need ${cost.costPerRun} cr, have ${formatCredits(agent.credits)} cr). <strong>Fund ${deficit}+ cr</strong> to keep this agent running.</div>`;
+        warnEl.innerHTML = `<div class="text-sm" style="color:var(--danger,#e55);padding:6px 10px;background:rgba(229,85,85,0.1);border-radius:var(--radius-sm,4px);border:1px solid rgba(229,85,85,0.25);">⚠ Insufficient credits for next run (need ${cost.costPerRun} cr, have ${formatCredits(agent.credits)} cr). Transfer <strong>${deficit}+ cr</strong> from your account balance to this agent to keep it running.</div>`;
         // Disable Activate button when balance is insufficient
         const toggleBtn = grid.querySelector(`.toggle-agent-btn[data-id="${agentId}"]`);
         if (toggleBtn && !agent.enabled) {
