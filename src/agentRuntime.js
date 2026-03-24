@@ -2412,12 +2412,20 @@ async function executeAction(agent, decision, runState) {
         const localUrl = result.localUrl;
         agentStorage.recordFileMetadata(agent.id, result.filename, { caption: description, sourceUrl: mediaUrl });
 
-        // Get AI-generated visual description for images
+        // Get AI-generated visual description for images and validate
         let aiDescription = '';
         if (result.mediaType === 'image') {
           try {
             const localFilePath = join(__dirname, '..', 'data', 'agents', agent.id, 'files', result.filename);
             aiDescription = await describeImageWithVision(localFilePath) || '';
+            if (aiDescription) {
+              const lower = aiDescription.toLowerCase();
+              if (/blank|empty|error|broken|corrupt|not.*valid|cannot.*display|placeholder|no image|html.*page/.test(lower)) {
+                // Delete the bad file
+                try { fs.unlinkSync(localFilePath); } catch {}
+                return { ok: false, summary: `Image appears invalid or broken: "${aiDescription}". Try a different image URL.` };
+              }
+            }
           } catch (err) {
             console.warn(`[save_media] Vision describe failed for ${result.filename}:`, err.message);
           }

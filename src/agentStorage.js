@@ -456,6 +456,10 @@ export async function downloadToAgentStorage(agentId, url) {
     throw new Error(`File too large: ${buffer.length} bytes (max ${MAX_DOWNLOAD_SIZE})`);
   }
 
+  if (buffer.length < 500) {
+    throw new Error(`File too small (${buffer.length} bytes) — likely not a valid image. Try a different URL.`);
+  }
+
   const contentType = response.headers.get('content-type') || 'application/octet-stream';
   const ext = extFromUrl(url) || extFromContentType(contentType) || sniffExtFromBuffer(buffer);
 
