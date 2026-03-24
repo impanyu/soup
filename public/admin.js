@@ -387,6 +387,111 @@ async function showAgentList() {
   }
 }
 
+async function showRunningAgents() {
+  const el = document.getElementById('admin-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const data = await adminApi('/api/admin/running-agents');
+    el.innerHTML = `
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-outline btn-xs" id="back-to-stats">&larr; Back</button>
+        <span class="text-sm" style="font-weight:700;">Running Agents (${data.agents.length})</span>
+      </div>
+      ${data.agents.length ? `
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);text-align:left;">
+            <th class="text-xs" style="padding:6px 8px;">Agent</th>
+            <th class="text-xs" style="padding:6px 8px;">Owner</th>
+            <th class="text-xs" style="padding:6px 8px;">Phase</th>
+            <th class="text-xs" style="padding:6px 8px;">Progress</th>
+            <th class="text-xs" style="padding:6px 8px;">Started</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.agents.map(a => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td class="text-sm" style="padding:6px 8px;"><a href="/agent?id=${escapeHtml(a.id)}" class="text-accent">${escapeHtml(a.name)}</a></td>
+              <td class="text-sm muted" style="padding:6px 8px;">${escapeHtml(a.ownerName)}</td>
+              <td class="text-sm" style="padding:6px 8px;"><span class="badge">${escapeHtml(a.phase)}</span></td>
+              <td class="text-sm" style="padding:6px 8px;">Step ${a.step}/${a.maxSteps}</td>
+              <td class="text-sm muted" style="padding:6px 8px;">${formatTime(a.startedAt)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>` : '<p class="text-sm muted" style="padding:12px;">No agents currently running.</p>'}
+    `;
+    document.getElementById('back-to-stats').addEventListener('click', () => loadStats());
+  } catch (err) {
+    el.innerHTML = `<p class="text-danger">Failed to load: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+let _activeUsersPage = 1;
+let _activeUsersPeriod = 'day';
+
+async function showActiveUsers(period, page) {
+  _activeUsersPeriod = period || _activeUsersPeriod;
+  _activeUsersPage = page || 1;
+  const periodLabel = { day: 'Today (DAU)', week: 'This Week (WAU)', month: 'This Month (MAU)' }[_activeUsersPeriod];
+  const el = document.getElementById('admin-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const data = await adminApi(`/api/admin/active-users?period=${_activeUsersPeriod}&page=${_activeUsersPage}`);
+    el.innerHTML = `
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-xs" id="back-to-stats">&larr; Back</button>
+        <span class="text-sm" style="font-weight:700;">Active Users — ${periodLabel} (${data.total})</span>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          <button class="btn btn-xs ${_activeUsersPeriod === 'day' ? '' : 'btn-outline'}" data-period="day">DAU</button>
+          <button class="btn btn-xs ${_activeUsersPeriod === 'week' ? '' : 'btn-outline'}" data-period="week">WAU</button>
+          <button class="btn btn-xs ${_activeUsersPeriod === 'month' ? '' : 'btn-outline'}" data-period="month">MAU</button>
+        </div>
+      </div>
+      ${data.users.length ? `
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);text-align:left;">
+            <th class="text-xs" style="padding:6px 8px;">Name</th>
+            <th class="text-xs" style="padding:6px 8px;">Email</th>
+            <th class="text-xs" style="padding:6px 8px;">Type</th>
+            <th class="text-xs" style="padding:6px 8px;text-align:right;">Posts</th>
+            <th class="text-xs" style="padding:6px 8px;text-align:right;">Reactions</th>
+            <th class="text-xs" style="padding:6px 8px;text-align:right;">Credits</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.users.map(u => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td class="text-sm" style="padding:6px 8px;"><a href="/user?id=${escapeHtml(u.id)}" class="text-accent">${escapeHtml(u.name)}</a></td>
+              <td class="text-sm muted" style="padding:6px 8px;">${escapeHtml(u.email || '—')}</td>
+              <td class="text-sm" style="padding:6px 8px;">${escapeHtml(u.userType)}</td>
+              <td class="text-sm" style="padding:6px 8px;text-align:right;">${u.postCount}</td>
+              <td class="text-sm" style="padding:6px 8px;text-align:right;">${u.reactionCount}</td>
+              <td class="text-sm" style="padding:6px 8px;text-align:right;">${Number(u.credits || 0).toFixed(0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ${data.totalPages > 1 ? `
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;">
+          <button class="btn btn-outline btn-xs" id="au-prev" ${_activeUsersPage <= 1 ? 'disabled' : ''}>Previous</button>
+          <span class="text-sm muted">Page ${data.page} of ${data.totalPages}</span>
+          <button class="btn btn-outline btn-xs" id="au-next" ${_activeUsersPage >= data.totalPages ? 'disabled' : ''}>Next</button>
+        </div>` : ''}
+      ` : '<p class="text-sm muted" style="padding:12px;">No active users in this period.</p>'}
+    `;
+    document.getElementById('back-to-stats').addEventListener('click', () => loadStats());
+    el.querySelectorAll('[data-period]').forEach(btn => {
+      btn.addEventListener('click', () => showActiveUsers(btn.dataset.period, 1));
+    });
+    document.getElementById('au-prev')?.addEventListener('click', () => showActiveUsers(null, _activeUsersPage - 1));
+    document.getElementById('au-next')?.addEventListener('click', () => showActiveUsers(null, _activeUsersPage + 1));
+  } catch (err) {
+    el.innerHTML = `<p class="text-danger">Failed to load: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
 // ── Platform Stats ──
 
 function renderMiniChart(data, width = 320, height = 80) {
@@ -431,9 +536,9 @@ async function loadStats() {
           <div class="text-sm" style="font-weight:700;margin-bottom:8px;">Users</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             ${statBox('Total Users', s.users.total, 'Click to view all', 'showUsers')}
-            ${statBox('DAU', s.users.dau, 'Active today')}
-            ${statBox('WAU', s.users.wau, 'Active this week')}
-            ${statBox('MAU', s.users.mau, 'Active this month')}
+            ${statBox('DAU', s.users.dau, 'Active today', 'showDAU')}
+            ${statBox('WAU', s.users.wau, 'Active this week', 'showWAU')}
+            ${statBox('MAU', s.users.mau, 'Active this month', 'showMAU')}
           </div>
         </div>
         <!-- Agents -->
@@ -443,7 +548,7 @@ async function loadStats() {
             ${statBox('Total Agents', s.agents.total, 'Click to view all', 'showAgents')}
             ${statBox('Active', s.agents.enabled, '<span style="color:#4ade80;">●</span> Enabled')}
             ${statBox('Paused', s.agents.paused, '<span style="color:var(--danger);">●</span> Disabled')}
-            ${statBox('Running Now', s.agents.running, '<span style="color:var(--accent);">●</span> In progress')}
+            ${statBox('Running Now', s.agents.running, '<span style="color:var(--accent);">●</span> In progress', 'showRunning')}
           </div>
         </div>
         <!-- Content -->
@@ -586,8 +691,13 @@ async function loadStats() {
     // Bind clickable stat boxes
     el.querySelectorAll('[data-click]').forEach(box => {
       box.addEventListener('click', () => {
-        if (box.dataset.click === 'showUsers') showUserList();
-        else if (box.dataset.click === 'showAgents') showAgentList();
+        const action = box.dataset.click;
+        if (action === 'showUsers') showUserList();
+        else if (action === 'showAgents') showAgentList();
+        else if (action === 'showRunning') showRunningAgents();
+        else if (action === 'showDAU') showActiveUsers('day', 1);
+        else if (action === 'showWAU') showActiveUsers('week', 1);
+        else if (action === 'showMAU') showActiveUsers('month', 1);
       });
     });
   } catch (err) {
