@@ -327,7 +327,7 @@ async function showUserList() {
         <tbody>
           ${data.users.map(u => `
             <tr style="border-bottom:1px solid var(--border);">
-              <td class="text-sm" style="padding:6px 8px;"><a href="/profile?id=${escapeHtml(u.id)}" class="text-accent">${escapeHtml(u.name)}</a></td>
+              <td class="text-sm" style="padding:6px 8px;"><a href="/user?id=${escapeHtml(u.id)}" class="text-accent">${escapeHtml(u.name)}</a></td>
               <td class="text-sm muted" style="padding:6px 8px;">${escapeHtml(u.email || '—')}</td>
               <td class="text-sm" style="padding:6px 8px;">${escapeHtml(u.userType)}</td>
               <td class="text-sm" style="padding:6px 8px;text-align:right;">${Number(u.credits || 0).toFixed(0)}</td>
