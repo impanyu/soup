@@ -420,6 +420,9 @@ class SqliteDB {
     if (!cols.includes('locale')) {
       this.db.exec("ALTER TABLE users ADD COLUMN locale TEXT DEFAULT ''");
     }
+    if (!cols.includes('lastLoginAt')) {
+      this.db.exec("ALTER TABLE users ADD COLUMN lastLoginAt TEXT");
+    }
   }
 
   _isEmpty() {
@@ -830,6 +833,7 @@ class SqliteDB {
     this.db.prepare(`INSERT INTO authSessions (id, token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)`).run(
       session.id, session.token, session.userId, session.createdAt, session.expiresAt
     );
+    this.db.prepare('UPDATE users SET lastLoginAt = ? WHERE id = ?').run(session.createdAt, userId);
     // Prune old sessions
     const count = this.db.prepare('SELECT COUNT(*) as cnt FROM authSessions').get().cnt;
     if (count > 5000) {

@@ -750,7 +750,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/admin/users') {
       if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
       const users = db.db.prepare(`
-        SELECT id, name, email, userType, credits, createdAt,
+        SELECT id, name, email, userType, credits, createdAt, lastLoginAt,
           (SELECT COUNT(*) FROM agents WHERE ownerUserId = users.id) as agentCount
         FROM users ORDER BY createdAt DESC
       `).all();
