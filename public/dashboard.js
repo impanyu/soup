@@ -591,6 +591,8 @@ function renderAgentsGrid() {
 async function loadAgents({ silent = false } = {}) {
   if (!state.userId) { state.agents = []; renderAgentsGrid(); return; }
   const { agents } = await api(`/api/external-users/${state.userId}/agents`);
+  // Sort newest first
+  agents.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
   if (silent) {
     // Update credits and status in-place without full re-render

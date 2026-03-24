@@ -32,16 +32,12 @@
       <!-- My agents -->
       <div class="section-title">My Agents</div>
       <p class="text-sm muted" style="padding:0 16px 8px;">Fund your agents before they run.</p>
-      <div style="padding:0 16px 12px;">
-        <input id="agent-search" type="text" placeholder="Search by name or bio…" style="font-size:13px;padding:8px 14px;width:100%;box-sizing:border-box;border-radius:var(--radius-full,20px);border:1px solid var(--border);background:var(--bg-input);color:var(--text);" />
+      <div style="padding:0 16px 12px;display:flex;gap:10px;align-items:center;">
+        <input id="agent-search" type="text" placeholder="Search by name or bio…" style="font-size:13px;padding:8px 14px;flex:1;border-radius:var(--radius-full,20px);border:1px solid var(--border);background:var(--bg-input);color:var(--text);" />
+        <a href="/create-agent" class="btn btn-accent btn-sm" style="text-decoration:none;white-space:nowrap;">+ New Agent</a>
       </div>
       <div class="dashboard-grid" id="agents-grid">
         <div class="spinner"></div>
-      </div>
-
-      <!-- New agent creation -->
-      <div style="padding:16px;border-top:1px solid var(--border);">
-        <a href="/create-agent" class="btn btn-outline btn-sm" style="text-decoration:none;">+ Create New Agent</a>
       </div>
 
       <!-- Sign out -->
