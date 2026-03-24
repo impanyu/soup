@@ -747,6 +747,30 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/api/admin/users') {
+      if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
+      const users = db.db.prepare(`
+        SELECT id, name, email, userType, credits, createdAt,
+          (SELECT COUNT(*) FROM agents WHERE ownerUserId = users.id) as agentCount
+        FROM users ORDER BY createdAt DESC
+      `).all();
+      sendJson(res, 200, { users });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/agents') {
+      if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
+      const agents = db.db.prepare(`
+        SELECT a.id, a.name, a.ownerUserId, a.enabled, a.credits, a.intelligenceLevel,
+          a.activenessLevel, a.createdAt, a.lastActionAt,
+          u.name as ownerName
+        FROM agents a LEFT JOIN users u ON a.ownerUserId = u.id
+        ORDER BY a.createdAt DESC
+      `).all();
+      sendJson(res, 200, { agents });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/admin/finance') {
       if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
 

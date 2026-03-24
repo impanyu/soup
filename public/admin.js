@@ -301,6 +301,92 @@ function bindWeekNav() {
   });
 }
 
+// ── Detail Lists ──
+
+async function showUserList() {
+  const el = document.getElementById('admin-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const data = await adminApi('/api/admin/users');
+    el.innerHTML = `
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-outline btn-xs" id="back-to-stats">&larr; Back</button>
+        <span class="text-sm" style="font-weight:700;">All Users (${data.users.length})</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);text-align:left;">
+            <th class="text-xs" style="padding:6px 8px;">Name</th>
+            <th class="text-xs" style="padding:6px 8px;">Email</th>
+            <th class="text-xs" style="padding:6px 8px;">Type</th>
+            <th class="text-xs" style="padding:6px 8px;text-align:right;">Credits</th>
+            <th class="text-xs" style="padding:6px 8px;text-align:right;">Agents</th>
+            <th class="text-xs" style="padding:6px 8px;">Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.users.map(u => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td class="text-sm" style="padding:6px 8px;"><a href="/profile?id=${escapeHtml(u.id)}" class="text-accent">${escapeHtml(u.name)}</a></td>
+              <td class="text-sm muted" style="padding:6px 8px;">${escapeHtml(u.email || '—')}</td>
+              <td class="text-sm" style="padding:6px 8px;">${escapeHtml(u.userType)}</td>
+              <td class="text-sm" style="padding:6px 8px;text-align:right;">${Number(u.credits || 0).toFixed(0)}</td>
+              <td class="text-sm" style="padding:6px 8px;text-align:right;">${u.agentCount}</td>
+              <td class="text-sm muted" style="padding:6px 8px;">${formatTime(u.createdAt)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    document.getElementById('back-to-stats').addEventListener('click', () => loadStats());
+  } catch (err) {
+    el.innerHTML = `<p class="text-danger">Failed to load: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+async function showAgentList() {
+  const el = document.getElementById('admin-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const data = await adminApi('/api/admin/agents');
+    el.innerHTML = `
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-outline btn-xs" id="back-to-stats">&larr; Back</button>
+        <span class="text-sm" style="font-weight:700;">All Agents (${data.agents.length})</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);text-align:left;">
+            <th class="text-xs" style="padding:6px 8px;">Agent</th>
+            <th class="text-xs" style="padding:6px 8px;">Owner</th>
+            <th class="text-xs" style="padding:6px 8px;">Intelligence</th>
+            <th class="text-xs" style="padding:6px 8px;text-align:right;">Credits</th>
+            <th class="text-xs" style="padding:6px 8px;">Status</th>
+            <th class="text-xs" style="padding:6px 8px;">Last Active</th>
+            <th class="text-xs" style="padding:6px 8px;">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.agents.map(a => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td class="text-sm" style="padding:6px 8px;"><a href="/agent?id=${escapeHtml(a.id)}" class="text-accent">${escapeHtml(a.name)}</a></td>
+              <td class="text-sm muted" style="padding:6px 8px;">${escapeHtml(a.ownerName || a.ownerUserId)}</td>
+              <td class="text-sm" style="padding:6px 8px;">${escapeHtml(a.intelligenceLevel)}</td>
+              <td class="text-sm" style="padding:6px 8px;text-align:right;">${Number(a.credits || 0).toFixed(0)}</td>
+              <td class="text-sm" style="padding:6px 8px;">${a.enabled ? '<span style="color:#4ade80;">Active</span>' : '<span style="color:var(--danger);">Paused</span>'}</td>
+              <td class="text-sm muted" style="padding:6px 8px;">${formatTime(a.lastActionAt)}</td>
+              <td class="text-sm muted" style="padding:6px 8px;">${formatTime(a.createdAt)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    document.getElementById('back-to-stats').addEventListener('click', () => loadStats());
+  } catch (err) {
+    el.innerHTML = `<p class="text-danger">Failed to load: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
 // ── Platform Stats ──
 
 function renderMiniChart(data, width = 320, height = 80) {
@@ -331,8 +417,8 @@ async function loadStats() {
   try {
     const s = await adminApi('/api/admin/platform-stats');
 
-    const statBox = (label, value, sub) => `
-      <div style="flex:1;min-width:120px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);">
+    const statBox = (label, value, sub, onClick) => `
+      <div style="flex:1;min-width:120px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);${onClick ? 'cursor:pointer;' : ''}" ${onClick ? `data-click="${onClick}"` : ''} ${onClick ? 'onmouseenter="this.style.borderColor=\'var(--accent,#6366f1)\'" onmouseleave="this.style.borderColor=\'var(--border)\'"' : ''}>
         <span class="text-xs muted">${label}</span>
         <div style="font-size:22px;font-weight:800;">${value}</div>
         ${sub ? `<div class="text-xs muted" style="margin-top:2px;">${sub}</div>` : ''}
@@ -344,7 +430,7 @@ async function loadStats() {
         <div>
           <div class="text-sm" style="font-weight:700;margin-bottom:8px;">Users</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            ${statBox('Total Users', s.users.total)}
+            ${statBox('Total Users', s.users.total, 'Click to view all', 'showUsers')}
             ${statBox('DAU', s.users.dau, 'Active today')}
             ${statBox('WAU', s.users.wau, 'Active this week')}
             ${statBox('MAU', s.users.mau, 'Active this month')}
@@ -354,7 +440,7 @@ async function loadStats() {
         <div>
           <div class="text-sm" style="font-weight:700;margin-bottom:8px;">Agents</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            ${statBox('Total Agents', s.agents.total)}
+            ${statBox('Total Agents', s.agents.total, 'Click to view all', 'showAgents')}
             ${statBox('Active', s.agents.enabled, '<span style="color:#4ade80;">●</span> Enabled')}
             ${statBox('Paused', s.agents.paused, '<span style="color:var(--danger);">●</span> Disabled')}
             ${statBox('Running Now', s.agents.running, '<span style="color:var(--accent);">●</span> In progress')}
@@ -496,6 +582,14 @@ async function loadStats() {
         </div>
       </div>
     `;
+
+    // Bind clickable stat boxes
+    el.querySelectorAll('[data-click]').forEach(box => {
+      box.addEventListener('click', () => {
+        if (box.dataset.click === 'showUsers') showUserList();
+        else if (box.dataset.click === 'showAgents') showAgentList();
+      });
+    });
   } catch (err) {
     el.innerHTML = `<p class="text-danger">Failed to load: ${escapeHtml(err.message)}</p>`;
   }
