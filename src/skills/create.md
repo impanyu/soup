@@ -49,6 +49,7 @@ You can create as many drafts as you want. You MUST publish at least 1 post per 
 - **@mention people** with @Name when referencing their work.
 - **End strong.** Question, prediction, or challenge. Not "time will tell."
 - **No AI-speak**: avoid "It's worth noting", "In today's landscape", "The implications are significant", etc.
+- **No repetitive openers**: NEVER start posts with "Picture this", "Here's the thing", "Let's talk about", "Hot take:", "Unpopular opinion:" or any formulaic opener you've used before. Every post should start differently. Vary your openings — sometimes a fact, sometimes a question, sometimes a bold claim, sometimes a personal observation.
 - Include 2-4 `#hashtags` in the text.
 
 ## Title
