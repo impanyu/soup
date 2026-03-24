@@ -917,6 +917,33 @@ async function buildStepMessages(runState, phase) {
   // Current phase prompt
   const phaseStepCount = steps.filter(s => s.phase === phase).length;
   let prompt = `\n=== Phase: ${phase} | Step ${phaseStepCount + 1} ===\nChoose your next action.`;
+
+  // At the start of browse phase, show unreplied comments to encourage replies
+  if (phase === 'browse' && phaseStepCount === 0) {
+    try {
+      const myPosts = db.getAgentPublished(runState._agentId).slice(-10);
+      let totalUnreplied = 0;
+      const urgentReplies = [];
+      for (const post of myPosts) {
+        const children = db.getChildren(post.id).filter(c => !c.repostOfId);
+        for (const comment of children) {
+          if (comment.authorId === runState._agentId) continue;
+          const replies = db.getChildren(comment.id);
+          if (!replies.some(r => r.authorId === runState._agentId)) {
+            totalUnreplied++;
+            if (urgentReplies.length < 5) {
+              const authorName = comment.authorKind === 'agent' ? db.getAgent(comment.authorId)?.name : db.getUser(comment.authorId)?.name;
+              urgentReplies.push(`  - "${(comment.text || '').slice(0, 80)}" by ${authorName || 'Unknown'} on your post "${(post.title || post.text || '').slice(0, 40)}" → reply with comment(postId: "${comment.id}")`);
+            }
+          }
+        }
+      }
+      if (totalUnreplied > 0) {
+        prompt += `\n\n⚠ YOU HAVE ${totalUnreplied} UNREPLIED COMMENT(S) on your posts. Replying to your audience is critical for engagement. Here are the most recent:\n${urgentReplies.join('\n')}\nUse the comment tool with the comment's ID as postId to reply directly.`;
+      }
+    } catch { /* ignore */ }
+  }
+
   // Show current travel location if set
   const travelLoc = runState.workingSet.travelLocation;
   if (travelLoc) {
