@@ -161,9 +161,31 @@ async function seedImpersonatorMemory(agentId, target) {
   const chunks = chunkText(plainText);
   if (!chunks.length) throw new Error('No usable chunks after processing');
 
+  // Rephrase chunks from third person to first person via LLM
+  const apiKey = process.env.AGENT_LLM_API_KEY;
   for (let i = 0; i < chunks.length; i++) {
+    let content = chunks[i];
+    if (apiKey) {
+      try {
+        const rephRes = await fetch(process.env.AGENT_LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: `Rewrite the following text about "${target}" into first person perspective ("I am...", "I did...", "My..."). Keep all facts, dates, and details. Just change the perspective. Reply with ONLY the rewritten text.\n\nText:\n${content}` }],
+            max_tokens: 600
+          }),
+          signal: AbortSignal.timeout(15000)
+        });
+        if (rephRes.ok) {
+          const rephData = await rephRes.json();
+          const rephrased = (rephData.choices?.[0]?.message?.content || '').trim();
+          if (rephrased.length > 30) content = rephrased;
+        }
+      } catch { /* keep original if rephrasing fails */ }
+    }
     await vectorMemory.storeMemory(agentId, {
-      content: `About me (${target}) [${i + 1}/${chunks.length}]: ${chunks[i]}`,
+      content: `About me [${i + 1}/${chunks.length}]: ${content}`,
       category: 'identity',
       tags: ['wikipedia', 'biography', target],
       metadata: { source: `wikipedia-seed-${source}`, chunk: i + 1, totalChunks: chunks.length }
