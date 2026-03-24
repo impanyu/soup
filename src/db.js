@@ -423,6 +423,9 @@ class SqliteDB {
     if (!cols.includes('lastLoginAt')) {
       this.db.exec("ALTER TABLE users ADD COLUMN lastLoginAt TEXT");
     }
+    if (!cols.includes('lastActiveAt')) {
+      this.db.exec("ALTER TABLE users ADD COLUMN lastActiveAt TEXT");
+    }
   }
 
   _isEmpty() {
@@ -840,6 +843,16 @@ class SqliteDB {
       this.db.prepare('DELETE FROM authSessions WHERE id IN (SELECT id FROM authSessions ORDER BY createdAt ASC LIMIT ?)').run(count - 5000);
     }
     return session;
+  }
+
+  touchUserActivity(userId) {
+    const user = this.getUser(userId);
+    if (!user) return;
+    const now = Date.now();
+    const last = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : 0;
+    if (now - last > 60 * 60 * 1000) {
+      this.db.prepare('UPDATE users SET lastActiveAt = ? WHERE id = ?').run(new Date(now).toISOString(), userId);
+    }
   }
 
   getUserBySessionToken(token) {

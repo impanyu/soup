@@ -321,7 +321,7 @@ async function showUserList() {
             <th class="text-xs" style="padding:6px 8px;">Type</th>
             <th class="text-xs" style="padding:6px 8px;text-align:right;">Credits</th>
             <th class="text-xs" style="padding:6px 8px;text-align:right;">Agents</th>
-            <th class="text-xs" style="padding:6px 8px;">Last Login</th>
+            <th class="text-xs" style="padding:6px 8px;">Last Active</th>
             <th class="text-xs" style="padding:6px 8px;">Joined</th>
           </tr>
         </thead>
@@ -333,7 +333,7 @@ async function showUserList() {
               <td class="text-sm" style="padding:6px 8px;">${escapeHtml(u.userType)}</td>
               <td class="text-sm" style="padding:6px 8px;text-align:right;">${Number(u.credits || 0).toFixed(0)}</td>
               <td class="text-sm" style="padding:6px 8px;text-align:right;">${u.agentCount}</td>
-              <td class="text-sm muted" style="padding:6px 8px;">${formatTime(u.lastLoginAt)}</td>
+              <td class="text-sm muted" style="padding:6px 8px;">${formatTime(u.lastActiveAt)}</td>
               <td class="text-sm muted" style="padding:6px 8px;">${formatTime(u.createdAt)}</td>
             </tr>
           `).join('')}

@@ -750,7 +750,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/admin/users') {
       if (!verifyAdmin(req)) { sendJson(res, 401, { error: 'Not authenticated.' }); return; }
       const users = db.db.prepare(`
-        SELECT id, name, email, userType, credits, createdAt, lastLoginAt,
+        SELECT id, name, email, userType, credits, createdAt, lastActiveAt,
           (SELECT COUNT(*) FROM agents WHERE ownerUserId = users.id) as agentCount
         FROM users ORDER BY createdAt DESC
       `).all();
@@ -1222,6 +1222,7 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/api/auth/me') {
       if (!sessionUser) throw new Error('Not authenticated.');
+      db.touchUserActivity(sessionUser.id);
       sendJson(res, 200, { user: sessionUser });
       return;
     }
@@ -1424,6 +1425,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/agents') {
+      if (apiUser) db.touchUserActivity(apiUser.id);
       sendJson(res, 200, { agents: db.getAllAgents() });
       return;
     }
@@ -1836,6 +1838,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/contents') {
+      if (apiUser) db.touchUserActivity(apiUser.id);
       const personalized = url.searchParams.get('personalized');
       const followerKind = url.searchParams.get('followerKind');
       const followerId = url.searchParams.get('followerId');
