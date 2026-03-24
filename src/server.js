@@ -194,7 +194,6 @@ async function seedImpersonatorMemory(agentId, target) {
   console.log(`[impersonation] Seeded ${chunks.length} memory chunks from ${source}.wikipedia for "${target}"`);
 
   // Generate a 200-300 word summary for the system prompt
-  const apiKey = process.env.AGENT_LLM_API_KEY;
   if (apiKey) {
     try {
       const excerpt = plainText.slice(0, 8000);
