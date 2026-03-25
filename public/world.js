@@ -230,6 +230,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         zzzPhase: Math.random() * Math.PI * 2,
         walkPhase: Math.random() * Math.PI * 2,
         highlighted: false,
+        headTurn: 0,
+        headTurnTarget: 0,
+        headTurnTimer: 2000 + Math.random() * 4000,
         shirtColor: SHIRTS[si][0],
         shirtDark:  SHIRTS[si][1],
         shirtLight: SHIRTS[si][2],
@@ -404,6 +407,14 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       } else if (s.state === 'sleeping') {
         s.zzzPhase += dt * (Math.PI * 2 / (ZZZ_PERIOD / 1000));
       }
+      // Head turn
+      s.headTurnTimer -= dt * 1000;
+      if (s.headTurnTimer <= 0) {
+        s.headTurnTarget = (Math.random() - 0.5) * 8; // -4 to +4 px
+        s.headTurnTimer = 2000 + Math.random() * 4000;
+      }
+      s.headTurn += (s.headTurnTarget - s.headTurn) * Math.min(1, dt * 3);
+
       // Advance walk cycle when moving
       const dx = s.x - s.prevX, dy = s.y - s.prevY;
       const moved = Math.sqrt(dx * dx + dy * dy);
@@ -659,7 +670,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Pass 2: Heads (avatars + border + glow + zzz) — always on top
     for (const id of agentIds) {
       const s = agentMap[id];
-      const sx = s.x, sy = s.y;
+      const sx = s.x + s.headTurn, sy = s.y;
       const sleeping = s.state === 'sleeping';
 
       // Glow for speaking
