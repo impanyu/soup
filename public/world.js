@@ -95,13 +95,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     }
   }
 
-  // ── Pre-rendered background ───────────────────────────────────────────────
-  let bgCanvas = null;   // offscreen canvas for static bg (nebulae + stars)
-  let bgParticles = [];  // animated particles (updated each frame)
-
+  // ── Static background (rendered once as CSS background-image) ─────────────
   function initBackground() {
-    // Pre-render static background to offscreen canvas
-    bgCanvas = document.createElement('canvas');
+    const bgCanvas = document.createElement('canvas');
     bgCanvas.width = worldW;
     bgCanvas.height = worldH;
     const bg = bgCanvas.getContext('2d');
@@ -139,7 +135,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       bg.restore();
     }
 
-    // Stars (baked in, no twinkle needed for static layer)
+    // Stars
     const area = worldW * worldH;
     const starCount = Math.min(600, Math.floor(area / 8000));
     for (let i = 0; i < starCount; i++) {
@@ -156,51 +152,18 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Subtle grid
     bg.strokeStyle = 'rgba(255,255,255,0.02)';
     bg.lineWidth = 1;
-    const gridSize = 80;
-    for (let gx = 0; gx < worldW; gx += gridSize) {
+    const gs = 80;
+    for (let gx = 0; gx < worldW; gx += gs) {
       bg.beginPath(); bg.moveTo(gx, 0); bg.lineTo(gx, worldH); bg.stroke();
     }
-    for (let gy = 0; gy < worldH; gy += gridSize) {
+    for (let gy = 0; gy < worldH; gy += gs) {
       bg.beginPath(); bg.moveTo(0, gy); bg.lineTo(worldW, gy); bg.stroke();
     }
 
-    // Floating animated particles (these update per-frame, kept lightweight)
-    const particleCount = Math.min(30, Math.floor(area / 60000));
-    bgParticles = [];
-    for (let i = 0; i < particleCount; i++) {
-      bgParticles.push({
-        x: Math.random() * worldW,
-        y: Math.random() * worldH,
-        vx: (Math.random() - 0.5) * 8,
-        vy: (Math.random() - 0.5) * 8,
-        r: 1 + Math.random() * 2,
-        alpha: 0.1 + Math.random() * 0.2,
-        hue: 220 + Math.random() * 80,
-      });
-    }
-  }
-
-  function updateBackground(dt) {
-    for (const p of bgParticles) {
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      if (p.x < 0) p.x += worldW;
-      if (p.x > worldW) p.x -= worldW;
-      if (p.y < 0) p.y += worldH;
-      if (p.y > worldH) p.y -= worldH;
-    }
-  }
-
-  function renderBackground() {
-    // Blit pre-rendered static background
-    ctx.drawImage(bgCanvas, 0, 0);
-    // Draw animated particles on top
-    for (const p of bgParticles) {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${p.hue}, 70%, 60%, ${p.alpha})`;
-      ctx.fill();
-    }
+    // Set as CSS background on canvas — zero per-frame cost
+    canvas.style.backgroundImage = `url(${bgCanvas.toDataURL('image/png')})`;
+    canvas.style.backgroundPosition = '0 0';
+    canvas.style.backgroundRepeat = 'no-repeat';
   }
 
   // ── Fetch data ────────────────────────────────────────────────────────────
@@ -222,9 +185,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Setup agents ──────────────────────────────────────────────────────────
   function initAgents(rawAgents) {
-    const cols = Math.ceil(Math.sqrt(rawAgents.length));
-    worldW = Math.max(container.clientWidth, cols * AGENT_SPACING + AGENT_SPACING);
-    worldH = Math.max(container.clientHeight, Math.ceil(rawAgents.length / cols) * AGENT_SPACING + AGENT_SPACING);
+    // Size world based on agent count, at least viewport size
+    const n = rawAgents.length;
+    const idealCols = Math.ceil(Math.sqrt(n));
+    const idealRows = Math.ceil(n / idealCols);
+    worldW = Math.max(container.clientWidth, idealCols * AGENT_SPACING + AGENT_SPACING);
+    worldH = Math.max(container.clientHeight, idealRows * AGENT_SPACING + AGENT_SPACING);
 
     canvas.width = worldW;
     canvas.height = worldH;
@@ -234,13 +200,23 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     agentMap = {};
     agentIds = [];
 
+    // Compute grid that fills the entire world area
+    const padX = AVATAR_R + 20;
+    const padY = AVATAR_R + 20;
+    const usableW = worldW - padX * 2;
+    const usableH = worldH - padY * 2;
+    const cols = Math.ceil(Math.sqrt(n * (usableW / usableH)));
+    const rows = Math.ceil(n / cols);
+    const cellW = usableW / cols;
+    const cellH = usableH / rows;
+
     rawAgents.forEach((a, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const jitterX = (Math.random() - 0.5) * 60;
-      const jitterY = (Math.random() - 0.5) * 60;
-      const x = clampX(AGENT_SPACING / 2 + col * AGENT_SPACING + jitterX);
-      const y = clampY(AGENT_SPACING / 2 + row * AGENT_SPACING + jitterY);
+      const jitterX = (Math.random() - 0.5) * Math.min(60, cellW * 0.4);
+      const jitterY = (Math.random() - 0.5) * Math.min(60, cellH * 0.4);
+      const x = clampX(padX + cellW * (col + 0.5) + jitterX);
+      const y = clampY(padY + cellH * (row + 0.5) + jitterY);
 
       agentMap[a.id] = {
         agent: a,
@@ -404,7 +380,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     }
 
     resolveCollisions();
-    updateBackground(dt);
     for (const b of activeBubbles) positionBubble(b);
   }
 
@@ -423,7 +398,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const cw = container.clientWidth;
     const ch = container.clientHeight;
 
-    renderBackground();
+    // Clear only — background is a static CSS image
+    ctx.clearRect(0, 0, worldW, worldH);
 
     for (const id of agentIds) {
       const s = agentMap[id];
