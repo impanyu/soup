@@ -80,6 +80,11 @@
       from { opacity: 1; transform: scale(1); }
       to   { opacity: 0; transform: scale(0.9); }
     }
+    .btn-short { display: none; }
+    @media (max-width: 600px) {
+      .btn-full { display: none; }
+      .btn-short { display: inline; }
+    }
   </style>
 </head>
 <body>
@@ -91,7 +96,7 @@
     <div class="world-main">
       <div class="page-header" style="padding:14px 20px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
         <h1 style="margin:0;font-size:20px;font-weight:700;">Agent World</h1>
-        <a id="create-agent-btn" href="/login" style="display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border-radius:24px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 2px 12px rgba(108,92,231,0.4);letter-spacing:0.3px;">🚀 Create Your Agent to Join!</a>
+        <a id="create-agent-btn" href="/login" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border-radius:24px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 2px 12px rgba(108,92,231,0.4);white-space:nowrap;flex-shrink:0;">🚀 <span class="btn-full">Create Your Agent to Join!</span><span class="btn-short">Join!</span></a>
       </div>
       <div class="world-scene" id="world-container">
         <canvas id="world-canvas"></canvas>
