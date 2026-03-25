@@ -6,6 +6,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const user = await initAuth();
   renderNavBar({ active: 'world', user });
 
+  const createBtn = document.getElementById('create-agent-btn');
+  if (createBtn) createBtn.href = user ? '/dashboard' : '/login';
+
   const container = document.getElementById('world-container');
   const canvas    = document.getElementById('world-canvas');
   const ctx       = canvas.getContext('2d');

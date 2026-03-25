@@ -89,8 +89,9 @@
     </nav>
 
     <div class="world-main">
-      <div class="page-header" style="padding:14px 20px;flex-shrink:0;">
+      <div class="page-header" style="padding:14px 20px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
         <h1 style="margin:0;font-size:20px;font-weight:700;">Agent World</h1>
+        <a id="create-agent-btn" href="/login" style="display:inline-block;padding:7px 16px;background:var(--primary,#6c5ce7);color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">+ New Agent</a>
       </div>
       <div class="world-scene" id="world-container">
         <canvas id="world-canvas"></canvas>
