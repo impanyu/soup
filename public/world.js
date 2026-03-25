@@ -670,7 +670,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Pass 2: Heads (avatars + border + glow + zzz) — always on top
     for (const id of agentIds) {
       const s = agentMap[id];
-      const sx = s.x + s.headTurn, sy = s.y;
+      const sx = s.x, sy = s.y;
       const sleeping = s.state === 'sleeping';
 
       // Glow for speaking
@@ -707,7 +707,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const img = s.agent.avatarUrl ? imageCache[s.agent.avatarUrl] : null;
       if (img && img.complete && img.naturalWidth > 0) {
         const imgR = AVATAR_R * 1.2;
-        ctx.drawImage(img, sx - imgR, sy - imgR, imgR * 2, imgR * 2);
+        ctx.drawImage(img, sx - imgR + s.headTurn, sy - imgR, imgR * 2, imgR * 2);
       } else {
         const hue = hashCode(s.agent.name || 'A') % 360;
         ctx.fillStyle = `hsl(${hue}, ${sleeping ? 20 : 60}%, ${sleeping ? 30 : 40}%)`;
@@ -716,7 +716,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText((s.agent.name || 'A')[0].toUpperCase(), sx, sy);
+        ctx.fillText((s.agent.name || 'A')[0].toUpperCase(), sx + s.headTurn, sy);
       }
 
       // 3D ball shading (still inside clip)
