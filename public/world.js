@@ -183,6 +183,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const x = clampX(padX + cellW * (col + 0.5) + jitterX);
       const y = clampY(padY + cellH * (row + 0.5) + jitterY);
 
+      // Deterministic random colors for shirt & pants
+      const h1 = hashCode(a.id + 'shirt') % 360;
+      const h2 = hashCode(a.id + 'pants') % 360;
       agentMap[a.id] = {
         agent: a,
         x, y,
@@ -193,6 +196,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         zzzPhase: Math.random() * Math.PI * 2,
         walkPhase: Math.random() * Math.PI * 2,
         highlighted: false,
+        shirtColor: `hsl(${h1}, 70%, 55%)`,
+        shirtDark:  `hsl(${h1}, 60%, 30%)`,
+        shirtLight: `hsl(${h1}, 80%, 78%)`,
+        pantsColor: `hsl(${h2}, 60%, 40%)`,
+        pantsDark:  `hsl(${h2}, 50%, 22%)`,
+        pantsLight: `hsl(${h2}, 70%, 65%)`,
       };
       agentIds.push(a.id);
 
@@ -390,58 +399,78 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     s.y = clampY(s.y + (dy / dist) * step);
   }
 
-  // ── Draw cartoon body (shadow + 3 strokes) ─────────────────────────────
-  function buildBodyPath(ctx, sx, bodyTop, isMoving, wp, ox, oy) {
-    const legLen = 18, armLen = 16, torsoLen = 20;
-    ctx.beginPath();
-    ctx.moveTo(sx + ox, bodyTop + oy);
-    ctx.lineTo(sx + ox, bodyTop + torsoLen + oy);
-    if (isMoving) {
-      const legSwing = Math.sin(wp) * 12;
-      const armSwing = Math.sin(wp + Math.PI) * 10;
-      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx - legSwing + ox, bodyTop + torsoLen + legLen + oy);
-      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx + legSwing + ox, bodyTop + torsoLen + legLen + oy);
-      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx - 10 - armSwing + ox, bodyTop + 5 + armLen + oy);
-      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx + 10 + armSwing + ox, bodyTop + 5 + armLen + oy);
-    } else {
-      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx - 6 + ox, bodyTop + torsoLen + legLen + oy);
-      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx + 6 + ox, bodyTop + torsoLen + legLen + oy);
-      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx - 12 + ox, bodyTop + 5 + armLen + oy);
-      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx + 12 + ox, bodyTop + 5 + armLen + oy);
-    }
-  }
-
+  // ── Draw cartoon body with shirt, pants, hands & feet ──────────────────
   function drawBody(ctx, sx, sy, s) {
     const bodyTop = sy + AVATAR_R;
     const isMoving = Math.abs(s.x - s.prevX) > 0.5 || Math.abs(s.y - s.prevY) > 0.5;
     const wp = s.walkPhase;
+    const legLen = 18, armLen = 16, torsoLen = 20;
     const awake = s.state !== 'sleeping';
+    const dim = awake ? 1 : 0.5;
+
+    let lx1, ly1, lx2, ly2, ax1, ay1, ax2, ay2;
+    if (isMoving) {
+      const legSwing = Math.sin(wp) * 12;
+      const armSwing = Math.sin(wp + Math.PI) * 10;
+      lx1 = sx - legSwing; ly1 = bodyTop + torsoLen + legLen;
+      lx2 = sx + legSwing; ly2 = ly1;
+      ax1 = sx - 10 - armSwing; ay1 = bodyTop + 5 + armLen;
+      ax2 = sx + 10 + armSwing; ay2 = ay1;
+    } else {
+      lx1 = sx - 6; ly1 = bodyTop + torsoLen + legLen;
+      lx2 = sx + 6; ly2 = ly1;
+      ax1 = sx - 12; ay1 = bodyTop + 5 + armLen;
+      ax2 = sx + 12; ay2 = ay1;
+    }
 
     ctx.save();
     ctx.lineCap = 'round';
+    ctx.globalAlpha = dim;
 
-    // Shadow (offset +3,+3)
-    buildBodyPath(ctx, sx, bodyTop, isMoving, wp, 3, 3);
+    // Shadow (all limbs, offset +3,+3)
+    ctx.beginPath();
+    ctx.moveTo(sx + 3, bodyTop + 3); ctx.lineTo(sx + 3, bodyTop + torsoLen + 3);
+    ctx.moveTo(sx + 3, bodyTop + torsoLen + 3); ctx.lineTo(lx1 + 3, ly1 + 3);
+    ctx.moveTo(sx + 3, bodyTop + torsoLen + 3); ctx.lineTo(lx2 + 3, ly2 + 3);
+    ctx.moveTo(sx + 3, bodyTop + 5 + 3); ctx.lineTo(ax1 + 3, ay1 + 3);
+    ctx.moveTo(sx + 3, bodyTop + 5 + 3); ctx.lineTo(ax2 + 3, ay2 + 3);
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
     ctx.lineWidth = 5;
     ctx.stroke();
 
-    // Dark edge (bottom/right of tube)
-    buildBodyPath(ctx, sx, bodyTop, isMoving, wp, 0, 0);
-    ctx.strokeStyle = awake ? '#1a4a99' : 'rgba(60, 60, 80, 0.5)';
-    ctx.lineWidth = 7;
-    ctx.stroke();
+    // Pants (legs): dark edge → main → highlight
+    ctx.beginPath();
+    ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(lx1, ly1);
+    ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(lx2, ly2);
+    ctx.strokeStyle = s.pantsDark; ctx.lineWidth = 7; ctx.stroke();
+    ctx.strokeStyle = s.pantsColor; ctx.lineWidth = 5; ctx.stroke();
 
-    // Main body color
-    ctx.strokeStyle = awake ? '#4a9fff' : '#7a7794';
-    ctx.lineWidth = 5;
-    ctx.stroke();
+    // Shirt (torso + arms): dark edge → main → highlight
+    ctx.beginPath();
+    ctx.moveTo(sx, bodyTop); ctx.lineTo(sx, bodyTop + torsoLen);
+    ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(ax1, ay1);
+    ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(ax2, ay2);
+    ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 7; ctx.stroke();
+    ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 5; ctx.stroke();
 
-    // Highlight streak (offset -1,-1 for top-left light)
-    buildBodyPath(ctx, sx, bodyTop, isMoving, wp, -1, -1);
-    ctx.strokeStyle = awake ? 'rgba(180, 220, 255, 0.6)' : 'rgba(160, 160, 180, 0.3)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // Highlight on shirt
+    ctx.beginPath();
+    ctx.moveTo(sx - 1, bodyTop - 1); ctx.lineTo(sx - 1, bodyTop + torsoLen - 1);
+    ctx.strokeStyle = s.shirtLight; ctx.lineWidth = 2; ctx.stroke();
+
+    // Hands (small circles at arm ends) — skin tone
+    ctx.fillStyle = '#f0c8a0';
+    ctx.beginPath();
+    ctx.arc(ax1, ay1, 3.5, 0, Math.PI * 2);
+    ctx.arc(ax2, ay2, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Feet (small ovals at leg ends) — dark shoe color
+    ctx.fillStyle = '#3a3a3a';
+    ctx.beginPath();
+    ctx.ellipse(lx1, ly1 + 1, 4, 2.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(lx2, ly2 + 1, 4, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.restore();
   }
