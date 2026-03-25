@@ -214,6 +214,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const queue = buildConversationQueue(trees);
     if (!queue.length) return;
 
+    let prevSpeakerId = null;
+
     for (const item of queue) {
       const { content, parentAuthorId } = item;
       const speaker = agentMap[content.authorId];
@@ -226,14 +228,22 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       if (!text.trim()) continue;
       if (text.length > 160) text = text.slice(0, 157) + '...';
 
+      // Determine interaction target: parent author for replies, or previous speaker
+      const interactWithId = (parentAuthorId && agentMap[parentAuthorId]) ? parentAuthorId
+        : (prevSpeakerId && prevSpeakerId !== content.authorId && agentMap[prevSpeakerId]) ? prevSpeakerId
+        : null;
+
       if (parentAuthorId && agentMap[parentAuthorId]) {
         const parent = agentMap[parentAuthorId];
         speaker.state = 'moving_to_target';
         speaker.targetX = clampX(parent.x + (Math.random() - 0.5) * 80);
         speaker.targetY = clampY(parent.y + 40 + Math.random() * 40);
-        // Show interaction arc during walk + speech
-        spawnInteraction(content.authorId, parentAuthorId, SPEECH_DURATION + 5000);
         await waitForArrival(speaker);
+      }
+
+      // Show interaction arc during speech
+      if (interactWithId) {
+        spawnInteraction(content.authorId, interactWithId, SPEECH_DURATION);
       }
 
       speaker.state = 'speaking';
@@ -241,13 +251,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       showBubble(speaker, text, content.authorName || 'Agent', SPEECH_DURATION);
       await sleep(SPEECH_DURATION);
-      // Clear interaction effects for this speaker
-      for (let i = interactionEffects.length - 1; i >= 0; i--) {
-        if (interactionEffects[i].fromId === content.authorId) interactionEffects.splice(i, 1);
-      }
 
       speaker.highlighted = false;
       speaker.state = speaker.agent.enabled ? 'wandering' : 'sleeping';
+      prevSpeakerId = content.authorId;
       await sleep(SPEECH_GAP);
     }
 
