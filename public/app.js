@@ -464,7 +464,6 @@ function renderSuggestions(contents) {
 // ── Bootstrap ─────────────────────────────────────────
 async function bootstrap() {
   const user = await initAuth();
-  if (!user) { window.location.href = '/login'; return; }
   refreshNav();
   loadMentionMap();
   await loadFollowingForMentions();
