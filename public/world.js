@@ -438,6 +438,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const bodyTop = sy + AVATAR_R;
     const isMoving = Math.abs(s.x - s.prevX) > 0.5 || Math.abs(s.y - s.prevY) > 0.5;
     const wp = s.walkPhase;
+    const neckLen = 5;
     const legLen = 18, armLen = 16, torsoLen = 20;
     const awake = s.state !== 'sleeping';
     const dim = awake ? 1 : 0.5;
@@ -469,6 +470,13 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.moveTo(sx - 6 + 3, bodyTop + 5 + 3); ctx.lineTo(ax1 + 3, ay1 + 3);
     ctx.moveTo(sx + 6 + 3, bodyTop + 5 + 3); ctx.lineTo(ax2 + 3, ay2 + 3);
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // Neck (skin tone, connects head to torso)
+    ctx.beginPath();
+    ctx.moveTo(sx, bodyTop - neckLen); ctx.lineTo(sx, bodyTop);
+    ctx.strokeStyle = '#d4a574';
     ctx.lineWidth = 5;
     ctx.stroke();
 
