@@ -548,16 +548,16 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   function render() {
     ctx.clearRect(0, 0, worldW, worldH);
 
-    // Pass 0: Ground shadows (cast to the right, batched into one path)
+    // Pass 0: Ground shadows (flat ellipse at feet, offset right)
     ctx.beginPath();
     for (const id of agentIds) {
       const s = agentMap[id];
-      const shadowX = s.x + 12;
-      const shadowY = s.y + 10;
-      ctx.moveTo(shadowX + 18, shadowY);
-      ctx.ellipse(shadowX, shadowY, 18, 40, 0, 0, Math.PI * 2);
+      const footY = s.y + AVATAR_R + 40;
+      const shadowX = s.x + 8;
+      ctx.moveTo(shadowX + 22, footY);
+      ctx.ellipse(shadowX, footY, 22, 6, 0, 0, Math.PI * 2);
     }
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.13)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
     ctx.fill();
 
     // Pass 1: Bodies + name labels
