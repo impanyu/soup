@@ -390,42 +390,57 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     s.y = clampY(s.y + (dy / dist) * step);
   }
 
-  // ── Draw cartoon body (batched paths, 2 strokes total) ──────────────────
+  // ── Draw cartoon body (shadow + 3 strokes) ─────────────────────────────
+  function buildBodyPath(ctx, sx, bodyTop, isMoving, wp, ox, oy) {
+    const legLen = 18, armLen = 16, torsoLen = 20;
+    ctx.beginPath();
+    ctx.moveTo(sx + ox, bodyTop + oy);
+    ctx.lineTo(sx + ox, bodyTop + torsoLen + oy);
+    if (isMoving) {
+      const legSwing = Math.sin(wp) * 12;
+      const armSwing = Math.sin(wp + Math.PI) * 10;
+      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx - legSwing + ox, bodyTop + torsoLen + legLen + oy);
+      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx + legSwing + ox, bodyTop + torsoLen + legLen + oy);
+      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx - 10 - armSwing + ox, bodyTop + 5 + armLen + oy);
+      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx + 10 + armSwing + ox, bodyTop + 5 + armLen + oy);
+    } else {
+      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx - 6 + ox, bodyTop + torsoLen + legLen + oy);
+      ctx.moveTo(sx + ox, bodyTop + torsoLen + oy); ctx.lineTo(sx + 6 + ox, bodyTop + torsoLen + legLen + oy);
+      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx - 12 + ox, bodyTop + 5 + armLen + oy);
+      ctx.moveTo(sx + ox, bodyTop + 5 + oy); ctx.lineTo(sx + 12 + ox, bodyTop + 5 + armLen + oy);
+    }
+  }
+
   function drawBody(ctx, sx, sy, s) {
     const bodyTop = sy + AVATAR_R;
     const isMoving = Math.abs(s.x - s.prevX) > 0.5 || Math.abs(s.y - s.prevY) > 0.5;
     const wp = s.walkPhase;
-    const legLen = 18, armLen = 16, torsoLen = 20;
     const awake = s.state !== 'sleeping';
 
     ctx.save();
     ctx.lineCap = 'round';
 
-    // Build one path for all limbs
-    ctx.beginPath();
-    // Torso
-    ctx.moveTo(sx, bodyTop);
-    ctx.lineTo(sx, bodyTop + torsoLen);
-    if (isMoving) {
-      const legSwing = Math.sin(wp) * 12;
-      const armSwing = Math.sin(wp + Math.PI) * 10;
-      ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(sx - legSwing, bodyTop + torsoLen + legLen);
-      ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(sx + legSwing, bodyTop + torsoLen + legLen);
-      ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(sx - 10 - armSwing, bodyTop + 5 + armLen);
-      ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(sx + 10 + armSwing, bodyTop + 5 + armLen);
-    } else {
-      ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(sx - 6, bodyTop + torsoLen + legLen);
-      ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(sx + 6, bodyTop + torsoLen + legLen);
-      ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(sx - 12, bodyTop + 5 + armLen);
-      ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(sx + 12, bodyTop + 5 + armLen);
-    }
-    // Outline pass
-    ctx.strokeStyle = awake ? 'rgba(80, 160, 255, 0.6)' : 'rgba(100, 100, 130, 0.4)';
-    ctx.lineWidth = 6;
+    // Shadow (offset +3,+3)
+    buildBodyPath(ctx, sx, bodyTop, isMoving, wp, 3, 3);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+    ctx.lineWidth = 5;
     ctx.stroke();
-    // Fill pass (same path)
-    ctx.strokeStyle = awake ? '#b0d4f8' : '#7a7794';
-    ctx.lineWidth = 4;
+
+    // Dark edge (bottom/right of tube)
+    buildBodyPath(ctx, sx, bodyTop, isMoving, wp, 0, 0);
+    ctx.strokeStyle = awake ? '#1a4a99' : 'rgba(60, 60, 80, 0.5)';
+    ctx.lineWidth = 7;
+    ctx.stroke();
+
+    // Main body color
+    ctx.strokeStyle = awake ? '#4a9fff' : '#7a7794';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // Highlight streak (offset -1,-1 for top-left light)
+    buildBodyPath(ctx, sx, bodyTop, isMoving, wp, -1, -1);
+    ctx.strokeStyle = awake ? 'rgba(180, 220, 255, 0.6)' : 'rgba(160, 160, 180, 0.3)';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     ctx.restore();
@@ -574,6 +589,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.restore();
       }
 
+      // Drop shadow
+      ctx.beginPath();
+      ctx.arc(sx + 3, sy + 3, AVATAR_R + 1, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fill();
+
       // Avatar circle
       ctx.save();
       ctx.beginPath();
@@ -596,13 +617,28 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.textBaseline = 'middle';
         ctx.fillText((s.agent.name || 'A')[0].toUpperCase(), sx, sy);
       }
+
+      // 3D depth overlay (still inside clip) — dark bottom, light top
+      const depthGrad = ctx.createLinearGradient(sx, sy - AVATAR_R, sx, sy + AVATAR_R);
+      depthGrad.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
+      depthGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+      depthGrad.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = depthGrad;
+      ctx.fillRect(sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
       ctx.restore();
 
-      // Border ring
+      // Border — dark bottom edge, light top edge for 3D rim
       ctx.beginPath();
       ctx.arc(sx, sy, AVATAR_R, 0, Math.PI * 2);
-      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.1)'
-        : s.highlighted ? 'rgba(80, 160, 255, 0.9)' : 'rgba(80, 160, 255, 0.5)';
+      ctx.strokeStyle = sleeping ? 'rgba(0,0,0,0.15)' : 'rgba(0, 20, 60, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Top highlight rim
+      ctx.beginPath();
+      ctx.arc(sx, sy, AVATAR_R, -Math.PI * 0.8, -Math.PI * 0.2);
+      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.08)'
+        : s.highlighted ? 'rgba(160, 210, 255, 0.9)' : 'rgba(200, 220, 255, 0.45)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
