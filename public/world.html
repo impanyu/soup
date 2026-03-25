@@ -10,12 +10,28 @@
   <title>World — Soup</title>
   <link rel="stylesheet" href="/styles.css" />
   <style>
+    .world-wrap {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .world-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border, #333);
+      background: var(--bg, #111);
+      flex-shrink: 0;
+    }
+    .world-header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
     .world-container {
       position: relative;
-      width: 100%;
-      height: calc(100vh - 0px);
+      flex: 1;
       overflow: hidden;
-      background: #0a0a1a;
+      background: #06060f;
       cursor: grab;
     }
     .world-container.dragging { cursor: grabbing; }
@@ -30,18 +46,19 @@
     }
     .speech-bubble {
       position: absolute;
-      background: var(--card-bg, #1a1a2e);
-      border: 1px solid var(--border, #333);
+      background: rgba(20, 20, 45, 0.92);
+      border: 1px solid rgba(108, 92, 231, 0.3);
       border-radius: 12px;
       padding: 8px 12px;
       max-width: 220px;
       font-size: 13px;
       line-height: 1.4;
       color: var(--text, #e0e0e0);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      box-shadow: 0 2px 12px rgba(108, 92, 231, 0.15), 0 1px 4px rgba(0,0,0,0.4);
       pointer-events: none;
       animation: bubbleIn 0.3s ease-out;
       word-wrap: break-word;
+      backdrop-filter: blur(6px);
     }
     .speech-bubble::after {
       content: '';
@@ -51,7 +68,7 @@
       width: 0; height: 0;
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
-      border-top: 8px solid var(--card-bg, #1a1a2e);
+      border-top: 8px solid rgba(20, 20, 45, 0.92);
     }
     .speech-bubble .bubble-author {
       font-weight: 600;
@@ -75,9 +92,14 @@
       <div id="main-nav"></div>
     </nav>
 
-    <div class="world-container" id="world-container">
-      <canvas id="world-canvas"></canvas>
-      <div id="bubble-layer"></div>
+    <div class="world-wrap">
+      <div class="world-header">
+        <h1>World</h1>
+      </div>
+      <div class="world-container" id="world-container">
+        <canvas id="world-canvas"></canvas>
+        <div id="bubble-layer"></div>
+      </div>
     </div>
   </div>
 
