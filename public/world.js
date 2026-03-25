@@ -183,9 +183,43 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const x = clampX(padX + cellW * (col + 0.5) + jitterX);
       const y = clampY(padY + cellH * (row + 0.5) + jitterY);
 
-      // Deterministic random colors for shirt & pants
-      const h1 = hashCode(a.id + 'shirt') % 360;
-      const h2 = hashCode(a.id + 'pants') % 360;
+      // Deterministic clothing colors from curated palettes
+      const SHIRTS = [
+        ['#e74c3c','#8b1a1a','#f5a0a0'], // red
+        ['#e67e22','#8b4513','#f5c89a'], // orange
+        ['#f1c40f','#8b7a00','#f9e88a'], // yellow
+        ['#2ecc71','#1a6b3a','#a0f0c0'], // green
+        ['#1abc9c','#0d6b5a','#8eecd8'], // teal
+        ['#3498db','#1a4a8b','#a0c8f0'], // blue
+        ['#9b59b6','#5b2a7a','#d0a0e8'], // purple
+        ['#e91e63','#7a0a30','#f5a0c0'], // pink
+        ['#ffffff','#999999','#ffffff'], // white
+        ['#2c3e50','#131a22','#7f8c9a'], // dark navy
+        ['#e8dcc8','#8b7d6b','#f5efe5'], // cream
+        ['#c0392b','#6b1a10','#e8a098'], // dark red
+        ['#16a085','#0a5a48','#80d8c0'], // dark teal
+        ['#8e44ad','#4a1a6b','#c8a0e0'], // dark purple
+        ['#d35400','#7a3000','#e8a870'], // burnt orange
+        ['#7f8c8d','#444a4b','#b8c0c0'], // gray
+      ];
+      const PANTS = [
+        ['#2c3e50','#131a22','#6a7a8a'], // dark navy
+        ['#1a1a2e','#0a0a18','#4a4a6e'], // dark indigo
+        ['#4a6fa5','#2a3f65','#8aafda'], // denim blue
+        ['#5d4e37','#2e2718','#9a8a70'], // brown
+        ['#3d3d3d','#1a1a1a','#7a7a7a'], // charcoal
+        ['#1a1a1a','#080808','#4a4a4a'], // black
+        ['#c8b898','#7a6a48','#e8dcc0'], // khaki
+        ['#556b2f','#2a3a18','#8a9a60'], // olive
+        ['#8b4513','#4a2208','#c08050'], // saddle brown
+        ['#696969','#333333','#a0a0a0'], // dim gray
+        ['#2f4f4f','#182828','#6a8a8a'], // dark slate
+        ['#483d8b','#241e50','#8878c8'], // dark slate blue
+        ['#800000','#400000','#b04040'], // maroon
+        ['#f5f5dc','#9a9a80','#fafaf0'], // beige
+      ];
+      const si = hashCode(a.id + 'shirt') % SHIRTS.length;
+      const pi = hashCode(a.id + 'pants') % PANTS.length;
       agentMap[a.id] = {
         agent: a,
         x, y,
@@ -196,12 +230,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         zzzPhase: Math.random() * Math.PI * 2,
         walkPhase: Math.random() * Math.PI * 2,
         highlighted: false,
-        shirtColor: `hsl(${h1}, 70%, 55%)`,
-        shirtDark:  `hsl(${h1}, 60%, 30%)`,
-        shirtLight: `hsl(${h1}, 80%, 78%)`,
-        pantsColor: `hsl(${h2}, 60%, 40%)`,
-        pantsDark:  `hsl(${h2}, 50%, 22%)`,
-        pantsLight: `hsl(${h2}, 70%, 65%)`,
+        shirtColor: SHIRTS[si][0],
+        shirtDark:  SHIRTS[si][1],
+        shirtLight: SHIRTS[si][2],
+        pantsColor: PANTS[pi][0],
+        pantsDark:  PANTS[pi][1],
+        pantsLight: PANTS[pi][2],
       };
       agentIds.push(a.id);
 
