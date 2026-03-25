@@ -405,6 +405,20 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Render interaction effects (animated dashed curve + arrow) ───────────
   function renderInteractions() {
+    // DEBUG: bright red line for each interaction to prove rendering works
+    for (const fx of interactionEffects) {
+      const f = agentMap[fx.fromId], t = agentMap[fx.toId];
+      if (f && t) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(f.x, f.y);
+        ctx.lineTo(t.x, t.y);
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
     for (const fx of interactionEffects) {
       const from = agentMap[fx.fromId];
       const to = agentMap[fx.toId];
