@@ -565,12 +565,18 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const s = agentMap[id];
       drawBody(ctx, s.x, s.y, s);
       // Name label
-      ctx.fillStyle = s.state === 'sleeping' ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.75)';
-      ctx.font = '11px sans-serif';
+      ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       const name = s.agent.name || 'Agent';
-      ctx.fillText(name.length > 14 ? name.slice(0, 12) + '..' : name, s.x, s.y + AVATAR_R + 38);
+      const label = name.length > 14 ? name.slice(0, 12) + '..' : name;
+      const labelY = s.y + AVATAR_R + 38;
+      // Text outline for readability
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(label, s.x, labelY);
+      ctx.fillStyle = s.state === 'sleeping' ? 'rgba(255,255,255,0.5)' : '#fff';
+      ctx.fillText(label, s.x, labelY);
     }
 
     // Pass 2: Heads (avatars + border + glow + zzz) — always on top
