@@ -34,7 +34,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   let hoveredAgent = null;
   let imageCache = {};
   let activeBubbles = [];
+  let interactionEffects = [];  // { fromId, toId, particles: [{x,y,life}], startTime }
   let lastTime = 0;
+  let globalTime = 0;
 
   // ── Spatial hash grid for fast collision ──────────────────────────────────
   const GRID_CELL = COLLISION_D + 4;
@@ -113,7 +115,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Boundary clamping ─────────────────────────────────────────────────────
   function clampX(x) { return Math.max(AVATAR_R + 10, Math.min(worldW - AVATAR_R - 10, x)); }
-  function clampY(y) { return Math.max(AVATAR_R + 10, Math.min(worldH - AVATAR_R - 20, y)); }
+  function clampY(y) { return Math.max(AVATAR_R + 10, Math.min(worldH - AVATAR_R - 55, y)); }
 
   // ── Setup agents ──────────────────────────────────────────────────────────
   function initAgents(rawAgents) {
@@ -148,10 +150,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       agentMap[a.id] = {
         agent: a,
         x, y,
+        prevX: x, prevY: y,
         targetX: x, targetY: y,
         state: a.enabled ? 'wandering' : 'sleeping',
         wanderTimer: Math.random() * 3000,
         zzzPhase: Math.random() * Math.PI * 2,
+        walkPhase: Math.random() * Math.PI * 2,
         highlighted: false,
       };
       agentIds.push(a.id);
@@ -228,6 +232,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         speaker.targetX = clampX(parent.x + (Math.random() - 0.5) * 80);
         speaker.targetY = clampY(parent.y + 40 + Math.random() * 40);
         await waitForArrival(speaker);
+        // Interaction effect from speaker to parent
+        spawnInteraction(content.authorId, parentAuthorId, SPEECH_DURATION);
       }
 
       speaker.state = 'speaking';
@@ -294,8 +300,11 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Update loop ───────────────────────────────────────────────────────────
   function update(dt) {
+    globalTime += dt;
     for (const id of agentIds) {
       const s = agentMap[id];
+      s.prevX = s.x;
+      s.prevY = s.y;
       if (s.state === 'wandering') {
         s.wanderTimer -= dt * 1000;
         if (s.wanderTimer <= 0) pickWanderTarget(s);
@@ -304,6 +313,31 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         moveToward(s, MOVE_SPEED, dt);
       } else if (s.state === 'sleeping') {
         s.zzzPhase += dt * (Math.PI * 2 / (ZZZ_PERIOD / 1000));
+      }
+      // Advance walk cycle when moving
+      const dx = s.x - s.prevX, dy = s.y - s.prevY;
+      const moved = Math.sqrt(dx * dx + dy * dy);
+      if (moved > 0.5) {
+        s.walkPhase += dt * 10;  // walk cycle speed
+      }
+    }
+    // Update interaction effects
+    for (let i = interactionEffects.length - 1; i >= 0; i--) {
+      const fx = interactionEffects[i];
+      fx.elapsed += dt;
+      if (fx.elapsed > fx.duration) {
+        interactionEffects.splice(i, 1);
+        continue;
+      }
+      // Update particles along the path
+      const from = agentMap[fx.fromId];
+      const to = agentMap[fx.toId];
+      if (!from || !to) { interactionEffects.splice(i, 1); continue; }
+      for (const p of fx.particles) {
+        p.t += dt * p.speed;
+        if (p.t > 1) p.t -= 1;
+        p.x = from.x + (to.x - from.x) * p.t + Math.sin(p.t * Math.PI * 4 + p.offset) * 8;
+        p.y = from.y + (to.y - from.y) * p.t + Math.cos(p.t * Math.PI * 4 + p.offset) * 8;
       }
     }
     resolveCollisions();
@@ -320,9 +354,126 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     s.y = clampY(s.y + (dy / dist) * step);
   }
 
+  // ── Draw cartoon body ────────────────────────────────────────────────────
+  function drawBody(ctx, sx, sy, s) {
+    const bodyTop = sy + AVATAR_R;  // just below the avatar circle
+    const isMoving = Math.abs(s.x - s.prevX) > 0.5 || Math.abs(s.y - s.prevY) > 0.5;
+    const wp = s.walkPhase;
+    const legLen = 16;
+    const armLen = 14;
+    const torsoLen = 18;
+    const bodyColor = s.state === 'sleeping' ? 'rgba(150, 150, 180, 0.5)' : 'rgba(180, 175, 220, 0.8)';
+
+    ctx.save();
+    ctx.strokeStyle = bodyColor;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+
+    // Torso
+    ctx.beginPath();
+    ctx.moveTo(sx, bodyTop);
+    ctx.lineTo(sx, bodyTop + torsoLen);
+    ctx.stroke();
+
+    if (isMoving) {
+      // Walking legs
+      const legSwing = Math.sin(wp) * 10;
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + torsoLen);
+      ctx.lineTo(sx - legSwing, bodyTop + torsoLen + legLen);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + torsoLen);
+      ctx.lineTo(sx + legSwing, bodyTop + torsoLen + legLen);
+      ctx.stroke();
+
+      // Swinging arms
+      const armSwing = Math.sin(wp + Math.PI) * 8;
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + 5);
+      ctx.lineTo(sx - 8 - armSwing, bodyTop + 5 + armLen);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + 5);
+      ctx.lineTo(sx + 8 + armSwing, bodyTop + 5 + armLen);
+      ctx.stroke();
+    } else {
+      // Standing legs
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + torsoLen);
+      ctx.lineTo(sx - 5, bodyTop + torsoLen + legLen);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + torsoLen);
+      ctx.lineTo(sx + 5, bodyTop + torsoLen + legLen);
+      ctx.stroke();
+
+      // Resting arms
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + 5);
+      ctx.lineTo(sx - 10, bodyTop + 5 + armLen);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(sx, bodyTop + 5);
+      ctx.lineTo(sx + 10, bodyTop + 5 + armLen);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // ── Render interaction effects ──────────────────────────────────────────
+  function renderInteractions() {
+    for (const fx of interactionEffects) {
+      const progress = fx.elapsed / fx.duration;
+      const alpha = progress < 0.2 ? progress / 0.2 : progress > 0.8 ? (1 - progress) / 0.2 : 1;
+      for (const p of fx.particles) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(108, 92, 231, ${alpha * 0.8})`;
+        ctx.shadowColor = 'rgba(108, 92, 231, 0.6)';
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.restore();
+      }
+      // Faint connecting line
+      const from = agentMap[fx.fromId];
+      const to = agentMap[fx.toId];
+      if (from && to) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.12})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  // ── Spawn interaction effect ────────────────────────────────────────────
+  function spawnInteraction(fromId, toId, duration) {
+    const particles = [];
+    const count = 6;
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        t: i / count,
+        x: 0, y: 0,
+        speed: 0.4 + Math.random() * 0.3,
+        offset: Math.random() * Math.PI * 2,
+      });
+    }
+    interactionEffects.push({ fromId, toId, particles, elapsed: 0, duration });
+  }
+
   // ── Render loop ───────────────────────────────────────────────────────────
   function render() {
     ctx.clearRect(0, 0, worldW, worldH);
+
+    // Interaction effects (behind agents)
+    renderInteractions();
 
     for (const id of agentIds) {
       const s = agentMap[id];
@@ -340,6 +491,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.fill();
         ctx.restore();
       }
+
+      // Body (drawn behind avatar)
+      drawBody(ctx, sx, sy, s);
 
       // Avatar
       ctx.save();
@@ -371,13 +525,13 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Name label
+      // Name label (below body now)
       ctx.fillStyle = 'rgba(255,255,255,0.75)';
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       const name = s.agent.name || 'Agent';
-      ctx.fillText(name.length > 14 ? name.slice(0, 12) + '..' : name, sx, sy + AVATAR_R + 4);
+      ctx.fillText(name.length > 14 ? name.slice(0, 12) + '..' : name, sx, sy + AVATAR_R + 38);
 
       // ZZZ for sleeping
       if (s.state === 'sleeping') {
