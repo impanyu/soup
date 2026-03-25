@@ -702,39 +702,41 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.globalAlpha = 1;
       const R = AVATAR_R;
 
-      // 1) Spherical edge darkening — radial gradient from center outward
+      // 1) Spherical edge darkening — stronger contrast
       ctx.beginPath();
       ctx.arc(sx, sy, R, 0, Math.PI * 2);
-      const sphere = ctx.createRadialGradient(sx, sy, R * 0.3, sx, sy, R);
+      const sphere = ctx.createRadialGradient(sx - R * 0.15, sy - R * 0.15, R * 0.15, sx, sy, R);
       sphere.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      sphere.addColorStop(0.7, 'rgba(0, 0, 0, 0.05)');
-      sphere.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+      sphere.addColorStop(0.5, 'rgba(0, 0, 0, 0.08)');
+      sphere.addColorStop(0.8, 'rgba(0, 0, 0, 0.25)');
+      sphere.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
       ctx.fillStyle = sphere;
       ctx.fill();
 
-      // 2) Specular highlight — small bright spot upper-left
+      // 2) Specular highlight — bright, tight spot upper-left
       ctx.beginPath();
       ctx.arc(sx, sy, R, 0, Math.PI * 2);
-      const spec = ctx.createRadialGradient(sx - R * 0.35, sy - R * 0.35, 0, sx - R * 0.35, sy - R * 0.35, R * 0.7);
-      spec.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-      spec.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
+      const spec = ctx.createRadialGradient(sx - R * 0.3, sy - R * 0.3, 0, sx - R * 0.3, sy - R * 0.3, R * 0.55);
+      spec.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+      spec.addColorStop(0.3, 'rgba(255, 255, 255, 0.25)');
+      spec.addColorStop(0.7, 'rgba(255, 255, 255, 0.05)');
       spec.addColorStop(1, 'rgba(255, 255, 255, 0)');
       ctx.fillStyle = spec;
       ctx.fill();
 
       ctx.restore();
 
-      // Rim — dark bottom, bright top for sphere edge
+      // Rim — thick dark bottom half, bright top half
       ctx.beginPath();
-      ctx.arc(sx, sy, R, 0.2, Math.PI - 0.2);
-      ctx.strokeStyle = sleeping ? 'rgba(0,0,0,0.12)' : 'rgba(0, 10, 40, 0.45)';
-      ctx.lineWidth = 2.5;
+      ctx.arc(sx, sy, R, 0.1, Math.PI - 0.1);
+      ctx.strokeStyle = sleeping ? 'rgba(0,0,0,0.15)' : 'rgba(0, 0, 0, 0.5)';
+      ctx.lineWidth = 3;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(sx, sy, R, -Math.PI + 0.2, -0.2);
-      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.06)'
-        : s.highlighted ? 'rgba(180, 220, 255, 0.9)' : 'rgba(220, 235, 255, 0.5)';
-      ctx.lineWidth = 2;
+      ctx.arc(sx, sy, R, -Math.PI + 0.1, -0.1);
+      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.08)'
+        : s.highlighted ? 'rgba(200, 230, 255, 0.95)' : 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
       // ZZZ for sleeping
