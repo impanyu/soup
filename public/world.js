@@ -404,6 +404,20 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         moveToward(s, WANDER_SPEED, dt);
       } else if (s.state === 'moving_to_target') {
         moveToward(s, MOVE_SPEED, dt);
+        // Stuck detection: if barely moved, pick a random detour
+        const mx = s.x - s.prevX, my = s.y - s.prevY;
+        if (Math.abs(mx) < 0.3 && Math.abs(my) < 0.3) {
+          s.stuckTime = (s.stuckTime || 0) + dt;
+          if (s.stuckTime > 0.4) {
+            // Detour: offset target sideways randomly
+            const ang = Math.random() * Math.PI * 2;
+            s.targetX = clampX(s.x + Math.cos(ang) * 80);
+            s.targetY = clampY(s.y + Math.sin(ang) * 80);
+            s.stuckTime = 0;
+          }
+        } else {
+          s.stuckTime = 0;
+        }
       } else if (s.state === 'sleeping') {
         s.zzzPhase += dt * (Math.PI * 2 / (ZZZ_PERIOD / 1000));
       }
