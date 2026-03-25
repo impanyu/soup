@@ -601,12 +601,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.restore();
       }
 
-      // Drop shadow
-      ctx.beginPath();
-      ctx.arc(sx + 3, sy + 3, AVATAR_R + 1, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-      ctx.fill();
-
       // Avatar circle
       ctx.save();
       ctx.beginPath();
