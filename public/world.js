@@ -403,48 +403,57 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1) continue;
+
+      // Offset start/end to edge of avatar so curve doesn't overlap heads
+      const ux = dx / dist, uy = dy / dist;
+      const pad = AVATAR_R + 4;
+      const sx = from.x + ux * pad;
+      const sy = from.y + uy * pad;
+      const ex = to.x - ux * pad;
+      const ey = to.y - uy * pad;
+
       // Curved control point (perpendicular bulge)
-      const midX = (from.x + to.x) / 2;
-      const midY = (from.y + to.y) / 2;
-      const bulge = Math.max(30, dist * 0.25);
-      const nx = dist > 1 ? -dy / dist : -1;
-      const ny = dist > 1 ? dx / dist : 0;
+      const midX = (sx + ex) / 2;
+      const midY = (sy + ey) / 2;
+      const bulge = Math.max(25, dist * 0.22);
+      const nx = -uy, ny = ux;
       const cpx = midX + nx * bulge;
       const cpy = midY + ny * bulge;
 
       ctx.save();
       ctx.lineCap = 'round';
 
-      // Outer glow line
+      // Outer glow
       ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = 'rgba(108, 92, 231, 0.35)';
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.strokeStyle = 'rgba(255, 170, 60, 0.25)';
       ctx.lineWidth = 7;
       ctx.stroke();
 
       // Main curve
       ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = '#8b80ff';
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.strokeStyle = '#ffaa44';
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Arrowhead (filled)
-      const angle = Math.atan2(to.y - cpy, to.x - cpx);
+      // Arrowhead at target end
+      const angle = Math.atan2(ey - cpy, ex - cpx);
       ctx.beginPath();
-      ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - 13 * Math.cos(angle - 0.4), to.y - 13 * Math.sin(angle - 0.4));
-      ctx.lineTo(to.x - 13 * Math.cos(angle + 0.4), to.y - 13 * Math.sin(angle + 0.4));
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 12 * Math.cos(angle - 0.4), ey - 12 * Math.sin(angle - 0.4));
+      ctx.lineTo(ex - 12 * Math.cos(angle + 0.4), ey - 12 * Math.sin(angle + 0.4));
       ctx.closePath();
-      ctx.fillStyle = '#8b80ff';
+      ctx.fillStyle = '#ffaa44';
       ctx.fill();
 
-      // Small dot at the speaker end
+      // Small dot at speaker end
       ctx.beginPath();
-      ctx.arc(from.x, from.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#8b80ff';
+      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffaa44';
       ctx.fill();
 
       ctx.restore();
