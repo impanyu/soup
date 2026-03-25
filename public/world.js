@@ -432,15 +432,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   }
 
   // ── Render interaction effects (3D parabola arc) ────────────────────────
-  // Sample a quadratic bezier at parameter t
-  function bezierPt(ax, ay, bx, by, cx, cy, t) {
-    const u = 1 - t;
-    return [u * u * ax + 2 * u * t * bx + t * t * cx,
-            u * u * ay + 2 * u * t * by + t * t * cy];
-  }
-
   function renderInteractions() {
-    const SEGMENTS = 24;
     for (const fx of interactionEffects) {
       const from = agentMap[fx.fromId];
       const to = agentMap[fx.toId];
@@ -451,7 +443,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < 1) continue;
 
-      // Offset start/end to edge of avatar
       const ux = dx / dist, uy = dy / dist;
       const pad = AVATAR_R + 4;
       const sx = from.x + ux * pad;
@@ -459,9 +450,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const ex = to.x - ux * pad;
       const ey = to.y - uy * pad;
 
-      // Arc height — scales with distance, simulates going "up" in 3D
-      const arcH = Math.max(40, dist * 0.45);
-      // Control point is above the midpoint (negative Y = up on screen)
+      const arcH = Math.max(50, dist * 0.5);
       const midX = (sx + ex) / 2;
       const midY = (sy + ey) / 2;
       const cpx = midX;
@@ -470,58 +459,63 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.save();
       ctx.lineCap = 'round';
 
-      // 1) Ground shadow — flattened ellipse on the "floor"
+      // 1) Ground shadow — flat on the "floor"
       ctx.beginPath();
       ctx.moveTo(sx, sy);
-      // Shadow control point is slightly below midpoint (on the ground)
-      ctx.quadraticCurveTo(midX, midY + 8, ex, ey);
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-      ctx.lineWidth = 6;
-      ctx.stroke();
-
-      // 2) Sample the 3D arc as segments with varying width for perspective
-      // Width is thinnest at peak (far away), thickest at endpoints (close)
-      for (let i = 0; i < SEGMENTS; i++) {
-        const t0 = i / SEGMENTS;
-        const t1 = (i + 1) / SEGMENTS;
-        const [x0, y0] = bezierPt(sx, sy, cpx, cpy, ex, ey, t0);
-        const [x1, y1] = bezierPt(sx, sy, cpx, cpy, ex, ey, t1);
-
-        // Perspective: width shrinks at peak (t=0.5), full at endpoints
-        const tMid = (t0 + t1) / 2;
-        const perspect = 1 - 0.5 * Math.sin(tMid * Math.PI); // 1.0 at ends, 0.5 at peak
-        const width = 2 + 3 * perspect; // 2-5px range
-
-        // Color: lighter/more transparent at peak
-        const alpha = 0.5 + 0.5 * perspect;
-        const r = Math.round(50 + 50 * (1 - tMid));
-        const g = Math.round(140 + 50 * perspect);
-
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.lineTo(x1, y1);
-        ctx.strokeStyle = `rgba(${r}, ${g}, 255, ${alpha})`;
-        ctx.lineWidth = width;
-        ctx.stroke();
-      }
-
-      // 3) Glow layer on top (single curve, wide + transparent)
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = 'rgba(100, 180, 255, 0.12)';
+      ctx.quadraticCurveTo(midX, midY + 10, ex, ey);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
       ctx.lineWidth = 10;
       ctx.stroke();
 
-      // 4) Arrowhead at landing point
-      const [px, py] = bezierPt(sx, sy, cpx, cpy, ex, ey, (SEGMENTS - 1) / SEGMENTS);
-      const angle = Math.atan2(ey - py, ex - px);
+      // 2) 3D tube effect — 4 layered strokes (wide→narrow, dark→bright)
+      // Outer ambient glow
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.strokeStyle = 'rgba(40, 100, 255, 0.1)';
+      ctx.lineWidth = 18;
+      ctx.stroke();
+
+      // Dark edge (bottom of tube)
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.strokeStyle = '#1a4a99';
+      ctx.lineWidth = 9;
+      ctx.stroke();
+
+      // Main body
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.strokeStyle = '#3388ff';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // Highlight streak (top of tube — offset upward by 1px via separate cp)
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 1);
+      ctx.quadraticCurveTo(cpx, cpy - 2, ex, ey - 1);
+      ctx.strokeStyle = 'rgba(160, 210, 255, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 3) Arrowhead at landing point
+      const angle = Math.atan2(ey - cpy, ex - cpx);
       ctx.beginPath();
       ctx.moveTo(ex, ey);
-      ctx.lineTo(ex - 14 * Math.cos(angle - 0.4), ey - 14 * Math.sin(angle - 0.4));
-      ctx.lineTo(ex - 14 * Math.cos(angle + 0.4), ey - 14 * Math.sin(angle + 0.4));
+      ctx.lineTo(ex - 16 * Math.cos(angle - 0.4), ey - 16 * Math.sin(angle - 0.4));
+      ctx.lineTo(ex - 16 * Math.cos(angle + 0.4), ey - 16 * Math.sin(angle + 0.4));
       ctx.closePath();
       ctx.fillStyle = '#3388ff';
+      ctx.fill();
+      // Arrow highlight
+      ctx.beginPath();
+      ctx.moveTo(ex, ey - 1);
+      ctx.lineTo(ex - 10 * Math.cos(angle - 0.3), ey - 1 - 10 * Math.sin(angle - 0.3));
+      ctx.lineTo(ex - 10 * Math.cos(angle + 0.15), ey - 1 - 10 * Math.sin(angle + 0.15));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(160, 210, 255, 0.5)';
       ctx.fill();
 
       ctx.restore();
