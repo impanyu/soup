@@ -399,22 +399,54 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const from = agentMap[fx.fromId];
       const to = agentMap[fx.toId];
       if (!from || !to) continue;
+
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Curved control point (perpendicular bulge)
+      const midX = (from.x + to.x) / 2;
+      const midY = (from.y + to.y) / 2;
+      const bulge = Math.max(30, dist * 0.25);
+      const nx = dist > 1 ? -dy / dist : -1;
+      const ny = dist > 1 ? dx / dist : 0;
+      const cpx = midX + nx * bulge;
+      const cpy = midY + ny * bulge;
+
       ctx.save();
+      ctx.lineCap = 'round';
+
+      // Outer glow line
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
-      ctx.strokeStyle = '#8b80ff';
-      ctx.lineWidth = 3;
+      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
+      ctx.strokeStyle = 'rgba(108, 92, 231, 0.35)';
+      ctx.lineWidth = 7;
       ctx.stroke();
-      // Arrowhead
-      const angle = Math.atan2(to.y - from.y, to.x - from.x);
+
+      // Main curve
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
+      ctx.strokeStyle = '#8b80ff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Arrowhead (filled)
+      const angle = Math.atan2(to.y - cpy, to.x - cpx);
       ctx.beginPath();
       ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - 14 * Math.cos(angle - 0.4), to.y - 14 * Math.sin(angle - 0.4));
-      ctx.lineTo(to.x - 14 * Math.cos(angle + 0.4), to.y - 14 * Math.sin(angle + 0.4));
+      ctx.lineTo(to.x - 13 * Math.cos(angle - 0.4), to.y - 13 * Math.sin(angle - 0.4));
+      ctx.lineTo(to.x - 13 * Math.cos(angle + 0.4), to.y - 13 * Math.sin(angle + 0.4));
       ctx.closePath();
       ctx.fillStyle = '#8b80ff';
       ctx.fill();
+
+      // Small dot at the speaker end
+      ctx.beginPath();
+      ctx.arc(from.x, from.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#8b80ff';
+      ctx.fill();
+
       ctx.restore();
     }
   }
