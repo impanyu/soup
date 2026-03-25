@@ -231,9 +231,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         speaker.state = 'moving_to_target';
         speaker.targetX = clampX(parent.x + (Math.random() - 0.5) * 80);
         speaker.targetY = clampY(parent.y + 40 + Math.random() * 40);
+        // Show interaction arc during walk + speech
+        spawnInteraction(content.authorId, parentAuthorId, SPEECH_DURATION + 5000);
         await waitForArrival(speaker);
-        // Interaction effect from speaker to parent
-        spawnInteraction(content.authorId, parentAuthorId, SPEECH_DURATION);
       }
 
       speaker.state = 'speaking';
@@ -241,6 +241,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       showBubble(speaker, text, content.authorName || 'Agent', SPEECH_DURATION);
       await sleep(SPEECH_DURATION);
+      // Clear interaction effects for this speaker
+      for (let i = interactionEffects.length - 1; i >= 0; i--) {
+        if (interactionEffects[i].fromId === content.authorId) interactionEffects.splice(i, 1);
+      }
 
       speaker.highlighted = false;
       speaker.state = speaker.agent.enabled ? 'wandering' : 'sleeping';
@@ -420,37 +424,48 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.shadowColor = `rgba(108, 92, 231, ${alpha * 0.6 * pulse})`;
       ctx.shadowBlur = 10;
 
-      // Arc line
+      // Outer glow arc
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.5 * pulse})`;
+      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.4 * pulse})`;
+      ctx.lineWidth = 8;
+      ctx.stroke();
+
+      // Main arc line
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
+      ctx.strokeStyle = `rgba(140, 130, 255, ${alpha * 0.7 * pulse})`;
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      // Inner brighter line
+      // Inner bright core
       ctx.shadowBlur = 0;
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(160, 148, 255, ${alpha * 0.6 * pulse})`;
+      ctx.strokeStyle = `rgba(200, 195, 255, ${alpha * 0.8 * pulse})`;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Animated dash traveling along the arc
-      const dashT = (fx.elapsed * 1.5) % 1;
-      const px = (1 - dashT) * (1 - dashT) * from.x + 2 * (1 - dashT) * dashT * cpx + dashT * dashT * to.x;
-      const py = (1 - dashT) * (1 - dashT) * from.y + 2 * (1 - dashT) * dashT * cpy + dashT * dashT * to.y;
-      ctx.beginPath();
-      ctx.arc(px, py, 4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(180, 170, 255, ${alpha * 0.9})`;
-      ctx.shadowColor = `rgba(108, 92, 231, ${alpha * 0.8})`;
-      ctx.shadowBlur = 8;
-      ctx.fill();
+      // Two animated dots traveling along the arc
+      for (let di = 0; di < 2; di++) {
+        const dashT = ((fx.elapsed * 1.2) + di * 0.5) % 1;
+        const px = (1 - dashT) * (1 - dashT) * from.x + 2 * (1 - dashT) * dashT * cpx + dashT * dashT * to.x;
+        const py = (1 - dashT) * (1 - dashT) * from.y + 2 * (1 - dashT) * dashT * cpy + dashT * dashT * to.y;
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200, 190, 255, ${alpha * 0.9})`;
+        ctx.shadowColor = `rgba(108, 92, 231, ${alpha})`;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
 
       // Arrowhead at target
       const angle = Math.atan2(to.y - cpy, to.x - cpx);
-      const arrLen = 10;
+      const arrLen = 12;
       ctx.beginPath();
       ctx.moveTo(to.x, to.y);
       ctx.lineTo(to.x - arrLen * Math.cos(angle - 0.4), to.y - arrLen * Math.sin(angle - 0.4));
