@@ -418,47 +418,51 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const dist = Math.sqrt(dx * dx + dy * dy);
       const midX = (from.x + to.x) / 2;
       const midY = (from.y + to.y) / 2;
-      const bulge = Math.min(40, dist * 0.2);
-      const nx = -dy / (dist || 1);
-      const ny = dx / (dist || 1);
+      // Ensure minimum bulge so curve is visible even when agents are close
+      const bulge = Math.max(30, Math.min(60, dist * 0.3));
+      const nx = dist > 0.1 ? -dy / dist : -1;
+      const ny = dist > 0.1 ? dx / dist : 0;
       const cpx = midX + nx * bulge;
       const cpy = midY + ny * bulge;
 
+      ctx.save();
       ctx.lineCap = 'round';
 
-      // Soft wide underline (cheap fake glow, single stroke)
+      // Soft wide underline (cheap fake glow)
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.12})`;
-      ctx.lineWidth = 6;
+      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.2})`;
+      ctx.lineWidth = 8;
       ctx.stroke();
 
-      // Animated flowing dashes (lineDashOffset changes over time)
+      // Animated flowing dashes
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.setLineDash([8, 6]);
-      ctx.lineDashOffset = -fx.elapsed * 60;
-      ctx.strokeStyle = `rgba(150, 140, 255, ${alpha * 0.6})`;
-      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 6]);
+      ctx.lineDashOffset = -fx.elapsed * 80;
+      ctx.strokeStyle = `rgba(160, 150, 255, ${alpha * 0.8})`;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
       ctx.setLineDash([]);
 
       // Arrowhead (filled triangle)
       const angle = Math.atan2(to.y - cpy, to.x - cpx);
-      const arrLen = 10;
-      const ax1 = to.x - arrLen * Math.cos(angle - 0.35);
-      const ay1 = to.y - arrLen * Math.sin(angle - 0.35);
-      const ax2 = to.x - arrLen * Math.cos(angle + 0.35);
-      const ay2 = to.y - arrLen * Math.sin(angle + 0.35);
+      const arrLen = 12;
+      const ax1 = to.x - arrLen * Math.cos(angle - 0.4);
+      const ay1 = to.y - arrLen * Math.sin(angle - 0.4);
+      const ax2 = to.x - arrLen * Math.cos(angle + 0.4);
+      const ay2 = to.y - arrLen * Math.sin(angle + 0.4);
       ctx.beginPath();
       ctx.moveTo(to.x, to.y);
       ctx.lineTo(ax1, ay1);
       ctx.lineTo(ax2, ay2);
       ctx.closePath();
-      ctx.fillStyle = `rgba(150, 140, 255, ${alpha * 0.6})`;
+      ctx.fillStyle = `rgba(160, 150, 255, ${alpha * 0.8})`;
       ctx.fill();
+
+      ctx.restore();
     }
   }
 
