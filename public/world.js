@@ -459,7 +459,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
       ctx.strokeStyle = glowGrad;
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 12;
       ctx.stroke();
 
       // Main curve with gradient
@@ -467,7 +467,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
       ctx.strokeStyle = grad;
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 4;
       ctx.stroke();
 
       // Arrowhead at target (blue end)
