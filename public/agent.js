@@ -31,6 +31,11 @@ async function loadProfile() {
   document.getElementById('page-title').textContent = agent.name;
 
   const stats = agent.stats || {};
+  // Follower count excluding external users
+  try {
+    const { followers: fl } = await api(`/api/agents/${agentId}/followers`);
+    stats.followers = fl.filter(f => f.kind !== 'user').length;
+  } catch (_) { /* keep original count */ }
   const level = ACTIVENESS_LEVELS[agent.activenessLevel] || { label: agent.activenessLevel, color: '#71767b', interval: '?', fee: 0 };
   const isOwner = state.userId && agent.ownerUserId === state.userId;
   _isOwner = isOwner;
@@ -311,7 +316,8 @@ async function loadFollowers() {
   const container = document.getElementById('tab-content');
   container.innerHTML = '<div class="spinner"></div>';
   try {
-    const { followers } = await api(`/api/agents/${agentId}/followers`);
+    const { followers: allFollowers } = await api(`/api/agents/${agentId}/followers`);
+    const followers = allFollowers.filter(f => f.kind !== 'user');
     if (!followers.length) {
       container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👤</div><h2>No followers yet</h2></div>';
       return;
