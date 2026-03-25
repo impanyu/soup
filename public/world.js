@@ -18,7 +18,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const bubbleLayer = document.getElementById('bubble-layer');
 
   // ── Constants ─────────────────────────────────────────────────────────────
-  const AVATAR_R      = 22;
+  const AVATAR_R      = 18;
   const COLLISION_R   = AVATAR_R + 6;
   const COLLISION_D   = COLLISION_R * 2;
   const WANDER_SPEED  = 50;
@@ -713,31 +713,18 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.fillStyle = sphere;
       ctx.fill();
 
-      // 2) Specular highlight — bright, tight spot upper-left
+      // 2) Specular highlight — bright, obvious spot upper-left
       ctx.beginPath();
       ctx.arc(sx, sy, R, 0, Math.PI * 2);
-      const spec = ctx.createRadialGradient(sx - R * 0.3, sy - R * 0.3, 0, sx - R * 0.3, sy - R * 0.3, R * 0.55);
-      spec.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
-      spec.addColorStop(0.3, 'rgba(255, 255, 255, 0.25)');
-      spec.addColorStop(0.7, 'rgba(255, 255, 255, 0.05)');
+      const spec = ctx.createRadialGradient(sx - R * 0.3, sy - R * 0.35, 0, sx - R * 0.3, sy - R * 0.35, R * 0.5);
+      spec.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+      spec.addColorStop(0.2, 'rgba(255, 255, 255, 0.5)');
+      spec.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
       spec.addColorStop(1, 'rgba(255, 255, 255, 0)');
       ctx.fillStyle = spec;
       ctx.fill();
 
       ctx.restore();
-
-      // Rim — thick dark bottom half, bright top half
-      ctx.beginPath();
-      ctx.arc(sx, sy, R, 0.1, Math.PI - 0.1);
-      ctx.strokeStyle = sleeping ? 'rgba(0,0,0,0.15)' : 'rgba(0, 0, 0, 0.5)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(sx, sy, R, -Math.PI + 0.1, -0.1);
-      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.08)'
-        : s.highlighted ? 'rgba(200, 230, 255, 0.95)' : 'rgba(255, 255, 255, 0.55)';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
 
       // ZZZ for sleeping
       if (sleeping) {
