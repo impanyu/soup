@@ -18,7 +18,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const bubbleLayer = document.getElementById('bubble-layer');
 
   // ── Constants ─────────────────────────────────────────────────────────────
-  const AVATAR_R      = 14;
+  const AVATAR_R      = 17;
   const COLLISION_R   = AVATAR_R + 6;
   const COLLISION_D   = COLLISION_R * 2;
   const WANDER_SPEED  = 50;
