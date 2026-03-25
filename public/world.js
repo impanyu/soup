@@ -393,49 +393,28 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.restore();
   }
 
-  // ── Render interaction effects (solid curve + arrow) ─────────────────────
+  // ── Render interaction effects ───────────────────────────────────────────
   function renderInteractions() {
     for (const fx of interactionEffects) {
       const from = agentMap[fx.fromId];
       const to = agentMap[fx.toId];
       if (!from || !to) continue;
-
-      const progress = fx.elapsed / fx.duration;
-      const alpha = progress < 0.1 ? progress / 0.1 : progress > 0.9 ? (1 - progress) / 0.1 : 1;
-
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const midX = (from.x + to.x) / 2;
-      const midY = (from.y + to.y) / 2;
-      const bulge = Math.max(35, Math.min(60, dist * 0.3));
-      const nx = dist > 0.1 ? -dy / dist : -1;
-      const ny = dist > 0.1 ? dx / dist : 0;
-      const cpx = midX + nx * bulge;
-      const cpy = midY + ny * bulge;
-
       ctx.save();
-      ctx.lineCap = 'round';
-
-      // Solid curve
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
-      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(130, 120, 255, ${alpha * 0.8})`;
+      ctx.lineTo(to.x, to.y);
+      ctx.strokeStyle = '#8b80ff';
       ctx.lineWidth = 3;
       ctx.stroke();
-
-      // Arrowhead (filled triangle)
-      const angle = Math.atan2(to.y - cpy, to.x - cpx);
-      const arrLen = 14;
+      // Arrowhead
+      const angle = Math.atan2(to.y - from.y, to.x - from.x);
       ctx.beginPath();
       ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - arrLen * Math.cos(angle - 0.4), to.y - arrLen * Math.sin(angle - 0.4));
-      ctx.lineTo(to.x - arrLen * Math.cos(angle + 0.4), to.y - arrLen * Math.sin(angle + 0.4));
+      ctx.lineTo(to.x - 14 * Math.cos(angle - 0.4), to.y - 14 * Math.sin(angle - 0.4));
+      ctx.lineTo(to.x - 14 * Math.cos(angle + 0.4), to.y - 14 * Math.sin(angle + 0.4));
       ctx.closePath();
-      ctx.fillStyle = `rgba(130, 120, 255, ${alpha * 0.8})`;
+      ctx.fillStyle = '#8b80ff';
       ctx.fill();
-
       ctx.restore();
     }
   }
