@@ -12,8 +12,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const bubbleLayer = document.getElementById('bubble-layer');
 
   // ── Constants ─────────────────────────────────────────────────────────────
-  const WORLD_W       = 2000;
-  const WORLD_H       = 2000;
   const AVATAR_R      = 28;
   const COLLISION_R   = AVATAR_R + 6;
   const COLLISION_D   = COLLISION_R * 2;
@@ -28,6 +26,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const SUPPORTIVE    = ['Love this!', 'Spot on!', 'So true!', 'Great take!', '100%!', 'Well said!', 'This!', 'Brilliant!', 'Couldn\'t agree more!', 'Nailed it!'];
 
   function esc(str) { return sharedEscape(str); }
+
+  // ── Dynamic world size (from container) ───────────────────────────────────
+  let worldW = 0, worldH = 0;
 
   // ── State ─────────────────────────────────────────────────────────────────
   let agentMap = {};
@@ -45,8 +46,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   function gridKey(cx, cy) { return cy * gridCols + cx; }
 
   function rebuildGrid() {
-    gridCols = Math.ceil(WORLD_W / GRID_CELL);
-    gridRows = Math.ceil(WORLD_H / GRID_CELL);
+    gridCols = Math.ceil(worldW / GRID_CELL);
+    gridRows = Math.ceil(worldH / GRID_CELL);
     grid = new Array(gridCols * gridRows);
     for (let i = 0; i < grid.length; i++) grid[i] = [];
     for (const id of agentIds) {
@@ -95,20 +96,20 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   // ── Static background ─────────────────────────────────────────────────────
   function initBackground() {
     const bgCanvas = document.createElement('canvas');
-    bgCanvas.width = WORLD_W;
-    bgCanvas.height = WORLD_H;
+    bgCanvas.width = worldW;
+    bgCanvas.height = worldH;
     const bg = bgCanvas.getContext('2d');
 
     bg.fillStyle = '#06060f';
-    bg.fillRect(0, 0, WORLD_W, WORLD_H);
+    bg.fillRect(0, 0, worldW, worldH);
 
     // Nebulae
     const nebulaColors = [
       [108, 92, 231], [46, 134, 222], [214, 48, 149], [0, 210, 211], [72, 52, 212],
     ];
     for (let i = 0; i < 5; i++) {
-      const nx = Math.random() * WORLD_W;
-      const ny = Math.random() * WORLD_H;
+      const nx = Math.random() * worldW;
+      const ny = Math.random() * worldH;
       const rx = 200 + Math.random() * 300;
       const ry = 150 + Math.random() * 250;
       const [r, g, b] = nebulaColors[i];
@@ -132,7 +133,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const starCount = 500;
     for (let i = 0; i < starCount; i++) {
       bg.beginPath();
-      bg.arc(Math.random() * WORLD_W, Math.random() * WORLD_H, 0.3 + Math.random() * 1.5, 0, Math.PI * 2);
+      bg.arc(Math.random() * worldW, Math.random() * worldH, 0.3 + Math.random() * 1.5, 0, Math.PI * 2);
       bg.fillStyle = `rgba(220, 225, 255, ${0.3 + Math.random() * 0.7})`;
       bg.fill();
     }
@@ -140,11 +141,11 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Grid
     bg.strokeStyle = 'rgba(255,255,255,0.02)';
     bg.lineWidth = 1;
-    for (let gx = 0; gx < WORLD_W; gx += 80) {
-      bg.beginPath(); bg.moveTo(gx, 0); bg.lineTo(gx, WORLD_H); bg.stroke();
+    for (let gx = 0; gx < worldW; gx += 80) {
+      bg.beginPath(); bg.moveTo(gx, 0); bg.lineTo(gx, worldH); bg.stroke();
     }
-    for (let gy = 0; gy < WORLD_H; gy += 80) {
-      bg.beginPath(); bg.moveTo(0, gy); bg.lineTo(WORLD_W, gy); bg.stroke();
+    for (let gy = 0; gy < worldH; gy += 80) {
+      bg.beginPath(); bg.moveTo(0, gy); bg.lineTo(worldW, gy); bg.stroke();
     }
 
     canvas.style.backgroundImage = `url(${bgCanvas.toDataURL('image/png')})`;
@@ -166,15 +167,17 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   }
 
   // ── Boundary clamping ─────────────────────────────────────────────────────
-  function clampX(x) { return Math.max(AVATAR_R + 10, Math.min(WORLD_W - AVATAR_R - 10, x)); }
-  function clampY(y) { return Math.max(AVATAR_R + 10, Math.min(WORLD_H - AVATAR_R - 20, y)); }
+  function clampX(x) { return Math.max(AVATAR_R + 10, Math.min(worldW - AVATAR_R - 10, x)); }
+  function clampY(y) { return Math.max(AVATAR_R + 10, Math.min(worldH - AVATAR_R - 20, y)); }
 
   // ── Setup agents ──────────────────────────────────────────────────────────
   function initAgents(rawAgents) {
-    canvas.width = WORLD_W;
-    canvas.height = WORLD_H;
-    bubbleLayer.style.width = WORLD_W + 'px';
-    bubbleLayer.style.height = WORLD_H + 'px';
+    worldW = container.clientWidth;
+    worldH = container.clientHeight;
+    canvas.width = worldW;
+    canvas.height = worldH;
+    bubbleLayer.style.width = worldW + 'px';
+    bubbleLayer.style.height = worldH + 'px';
 
     agentMap = {};
     agentIds = [];
@@ -182,8 +185,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const n = rawAgents.length;
     const padX = AVATAR_R + 20;
     const padY = AVATAR_R + 20;
-    const usableW = WORLD_W - padX * 2;
-    const usableH = WORLD_H - padY * 2;
+    const usableW = worldW - padX * 2;
+    const usableH = worldH - padY * 2;
     const cols = Math.ceil(Math.sqrt(n * (usableW / usableH)));
     const rows = Math.ceil(n / cols);
     const cellW = usableW / cols;
@@ -331,8 +334,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   function positionBubble(bubble) {
     const s = bubble.agentState;
-    const bx = Math.max(10, Math.min(WORLD_W - 230, s.x + AVATAR_R + 6));
-    const by = Math.max(10, Math.min(WORLD_H - 80, s.y - AVATAR_R - 10));
+    const bx = Math.max(10, Math.min(worldW - 230, s.x + AVATAR_R + 6));
+    const by = Math.max(10, Math.min(worldH - 80, s.y - AVATAR_R - 10));
     bubble.el.style.left = bx + 'px';
     bubble.el.style.top  = by + 'px';
   }
@@ -367,7 +370,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Render loop ───────────────────────────────────────────────────────────
   function render() {
-    ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+    ctx.clearRect(0, 0, worldW, worldH);
 
     for (const id of agentIds) {
       const s = agentMap[id];
@@ -458,8 +461,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   // ── Click to navigate to agent ────────────────────────────────────────────
   canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const scaleX = WORLD_W / rect.width;
-    const scaleY = WORLD_H / rect.height;
+    const scaleX = worldW / rect.width;
+    const scaleY = worldH / rect.height;
     const mx = (e.clientX - rect.left) * scaleX;
     const my = (e.clientY - rect.top) * scaleY;
     for (const id of agentIds) {
@@ -474,8 +477,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const scaleX = WORLD_W / rect.width;
-    const scaleY = WORLD_H / rect.height;
+    const scaleX = worldW / rect.width;
+    const scaleY = worldH / rect.height;
     const mx = (e.clientX - rect.left) * scaleX;
     const my = (e.clientY - rect.top) * scaleY;
     hoveredAgent = null;

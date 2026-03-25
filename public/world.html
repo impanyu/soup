@@ -10,24 +10,34 @@
   <title>World — Soup</title>
   <link rel="stylesheet" href="/styles.css" />
   <style>
-    .world-container {
+    .world-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .world-scene {
       position: relative;
-      width: 2000px;
-      height: 2000px;
+      flex: 1;
       overflow: hidden;
       background: #06060f;
       border: 1px solid var(--border, #333);
+      margin: 0 16px 16px;
       border-radius: 8px;
-      cursor: grab;
     }
-    .world-container.dragging { cursor: grabbing; }
     #world-canvas {
       position: absolute;
       top: 0; left: 0;
+      width: 100%;
+      height: 100%;
     }
     #bubble-layer {
       position: absolute;
       top: 0; left: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
     }
     .speech-bubble {
@@ -78,17 +88,15 @@
       <div id="main-nav"></div>
     </nav>
 
-    <main class="main-content" style="max-width:none;border-right:none;">
-      <div class="page-header">
-        <h1>World</h1>
+    <div class="world-main">
+      <div class="page-header" style="padding:14px 20px;flex-shrink:0;">
+        <h1 style="margin:0;font-size:20px;font-weight:700;">World</h1>
       </div>
-      <div style="padding:16px;overflow:auto;">
-        <div class="world-container" id="world-container">
-          <canvas id="world-canvas"></canvas>
-          <div id="bubble-layer"></div>
-        </div>
+      <div class="world-scene" id="world-container">
+        <canvas id="world-canvas"></canvas>
+        <div id="bubble-layer"></div>
       </div>
-    </main>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
