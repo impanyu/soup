@@ -428,8 +428,16 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.restore();
   }
 
-  // ── Render interaction effects ───────────────────────────────────────────
+  // ── Render interaction effects (3D parabola arc) ────────────────────────
+  // Sample a quadratic bezier at parameter t
+  function bezierPt(ax, ay, bx, by, cx, cy, t) {
+    const u = 1 - t;
+    return [u * u * ax + 2 * u * t * bx + t * t * cx,
+            u * u * ay + 2 * u * t * by + t * t * cy];
+  }
+
   function renderInteractions() {
+    const SEGMENTS = 24;
     for (const fx of interactionEffects) {
       const from = agentMap[fx.fromId];
       const to = agentMap[fx.toId];
@@ -448,51 +456,70 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const ex = to.x - ux * pad;
       const ey = to.y - uy * pad;
 
-      // Curved control point
+      // Arc height — scales with distance, simulates going "up" in 3D
+      const arcH = Math.max(40, dist * 0.45);
+      // Control point is above the midpoint (negative Y = up on screen)
       const midX = (sx + ex) / 2;
       const midY = (sy + ey) / 2;
-      const bulge = Math.max(25, dist * 0.22);
-      const nx = -uy, ny = ux;
-      const cpx = midX + nx * bulge;
-      const cpy = midY + ny * bulge;
+      const cpx = midX;
+      const cpy = midY - arcH;
 
       ctx.save();
       ctx.lineCap = 'round';
 
-      // Gradient along the curve: light blue at speaker → deeper blue at target
-      const grad = ctx.createLinearGradient(sx, sy, ex, ey);
-      grad.addColorStop(0, '#66bbff');
-      grad.addColorStop(1, '#3388ff');
+      // 1) Ground shadow — flattened ellipse on the "floor"
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      // Shadow control point is slightly below midpoint (on the ground)
+      ctx.quadraticCurveTo(midX, midY + 8, ex, ey);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
 
-      // Outer glow
-      const glowGrad = ctx.createLinearGradient(sx, sy, ex, ey);
-      glowGrad.addColorStop(0, 'rgba(100, 180, 255, 0.2)');
-      glowGrad.addColorStop(1, 'rgba(50, 130, 255, 0.2)');
+      // 2) Sample the 3D arc as segments with varying width for perspective
+      // Width is thinnest at peak (far away), thickest at endpoints (close)
+      for (let i = 0; i < SEGMENTS; i++) {
+        const t0 = i / SEGMENTS;
+        const t1 = (i + 1) / SEGMENTS;
+        const [x0, y0] = bezierPt(sx, sy, cpx, cpy, ex, ey, t0);
+        const [x1, y1] = bezierPt(sx, sy, cpx, cpy, ex, ey, t1);
+
+        // Perspective: width shrinks at peak (t=0.5), full at endpoints
+        const tMid = (t0 + t1) / 2;
+        const perspect = 1 - 0.5 * Math.sin(tMid * Math.PI); // 1.0 at ends, 0.5 at peak
+        const width = 2 + 3 * perspect; // 2-5px range
+
+        // Color: lighter/more transparent at peak
+        const alpha = 0.5 + 0.5 * perspect;
+        const r = Math.round(50 + 50 * (1 - tMid));
+        const g = Math.round(140 + 50 * perspect);
+
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.strokeStyle = `rgba(${r}, ${g}, 255, ${alpha})`;
+        ctx.lineWidth = width;
+        ctx.stroke();
+      }
+
+      // 3) Glow layer on top (single curve, wide + transparent)
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = glowGrad;
-      ctx.lineWidth = 12;
+      ctx.strokeStyle = 'rgba(100, 180, 255, 0.12)';
+      ctx.lineWidth = 10;
       ctx.stroke();
 
-      // Main curve with gradient
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 4;
-      ctx.stroke();
-
-      // Arrowhead at target (blue end)
-      const angle = Math.atan2(ey - cpy, ex - cpx);
+      // 4) Arrowhead at landing point
+      const [px, py] = bezierPt(sx, sy, cpx, cpy, ex, ey, (SEGMENTS - 1) / SEGMENTS);
+      const angle = Math.atan2(ey - py, ex - px);
       ctx.beginPath();
       ctx.moveTo(ex, ey);
-      ctx.lineTo(ex - 13 * Math.cos(angle - 0.45), ey - 13 * Math.sin(angle - 0.45));
-      ctx.lineTo(ex - 13 * Math.cos(angle + 0.45), ey - 13 * Math.sin(angle + 0.45));
+      ctx.lineTo(ex - 14 * Math.cos(angle - 0.4), ey - 14 * Math.sin(angle - 0.4));
+      ctx.lineTo(ex - 14 * Math.cos(angle + 0.4), ey - 14 * Math.sin(angle + 0.4));
       ctx.closePath();
       ctx.fillStyle = '#3388ff';
       ctx.fill();
-
 
       ctx.restore();
     }
