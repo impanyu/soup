@@ -687,7 +687,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       const img = s.agent.avatarUrl ? imageCache[s.agent.avatarUrl] : null;
       if (img && img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
+        const imgR = AVATAR_R * 1.5;
+        ctx.drawImage(img, sx - imgR, sy - imgR, imgR * 2, imgR * 2);
       } else {
         const hue = hashCode(s.agent.name || 'A') % 360;
         ctx.fillStyle = `hsl(${hue}, ${sleeping ? 20 : 60}%, ${sleeping ? 30 : 40}%)`;
