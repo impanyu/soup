@@ -95,62 +95,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Static background ─────────────────────────────────────────────────────
   function initBackground() {
-    const bgCanvas = document.createElement('canvas');
-    bgCanvas.width = worldW;
-    bgCanvas.height = worldH;
-    const bg = bgCanvas.getContext('2d');
-
-    bg.fillStyle = '#06060f';
-    bg.fillRect(0, 0, worldW, worldH);
-
-    // Nebulae
-    const nebulaColors = [
-      [108, 92, 231], [46, 134, 222], [214, 48, 149], [0, 210, 211], [72, 52, 212],
-    ];
-    for (let i = 0; i < 5; i++) {
-      const nx = Math.random() * worldW;
-      const ny = Math.random() * worldH;
-      const rx = 200 + Math.random() * 300;
-      const ry = 150 + Math.random() * 250;
-      const [r, g, b] = nebulaColors[i];
-      const alpha = 0.03 + Math.random() * 0.04;
-      bg.save();
-      bg.translate(nx, ny);
-      bg.rotate(Math.random() * Math.PI * 2);
-      bg.scale(1, ry / rx);
-      const grad = bg.createRadialGradient(0, 0, 0, 0, 0, rx);
-      grad.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
-      grad.addColorStop(0.5, `rgba(${r},${g},${b},${alpha * 0.4})`);
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      bg.fillStyle = grad;
-      bg.beginPath();
-      bg.arc(0, 0, rx, 0, Math.PI * 2);
-      bg.fill();
-      bg.restore();
-    }
-
-    // Stars
-    const starCount = 500;
-    for (let i = 0; i < starCount; i++) {
-      bg.beginPath();
-      bg.arc(Math.random() * worldW, Math.random() * worldH, 0.3 + Math.random() * 1.5, 0, Math.PI * 2);
-      bg.fillStyle = `rgba(220, 225, 255, ${0.3 + Math.random() * 0.7})`;
-      bg.fill();
-    }
-
-    // Grid
-    bg.strokeStyle = 'rgba(255,255,255,0.02)';
-    bg.lineWidth = 1;
-    for (let gx = 0; gx < worldW; gx += 80) {
-      bg.beginPath(); bg.moveTo(gx, 0); bg.lineTo(gx, worldH); bg.stroke();
-    }
-    for (let gy = 0; gy < worldH; gy += 80) {
-      bg.beginPath(); bg.moveTo(0, gy); bg.lineTo(worldW, gy); bg.stroke();
-    }
-
-    canvas.style.backgroundImage = `url(${bgCanvas.toDataURL('image/png')})`;
-    canvas.style.backgroundPosition = '0 0';
-    canvas.style.backgroundRepeat = 'no-repeat';
+    canvas.style.backgroundImage = 'url(/world.png)';
+    canvas.style.backgroundSize = 'cover';
+    canvas.style.backgroundPosition = 'center';
   }
 
   // ── Fetch data ────────────────────────────────────────────────────────────
