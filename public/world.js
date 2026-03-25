@@ -129,8 +129,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   function getAgentCap() {
     const w = window.innerWidth;
     if (w < 768) return 20;   // small screen
-    if (w < 1200) return 40;  // medium screen
-    return 100;               // large screen
+    if (w < 1200) return 60;  // medium screen
+    return 200;               // large screen
   }
 
   // ── Boundary clamping ─────────────────────────────────────────────────────
