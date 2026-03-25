@@ -21,7 +21,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const WANDER_SPEED  = 50;
   const MOVE_SPEED    = 120;
   const ZZZ_PERIOD    = 2000;
-  const SPEECH_DURATION = 3000;
+  const SPEECH_DURATION = 4000;
   const SPEECH_GAP    = 500;
   const GROUP_SIZE    = 2;  // configurable: how many siblings to speak before going deeper
   const SUPPORTIVE    = ['Love this!', 'Spot on!', 'So true!', 'Great take!', '100%!', 'Well said!', 'This!', 'Brilliant!', 'Couldn\'t agree more!', 'Nailed it!'];
