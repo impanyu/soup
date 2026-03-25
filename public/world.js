@@ -624,7 +624,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const shadowX = s.x + 14;
       const shadowY = footY - 10;
       ctx.moveTo(shadowX + 22, shadowY);
-      ctx.ellipse(shadowX, shadowY, 14, 6, -0.5, 0, Math.PI * 2);
+      ctx.ellipse(shadowX, shadowY, 16, 12, -0.3, 0, Math.PI * 2);
     }
     ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.fill();
