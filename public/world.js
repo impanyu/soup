@@ -508,13 +508,22 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       // Glow for speaking
       if (s.highlighted) {
         ctx.save();
+        const pulse = 0.8 + 0.2 * Math.sin(globalTime * 4);
+        // Outer soft glow
         ctx.beginPath();
-        ctx.arc(sx, sy, AVATAR_R + 12, 0, Math.PI * 2);
-        const glow = ctx.createRadialGradient(sx, sy, AVATAR_R, sx, sy, AVATAR_R + 12);
-        glow.addColorStop(0, 'rgba(108, 92, 231, 0.4)');
-        glow.addColorStop(1, 'rgba(108, 92, 231, 0)');
-        ctx.fillStyle = glow;
+        ctx.arc(sx, sy, AVATAR_R + 22, 0, Math.PI * 2);
+        const outerGlow = ctx.createRadialGradient(sx, sy, AVATAR_R, sx, sy, AVATAR_R + 22);
+        outerGlow.addColorStop(0, `rgba(255, 170, 60, ${0.35 * pulse})`);
+        outerGlow.addColorStop(0.5, `rgba(108, 92, 231, ${0.2 * pulse})`);
+        outerGlow.addColorStop(1, 'rgba(108, 92, 231, 0)');
+        ctx.fillStyle = outerGlow;
         ctx.fill();
+        // Inner bright ring
+        ctx.beginPath();
+        ctx.arc(sx, sy, AVATAR_R + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 200, 100, ${0.7 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
         ctx.restore();
       }
 
