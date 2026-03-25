@@ -479,7 +479,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.closePath();
       ctx.clip();
 
-      if (sleeping) ctx.globalAlpha = 0.4;
+      if (sleeping) ctx.globalAlpha = 0.7;
 
       const img = s.agent.avatarUrl ? imageCache[s.agent.avatarUrl] : null;
       if (img && img.complete && img.naturalWidth > 0) {
