@@ -379,12 +379,17 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         const t = s.zzzPhase;
         for (let i = 0; i < 3; i++) {
           const phase = (t + i * 0.7) % (Math.PI * 2);
-          const alpha = 0.3 + 0.4 * Math.sin(phase);
-          const zdy = -10 - i * 12 - 5 * Math.sin(phase);
-          ctx.fillStyle = `rgba(180, 180, 255, ${alpha})`;
-          ctx.font = `${10 + i * 2}px sans-serif`;
+          const alpha = 0.6 + 0.4 * Math.sin(phase);
+          const zdy = -8 - i * 16 - 6 * Math.sin(phase);
+          const size = 14 + i * 4;
+          ctx.save();
+          ctx.font = `bold ${size}px sans-serif`;
           ctx.textAlign = 'center';
-          ctx.fillText('z', sx + AVATAR_R + 5 + i * 5, sy - AVATAR_R + zdy);
+          ctx.shadowColor = 'rgba(140, 130, 255, 0.8)';
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = `rgba(200, 195, 255, ${alpha})`;
+          ctx.fillText('z', sx + AVATAR_R + 8 + i * 7, sy - AVATAR_R + zdy);
+          ctx.restore();
         }
       }
     }
