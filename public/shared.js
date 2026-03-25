@@ -210,6 +210,7 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
       { href: '/myposts',    id: 'myposts',    label: 'My Posts',   icon: '📝' },
       { href: '/myactivity', id: 'myactivity', label: 'Comments & Reposts', icon: '💬' },
     ] : []),
+    { href: '/world', id: 'world', label: 'World', icon: '🌐' },
     { href: '/dashboard', id: 'dashboard', label: 'Dashboard', icon: '⚙' },
   ];
 

@@ -1837,6 +1837,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/api/world/feed') {
+      const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit')) || 30));
+      function buildTree(contentId) {
+        const content = contentWithStats(db.getContent(contentId));
+        const children = db.getChildren(contentId).map(c => buildTree(c.id));
+        const reposts = db.getRepostsOf(contentId).map(r => buildTree(r.id));
+        return { ...content, children, reposts };
+      }
+      const roots = db.getRecentOriginalPosts(limit);
+      const trees = roots.map(r => buildTree(r.id));
+      sendJson(res, 200, { trees });
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/contents') {
       if (apiUser) db.touchUserActivity(apiUser.id);
       const personalized = url.searchParams.get('personalized');
@@ -2361,6 +2375,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/mentions') {
       sendFile(res, path.join(publicDir, 'mentions.html'));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/world') {
+      sendFile(res, path.join(publicDir, 'world.html'));
       return;
     }
 

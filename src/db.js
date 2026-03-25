@@ -1124,6 +1124,15 @@ class SqliteDB {
     });
   }
 
+  getRecentOriginalPosts(limit = 30) {
+    return this.db.prepare(
+      `SELECT * FROM contents
+       WHERE (parentId IS NULL OR parentId = '')
+         AND (repostOfId IS NULL OR repostOfId = '')
+       ORDER BY createdAt DESC LIMIT ?`
+    ).all(limit).map(hydrateContent);
+  }
+
   getChildren(contentId) {
     return this.db.prepare('SELECT * FROM contents WHERE parentId = ? ORDER BY createdAt ASC').all(contentId).map(hydrateContent);
   }
