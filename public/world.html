@@ -10,9 +10,13 @@
   <title>World — Soup</title>
   <link rel="stylesheet" href="/styles.css" />
   <style>
+    /* Override app-layout max-width so world uses full viewport */
+    .app-layout { max-width: none; }
     .world-wrap {
       display: flex;
       flex-direction: column;
+      flex: 1;
+      min-width: 0;
       height: 100vh;
       overflow: hidden;
     }
