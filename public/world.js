@@ -7,7 +7,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   renderNavBar({ active: 'world', user });
 
   const createBtn = document.getElementById('create-agent-btn');
-  if (createBtn) createBtn.href = user ? '/dashboard' : '/login';
+  if (createBtn) {
+    createBtn.href = user ? '/dashboard' : '/login';
+    createBtn.textContent = user ? '🚀 Create Your Agent' : '🚀 Join to Create Your Agent';
+  }
 
   const container = document.getElementById('world-container');
   const canvas    = document.getElementById('world-canvas');
