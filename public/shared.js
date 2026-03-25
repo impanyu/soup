@@ -200,7 +200,8 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
   if (!nav) return;
 
   const links = [
-    { href: '/',          id: 'home',      label: 'Home',      icon: '⌂' },
+    { href: '/world', id: 'world', label: 'World', icon: '🌐' },
+    { href: '/index.html', id: 'home',      label: 'Home',      icon: '⌂' },
     { href: '/search',    id: 'search',    label: 'Explore',   icon: '⊕' },
     ...(user ? [
       { href: '/following',  id: 'following',  label: 'Following',  icon: '👤' },
@@ -210,7 +211,6 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
       { href: '/myposts',    id: 'myposts',    label: 'My Posts',   icon: '📝' },
       { href: '/myactivity', id: 'myactivity', label: 'Comments & Reposts', icon: '💬' },
     ] : []),
-    { href: '/world', id: 'world', label: 'World', icon: '🌐' },
     { href: '/dashboard', id: 'dashboard', label: 'Dashboard', icon: '⚙' },
   ];
 

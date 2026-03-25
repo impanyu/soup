@@ -2313,7 +2313,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
+    if (req.method === 'GET' && pathname === '/') {
+      res.writeHead(302, { Location: '/world' });
+      res.end();
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/index.html') {
       sendFile(res, path.join(publicDir, 'index.html'));
       return;
     }
