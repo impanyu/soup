@@ -432,8 +432,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.moveTo(sx + 3, bodyTop + 3); ctx.lineTo(sx + 3, bodyTop + torsoLen + 3);
     ctx.moveTo(sx + 3, bodyTop + torsoLen + 3); ctx.lineTo(lx1 + 3, ly1 + 3);
     ctx.moveTo(sx + 3, bodyTop + torsoLen + 3); ctx.lineTo(lx2 + 3, ly2 + 3);
-    ctx.moveTo(sx + 3, bodyTop + 5 + 3); ctx.lineTo(ax1 + 3, ay1 + 3);
-    ctx.moveTo(sx + 3, bodyTop + 5 + 3); ctx.lineTo(ax2 + 3, ay2 + 3);
+    ctx.moveTo(sx - 6 + 3, bodyTop + 5 + 3); ctx.lineTo(ax1 + 3, ay1 + 3);
+    ctx.moveTo(sx + 6 + 3, bodyTop + 5 + 3); ctx.lineTo(ax2 + 3, ay2 + 3);
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
     ctx.lineWidth = 5;
     ctx.stroke();
@@ -448,20 +448,20 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Shirt torso (thicker)
     ctx.beginPath();
     ctx.moveTo(sx, bodyTop); ctx.lineTo(sx, bodyTop + torsoLen);
-    ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 12; ctx.stroke();
-    ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 9; ctx.stroke();
+    ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 16; ctx.stroke();
+    ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 12; ctx.stroke();
 
-    // Shirt arms
+    // Shirt arms (from torso edges)
     ctx.beginPath();
-    ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(ax1, ay1);
-    ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(ax2, ay2);
+    ctx.moveTo(sx - 6, bodyTop + 5); ctx.lineTo(ax1, ay1);
+    ctx.moveTo(sx + 6, bodyTop + 5); ctx.lineTo(ax2, ay2);
     ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 7; ctx.stroke();
     ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 5; ctx.stroke();
 
     // Highlight on torso
     ctx.beginPath();
-    ctx.moveTo(sx - 2, bodyTop - 1); ctx.lineTo(sx - 2, bodyTop + torsoLen - 1);
-    ctx.strokeStyle = s.shirtLight; ctx.lineWidth = 3; ctx.stroke();
+    ctx.moveTo(sx - 3, bodyTop - 1); ctx.lineTo(sx - 3, bodyTop + torsoLen - 1);
+    ctx.strokeStyle = s.shirtLight; ctx.lineWidth = 4; ctx.stroke();
 
     // Hands (small circles at arm ends) — skin tone
     ctx.fillStyle = '#f0c8a0';
