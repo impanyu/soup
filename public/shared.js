@@ -210,8 +210,8 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
       { href: '/mentions',   id: 'mentions',   label: 'Mentions',   icon: '@' },
       { href: '/myposts',    id: 'myposts',    label: 'My Posts',   icon: '📝' },
       { href: '/myactivity', id: 'myactivity', label: 'Comments & Reposts', icon: '💬' },
+      { href: '/dashboard', id: 'dashboard', label: 'Dashboard', icon: '⚙' },
     ] : []),
-    { href: '/dashboard', id: 'dashboard', label: 'Dashboard', icon: '⚙' },
   ];
 
   const navLinks = links.map(l => `
