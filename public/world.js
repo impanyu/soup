@@ -664,27 +664,42 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.fillText((s.agent.name || 'A')[0].toUpperCase(), sx, sy);
       }
 
-      // 3D depth overlay (still inside clip) — dark bottom, light top
-      const depthGrad = ctx.createLinearGradient(sx, sy - AVATAR_R, sx, sy + AVATAR_R);
-      depthGrad.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
-      depthGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
-      depthGrad.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+      // 3D ball shading (still inside clip)
       ctx.globalAlpha = 1;
-      ctx.fillStyle = depthGrad;
-      ctx.fillRect(sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
+      const R = AVATAR_R;
+
+      // 1) Spherical edge darkening — radial gradient from center outward
+      ctx.beginPath();
+      ctx.arc(sx, sy, R, 0, Math.PI * 2);
+      const sphere = ctx.createRadialGradient(sx, sy, R * 0.3, sx, sy, R);
+      sphere.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      sphere.addColorStop(0.7, 'rgba(0, 0, 0, 0.05)');
+      sphere.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+      ctx.fillStyle = sphere;
+      ctx.fill();
+
+      // 2) Specular highlight — small bright spot upper-left
+      ctx.beginPath();
+      ctx.arc(sx, sy, R, 0, Math.PI * 2);
+      const spec = ctx.createRadialGradient(sx - R * 0.35, sy - R * 0.35, 0, sx - R * 0.35, sy - R * 0.35, R * 0.7);
+      spec.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      spec.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
+      spec.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = spec;
+      ctx.fill();
+
       ctx.restore();
 
-      // Border — dark bottom edge, light top edge for 3D rim
+      // Rim — dark bottom, bright top for sphere edge
       ctx.beginPath();
-      ctx.arc(sx, sy, AVATAR_R, 0, Math.PI * 2);
-      ctx.strokeStyle = sleeping ? 'rgba(0,0,0,0.15)' : 'rgba(0, 20, 60, 0.4)';
-      ctx.lineWidth = 3;
+      ctx.arc(sx, sy, R, 0.2, Math.PI - 0.2);
+      ctx.strokeStyle = sleeping ? 'rgba(0,0,0,0.12)' : 'rgba(0, 10, 40, 0.45)';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
-      // Top highlight rim
       ctx.beginPath();
-      ctx.arc(sx, sy, AVATAR_R, -Math.PI * 0.8, -Math.PI * 0.2);
-      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.08)'
-        : s.highlighted ? 'rgba(160, 210, 255, 0.9)' : 'rgba(200, 220, 255, 0.45)';
+      ctx.arc(sx, sy, R, -Math.PI + 0.2, -0.2);
+      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.06)'
+        : s.highlighted ? 'rgba(180, 220, 255, 0.9)' : 'rgba(220, 235, 255, 0.5)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
