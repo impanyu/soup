@@ -445,18 +445,23 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.strokeStyle = s.pantsDark; ctx.lineWidth = 7; ctx.stroke();
     ctx.strokeStyle = s.pantsColor; ctx.lineWidth = 5; ctx.stroke();
 
-    // Shirt (torso + arms): dark edge → main → highlight
+    // Shirt torso (thicker)
     ctx.beginPath();
     ctx.moveTo(sx, bodyTop); ctx.lineTo(sx, bodyTop + torsoLen);
+    ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 12; ctx.stroke();
+    ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 9; ctx.stroke();
+
+    // Shirt arms
+    ctx.beginPath();
     ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(ax1, ay1);
     ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(ax2, ay2);
     ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 7; ctx.stroke();
     ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 5; ctx.stroke();
 
-    // Highlight on shirt
+    // Highlight on torso
     ctx.beginPath();
-    ctx.moveTo(sx - 1, bodyTop - 1); ctx.lineTo(sx - 1, bodyTop + torsoLen - 1);
-    ctx.strokeStyle = s.shirtLight; ctx.lineWidth = 2; ctx.stroke();
+    ctx.moveTo(sx - 2, bodyTop - 1); ctx.lineTo(sx - 2, bodyTop + torsoLen - 1);
+    ctx.strokeStyle = s.shirtLight; ctx.lineWidth = 3; ctx.stroke();
 
     // Hands (small circles at arm ends) — skin tone
     ctx.fillStyle = '#f0c8a0';
