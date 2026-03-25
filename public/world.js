@@ -393,7 +393,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.restore();
   }
 
-  // ── Render interaction effects (simple connecting curve) ─────────────────
+  // ── Render interaction effects (animated dashed curve + arrow) ───────────
   function renderInteractions() {
     for (const fx of interactionEffects) {
       const from = agentMap[fx.fromId];
@@ -416,25 +416,39 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       ctx.lineCap = 'round';
 
-      // Connecting curve
+      // Soft wide underline (cheap fake glow, single stroke)
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(140, 130, 255, ${alpha * 0.5})`;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.12})`;
+      ctx.lineWidth = 6;
       ctx.stroke();
 
-      // Arrowhead pointing at target
-      const angle = Math.atan2(to.y - cpy, to.x - cpx);
-      const arrLen = 10;
+      // Animated flowing dashes (lineDashOffset changes over time)
       ctx.beginPath();
-      ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - arrLen * Math.cos(angle - 0.35), to.y - arrLen * Math.sin(angle - 0.35));
-      ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - arrLen * Math.cos(angle + 0.35), to.y - arrLen * Math.sin(angle + 0.35));
-      ctx.strokeStyle = `rgba(140, 130, 255, ${alpha * 0.6})`;
+      ctx.moveTo(from.x, from.y);
+      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
+      ctx.setLineDash([8, 6]);
+      ctx.lineDashOffset = -fx.elapsed * 60;
+      ctx.strokeStyle = `rgba(150, 140, 255, ${alpha * 0.6})`;
       ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrowhead (filled triangle)
+      const angle = Math.atan2(to.y - cpy, to.x - cpx);
+      const arrLen = 10;
+      const ax1 = to.x - arrLen * Math.cos(angle - 0.35);
+      const ay1 = to.y - arrLen * Math.sin(angle - 0.35);
+      const ax2 = to.x - arrLen * Math.cos(angle + 0.35);
+      const ay2 = to.y - arrLen * Math.sin(angle + 0.35);
+      ctx.beginPath();
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(ax1, ay1);
+      ctx.lineTo(ax2, ay2);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(150, 140, 255, ${alpha * 0.6})`;
+      ctx.fill();
     }
   }
 
