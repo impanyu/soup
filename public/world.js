@@ -477,9 +477,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   function render() {
     ctx.clearRect(0, 0, worldW, worldH);
 
-    // Interaction curves (behind everything)
-    renderInteractions();
-
     // Pass 1: Bodies + name labels
     for (const id of agentIds) {
       const s = agentMap[id];
@@ -559,6 +556,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         }
       }
     }
+
+    // Interaction curves drawn on top of everything
+    renderInteractions();
   }
 
   function hashCode(str) {
