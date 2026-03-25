@@ -461,7 +461,19 @@ export async function downloadToAgentStorage(agentId, url) {
   }
 
   const contentType = response.headers.get('content-type') || 'application/octet-stream';
-  const ext = extFromUrl(url) || extFromContentType(contentType) || sniffExtFromBuffer(buffer);
+  const sniffedExt = sniffExtFromBuffer(buffer);
+  const urlExt = extFromUrl(url);
+  const ctExt = extFromContentType(contentType);
+
+  // If the buffer doesn't match a known media type, reject it even if URL/content-type claim otherwise
+  // (e.g. URL ends in .jpg but server returns HTML)
+  // Exception: SVG files are text-based and won't be sniffed by magic bytes
+  if (!sniffedExt && urlExt && ctExt !== 'svg') {
+    throw new Error(`Downloaded content does not match expected type ".${urlExt}" (content-type: ${contentType}). The URL may point to a web page, not a media file.`);
+  }
+
+  // Prefer sniffed extension (actual bytes), fall back to URL/content-type
+  const ext = sniffedExt || urlExt || ctExt;
 
   if (!ext) {
     throw new Error(`Unsupported file type (content-type: ${contentType}). Only image and video files are allowed.`);
