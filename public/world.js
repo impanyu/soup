@@ -214,16 +214,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const queue = buildConversationQueue(trees);
     if (!queue.length) return;
 
-    const replyCount = queue.filter(q => q.parentAuthorId).length;
-    console.log(`[World] Queue: ${queue.length} items, ${replyCount} replies/reposts`);
-
     for (const item of queue) {
       const { content, parentAuthorId } = item;
       const speaker = agentMap[content.authorId];
-      if (!speaker) {
-        console.log(`[World] Skipping: speaker ${content.authorId} not in agentMap`);
-        continue;
-      }
+      if (!speaker) continue;
 
       let text = content.text || content.title || '';
       if (content.repostOfId && !text.trim()) {
@@ -234,12 +228,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       // Only show interaction for actual replies/reposts
       const isReply = parentAuthorId && agentMap[parentAuthorId];
-      if (parentAuthorId && !agentMap[parentAuthorId]) {
-        console.log(`[World] Reply parent ${parentAuthorId} not in agentMap (speaker: ${content.authorId})`);
-      }
 
       if (isReply) {
-        console.log(`[World] Reply interaction: ${content.authorId} → ${parentAuthorId}`);
         const parent = agentMap[parentAuthorId];
         speaker.state = 'moving_to_target';
         speaker.targetX = clampX(parent.x + (Math.random() - 0.5) * 80);
@@ -403,37 +393,22 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.restore();
   }
 
-  // ── Render interaction effects (animated dashed curve + arrow) ───────────
+  // ── Render interaction effects (solid curve + arrow) ─────────────────────
   function renderInteractions() {
-    // DEBUG: bright red line for each interaction to prove rendering works
-    for (const fx of interactionEffects) {
-      const f = agentMap[fx.fromId], t = agentMap[fx.toId];
-      if (f && t) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(f.x, f.y);
-        ctx.lineTo(t.x, t.y);
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
     for (const fx of interactionEffects) {
       const from = agentMap[fx.fromId];
       const to = agentMap[fx.toId];
       if (!from || !to) continue;
 
       const progress = fx.elapsed / fx.duration;
-      const alpha = progress < 0.15 ? progress / 0.15 : progress > 0.85 ? (1 - progress) / 0.15 : 1;
+      const alpha = progress < 0.1 ? progress / 0.1 : progress > 0.9 ? (1 - progress) / 0.1 : 1;
 
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const midX = (from.x + to.x) / 2;
       const midY = (from.y + to.y) / 2;
-      // Ensure minimum bulge so curve is visible even when agents are close
-      const bulge = Math.max(30, Math.min(60, dist * 0.3));
+      const bulge = Math.max(35, Math.min(60, dist * 0.3));
       const nx = dist > 0.1 ? -dy / dist : -1;
       const ny = dist > 0.1 ? dx / dist : 0;
       const cpx = midX + nx * bulge;
@@ -442,38 +417,23 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.save();
       ctx.lineCap = 'round';
 
-      // Soft wide underline (cheap fake glow)
+      // Solid curve
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.2})`;
-      ctx.lineWidth = 8;
+      ctx.strokeStyle = `rgba(130, 120, 255, ${alpha * 0.8})`;
+      ctx.lineWidth = 3;
       ctx.stroke();
-
-      // Animated flowing dashes
-      ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.setLineDash([10, 6]);
-      ctx.lineDashOffset = -fx.elapsed * 80;
-      ctx.strokeStyle = `rgba(160, 150, 255, ${alpha * 0.8})`;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      ctx.setLineDash([]);
 
       // Arrowhead (filled triangle)
       const angle = Math.atan2(to.y - cpy, to.x - cpx);
-      const arrLen = 12;
-      const ax1 = to.x - arrLen * Math.cos(angle - 0.4);
-      const ay1 = to.y - arrLen * Math.sin(angle - 0.4);
-      const ax2 = to.x - arrLen * Math.cos(angle + 0.4);
-      const ay2 = to.y - arrLen * Math.sin(angle + 0.4);
+      const arrLen = 14;
       ctx.beginPath();
       ctx.moveTo(to.x, to.y);
-      ctx.lineTo(ax1, ay1);
-      ctx.lineTo(ax2, ay2);
+      ctx.lineTo(to.x - arrLen * Math.cos(angle - 0.4), to.y - arrLen * Math.sin(angle - 0.4));
+      ctx.lineTo(to.x - arrLen * Math.cos(angle + 0.4), to.y - arrLen * Math.sin(angle + 0.4));
       ctx.closePath();
-      ctx.fillStyle = `rgba(160, 150, 255, ${alpha * 0.8})`;
+      ctx.fillStyle = `rgba(130, 120, 255, ${alpha * 0.8})`;
       ctx.fill();
 
       ctx.restore();
