@@ -12,10 +12,11 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const bubbleLayer = document.getElementById('bubble-layer');
 
   // ── Constants ─────────────────────────────────────────────────────────────
+  const WORLD_W       = 2000;
+  const WORLD_H       = 2000;
   const AVATAR_R      = 28;
   const COLLISION_R   = AVATAR_R + 6;
   const COLLISION_D   = COLLISION_R * 2;
-  const AGENT_SPACING = 160;
   const WANDER_SPEED  = 50;
   const MOVE_SPEED    = 120;
   const ZZZ_PERIOD    = 2000;
@@ -31,24 +32,21 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   // ── State ─────────────────────────────────────────────────────────────────
   let agentMap = {};
   let agentIds = [];
-  let worldW = 0, worldH = 0;
-  let panX = 0, panY = 0;
-  let dragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
   let hoveredAgent = null;
   let imageCache = {};
   let activeBubbles = [];
   let lastTime = 0;
 
   // ── Spatial hash grid for fast collision ──────────────────────────────────
-  const GRID_CELL = COLLISION_D + 4; // cell size >= collision diameter
+  const GRID_CELL = COLLISION_D + 4;
   let gridCols = 0, gridRows = 0;
-  let grid = [];       // flat array of arrays (buckets)
+  let grid = [];
 
   function gridKey(cx, cy) { return cy * gridCols + cx; }
 
   function rebuildGrid() {
-    gridCols = Math.ceil(worldW / GRID_CELL);
-    gridRows = Math.ceil(worldH / GRID_CELL);
+    gridCols = Math.ceil(WORLD_W / GRID_CELL);
+    gridRows = Math.ceil(WORLD_H / GRID_CELL);
     grid = new Array(gridCols * gridRows);
     for (let i = 0; i < grid.length; i++) grid[i] = [];
     for (const id of agentIds) {
@@ -65,7 +63,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const a = agentMap[id];
       const cx = Math.min(gridCols - 1, Math.max(0, (a.x / GRID_CELL) | 0));
       const cy = Math.min(gridRows - 1, Math.max(0, (a.y / GRID_CELL) | 0));
-      // Check this cell + 8 neighbors
       for (let dy = -1; dy <= 1; dy++) {
         const ny = cy + dy;
         if (ny < 0 || ny >= gridRows) continue;
@@ -74,7 +71,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
           if (nx < 0 || nx >= gridCols) continue;
           const bucket = grid[gridKey(nx, ny)];
           for (const otherId of bucket) {
-            if (otherId <= id) continue; // avoid double-processing (string compare is fine)
+            if (otherId <= id) continue;
             const b = agentMap[otherId];
             const ddx = b.x - a.x;
             const ddy = b.y - a.y;
@@ -95,34 +92,30 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     }
   }
 
-  // ── Static background (rendered once as CSS background-image) ─────────────
+  // ── Static background ─────────────────────────────────────────────────────
   function initBackground() {
     const bgCanvas = document.createElement('canvas');
-    bgCanvas.width = worldW;
-    bgCanvas.height = worldH;
+    bgCanvas.width = WORLD_W;
+    bgCanvas.height = WORLD_H;
     const bg = bgCanvas.getContext('2d');
 
-    // Fill
     bg.fillStyle = '#06060f';
-    bg.fillRect(0, 0, worldW, worldH);
+    bg.fillRect(0, 0, WORLD_W, WORLD_H);
 
     // Nebulae
     const nebulaColors = [
       [108, 92, 231], [46, 134, 222], [214, 48, 149], [0, 210, 211], [72, 52, 212],
     ];
-    const nebulaCount = 4 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < nebulaCount; i++) {
-      const nx = Math.random() * worldW;
-      const ny = Math.random() * worldH;
-      const rx = 150 + Math.random() * 250;
-      const ry = 100 + Math.random() * 200;
-      const [r, g, b] = nebulaColors[i % nebulaColors.length];
+    for (let i = 0; i < 5; i++) {
+      const nx = Math.random() * WORLD_W;
+      const ny = Math.random() * WORLD_H;
+      const rx = 200 + Math.random() * 300;
+      const ry = 150 + Math.random() * 250;
+      const [r, g, b] = nebulaColors[i];
       const alpha = 0.03 + Math.random() * 0.04;
-      const rot = Math.random() * Math.PI * 2;
-
       bg.save();
       bg.translate(nx, ny);
-      bg.rotate(rot);
+      bg.rotate(Math.random() * Math.PI * 2);
       bg.scale(1, ry / rx);
       const grad = bg.createRadialGradient(0, 0, 0, 0, 0, rx);
       grad.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
@@ -136,31 +129,24 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     }
 
     // Stars
-    const area = worldW * worldH;
-    const starCount = Math.min(600, Math.floor(area / 8000));
+    const starCount = 500;
     for (let i = 0; i < starCount; i++) {
-      const sx = Math.random() * worldW;
-      const sy = Math.random() * worldH;
-      const sr = 0.3 + Math.random() * 1.5;
-      const brightness = 0.3 + Math.random() * 0.7;
       bg.beginPath();
-      bg.arc(sx, sy, sr, 0, Math.PI * 2);
-      bg.fillStyle = `rgba(220, 225, 255, ${brightness})`;
+      bg.arc(Math.random() * WORLD_W, Math.random() * WORLD_H, 0.3 + Math.random() * 1.5, 0, Math.PI * 2);
+      bg.fillStyle = `rgba(220, 225, 255, ${0.3 + Math.random() * 0.7})`;
       bg.fill();
     }
 
-    // Subtle grid
+    // Grid
     bg.strokeStyle = 'rgba(255,255,255,0.02)';
     bg.lineWidth = 1;
-    const gs = 80;
-    for (let gx = 0; gx < worldW; gx += gs) {
-      bg.beginPath(); bg.moveTo(gx, 0); bg.lineTo(gx, worldH); bg.stroke();
+    for (let gx = 0; gx < WORLD_W; gx += 80) {
+      bg.beginPath(); bg.moveTo(gx, 0); bg.lineTo(gx, WORLD_H); bg.stroke();
     }
-    for (let gy = 0; gy < worldH; gy += gs) {
-      bg.beginPath(); bg.moveTo(0, gy); bg.lineTo(worldW, gy); bg.stroke();
+    for (let gy = 0; gy < WORLD_H; gy += 80) {
+      bg.beginPath(); bg.moveTo(0, gy); bg.lineTo(WORLD_W, gy); bg.stroke();
     }
 
-    // Set as CSS background on canvas — zero per-frame cost
     canvas.style.backgroundImage = `url(${bgCanvas.toDataURL('image/png')})`;
     canvas.style.backgroundPosition = '0 0';
     canvas.style.backgroundRepeat = 'no-repeat';
@@ -180,31 +166,24 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   }
 
   // ── Boundary clamping ─────────────────────────────────────────────────────
-  function clampX(x) { return Math.max(AVATAR_R + 10, Math.min(worldW - AVATAR_R - 10, x)); }
-  function clampY(y) { return Math.max(AVATAR_R + 10, Math.min(worldH - AVATAR_R - 20, y)); }
+  function clampX(x) { return Math.max(AVATAR_R + 10, Math.min(WORLD_W - AVATAR_R - 10, x)); }
+  function clampY(y) { return Math.max(AVATAR_R + 10, Math.min(WORLD_H - AVATAR_R - 20, y)); }
 
   // ── Setup agents ──────────────────────────────────────────────────────────
   function initAgents(rawAgents) {
-    // Size world based on agent count, at least viewport size
-    const n = rawAgents.length;
-    const idealCols = Math.ceil(Math.sqrt(n));
-    const idealRows = Math.ceil(n / idealCols);
-    worldW = Math.max(container.clientWidth, idealCols * AGENT_SPACING + AGENT_SPACING);
-    worldH = Math.max(container.clientHeight, idealRows * AGENT_SPACING + AGENT_SPACING);
-
-    canvas.width = worldW;
-    canvas.height = worldH;
-    bubbleLayer.style.width = worldW + 'px';
-    bubbleLayer.style.height = worldH + 'px';
+    canvas.width = WORLD_W;
+    canvas.height = WORLD_H;
+    bubbleLayer.style.width = WORLD_W + 'px';
+    bubbleLayer.style.height = WORLD_H + 'px';
 
     agentMap = {};
     agentIds = [];
 
-    // Compute grid that fills the entire world area
+    const n = rawAgents.length;
     const padX = AVATAR_R + 20;
     const padY = AVATAR_R + 20;
-    const usableW = worldW - padX * 2;
-    const usableH = worldH - padY * 2;
+    const usableW = WORLD_W - padX * 2;
+    const usableH = WORLD_H - padY * 2;
     const cols = Math.ceil(Math.sqrt(n * (usableW / usableH)));
     const rows = Math.ceil(n / cols);
     const cellW = usableW / cols;
@@ -238,10 +217,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     });
 
     for (let pass = 0; pass < 5; pass++) resolveCollisions();
-
-    panX = Math.max(0, (worldW - container.clientWidth) / 2);
-    panY = Math.max(0, (worldH - container.clientHeight) / 2);
-
     initBackground();
   }
 
@@ -256,8 +231,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   // ── Conversation tree processing ──────────────────────────────────────────
   function flattenTree(tree, depth, parentAuthorId) {
     const items = [{ content: tree, depth, parentAuthorId }];
-    const kids = (tree.children || []).concat(tree.reposts || []);
-    for (const child of kids) {
+    for (const child of (tree.children || []).concat(tree.reposts || [])) {
       items.push(...flattenTree(child, depth + 1, tree.authorId));
     }
     return items;
@@ -334,7 +308,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  // ── Speech Bubbles (positioned top-right of avatar) ───────────────────────
+  // ── Speech Bubbles (top-right of avatar) ──────────────────────────────────
   function showBubble(agentState, text, authorName, duration) {
     const el = document.createElement('div');
     el.className = 'speech-bubble';
@@ -357,9 +331,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   function positionBubble(bubble) {
     const s = bubble.agentState;
-    // Top-right of avatar: offset right from center, above the top
-    const bx = Math.max(10, Math.min(worldW - 230, s.x + AVATAR_R + 6));
-    const by = Math.max(10, Math.min(worldH - 80, s.y - AVATAR_R - 10));
+    const bx = Math.max(10, Math.min(WORLD_W - 230, s.x + AVATAR_R + 6));
+    const by = Math.max(10, Math.min(WORLD_H - 80, s.y - AVATAR_R - 10));
     bubble.el.style.left = bx + 'px';
     bubble.el.style.top  = by + 'px';
   }
@@ -378,7 +351,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         s.zzzPhase += dt * (Math.PI * 2 / (ZZZ_PERIOD / 1000));
       }
     }
-
     resolveCollisions();
     for (const b of activeBubbles) positionBubble(b);
   }
@@ -395,18 +367,11 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Render loop ───────────────────────────────────────────────────────────
   function render() {
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
-
-    // Clear only — background is a static CSS image
-    ctx.clearRect(0, 0, worldW, worldH);
+    ctx.clearRect(0, 0, WORLD_W, WORLD_H);
 
     for (const id of agentIds) {
       const s = agentMap[id];
       const sx = s.x, sy = s.y;
-
-      if (sx < panX - AVATAR_R * 2 || sx > panX + cw + AVATAR_R * 2 ||
-          sy < panY - AVATAR_R * 2 || sy > panY + ch + AVATAR_R * 2) continue;
 
       // Glow for speaking
       if (s.highlighted) {
@@ -485,91 +450,41 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   function frame(time) {
     const dt = lastTime ? Math.min((time - lastTime) / 1000, 0.1) : 0.016;
     lastTime = time;
-    canvas.style.transform = `translate(${-panX}px, ${-panY}px)`;
-    bubbleLayer.style.transform = `translate(${-panX}px, ${-panY}px)`;
     update(dt);
     render();
     requestAnimationFrame(frame);
   }
 
-  // ── Pan / Click ───────────────────────────────────────────────────────────
-  container.addEventListener('mousedown', (e) => {
-    dragging = true;
-    dragStartX = e.clientX; dragStartY = e.clientY;
-    panStartX = panX; panStartY = panY;
-    container.classList.add('dragging');
+  // ── Click to navigate to agent ────────────────────────────────────────────
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = WORLD_W / rect.width;
+    const scaleY = WORLD_H / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    for (const id of agentIds) {
+      const s = agentMap[id];
+      const dx = mx - s.x, dy = my - s.y;
+      if (dx * dx + dy * dy < AVATAR_R * AVATAR_R) {
+        window.location.href = `/agent?id=${encodeURIComponent(id)}`;
+        return;
+      }
+    }
   });
 
-  window.addEventListener('mousemove', (e) => {
-    if (dragging) {
-      panX = Math.max(0, Math.min(worldW - container.clientWidth, panStartX - (e.clientX - dragStartX)));
-      panY = Math.max(0, Math.min(worldH - container.clientHeight, panStartY - (e.clientY - dragStartY)));
-    }
-    const rect = container.getBoundingClientRect();
-    const mx = e.clientX - rect.left + panX;
-    const my = e.clientY - rect.top + panY;
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = WORLD_W / rect.width;
+    const scaleY = WORLD_H / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
     hoveredAgent = null;
     for (const id of agentIds) {
       const s = agentMap[id];
       const dx = mx - s.x, dy = my - s.y;
       if (dx * dx + dy * dy < AVATAR_R * AVATAR_R) { hoveredAgent = id; break; }
     }
-    container.style.cursor = hoveredAgent ? 'pointer' : (dragging ? 'grabbing' : 'grab');
-  });
-
-  window.addEventListener('mouseup', (e) => {
-    if (!dragging) return;
-    const movedDist = Math.abs(e.clientX - dragStartX) + Math.abs(e.clientY - dragStartY);
-    dragging = false;
-    container.classList.remove('dragging');
-    if (movedDist < 5) {
-      const rect = container.getBoundingClientRect();
-      const mx = e.clientX - rect.left + panX;
-      const my = e.clientY - rect.top + panY;
-      for (const id of agentIds) {
-        const s = agentMap[id];
-        const dx = mx - s.x, dy = my - s.y;
-        if (dx * dx + dy * dy < AVATAR_R * AVATAR_R) {
-          window.location.href = `/agent?id=${encodeURIComponent(id)}`;
-          return;
-        }
-      }
-    }
-  });
-
-  // ── Touch support ─────────────────────────────────────────────────────────
-  container.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    dragging = true;
-    dragStartX = t.clientX; dragStartY = t.clientY;
-    panStartX = panX; panStartY = panY;
-  }, { passive: true });
-
-  container.addEventListener('touchmove', (e) => {
-    if (!dragging) return;
-    const t = e.touches[0];
-    panX = Math.max(0, Math.min(worldW - container.clientWidth, panStartX - (t.clientX - dragStartX)));
-    panY = Math.max(0, Math.min(worldH - container.clientHeight, panStartY - (t.clientY - dragStartY)));
-  }, { passive: true });
-
-  container.addEventListener('touchend', (e) => {
-    if (!dragging) return;
-    const ct = e.changedTouches[0];
-    const movedDist = Math.abs(ct.clientX - dragStartX) + Math.abs(ct.clientY - dragStartY);
-    dragging = false;
-    if (movedDist < 10) {
-      const rect = container.getBoundingClientRect();
-      const mx = ct.clientX - rect.left + panX;
-      const my = ct.clientY - rect.top + panY;
-      for (const id of agentIds) {
-        const s = agentMap[id];
-        const dx = mx - s.x, dy = my - s.y;
-        if (dx * dx + dy * dy < AVATAR_R * AVATAR_R) {
-          window.location.href = `/agent?id=${encodeURIComponent(id)}`;
-          return;
-        }
-      }
-    }
+    canvas.style.cursor = hoveredAgent ? 'pointer' : 'default';
   });
 
   // ── Conversation cycle ────────────────────────────────────────────────────
