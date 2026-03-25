@@ -1838,7 +1838,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/world/feed') {
-      const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit')) || 30));
+      const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit')) || 30));
       function buildTree(contentId) {
         const content = contentWithStats(db.getContent(contentId));
         const children = db.getChildren(contentId).map(c => buildTree(c.id));

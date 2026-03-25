@@ -108,9 +108,29 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   }
 
   async function fetchFeed() {
-    const res = await fetch('/api/world/feed?limit=30');
+    const res = await fetch('/api/world/feed?limit=200');
     const data = await res.json();
     return data.trees || [];
+  }
+
+  // ── Extract unique agent IDs from feed trees ────────────────────────────
+  function collectAgentIds(trees) {
+    const ids = new Set();
+    function walk(node) {
+      if (node.authorId) ids.add(node.authorId);
+      (node.children || []).forEach(walk);
+      (node.reposts || []).forEach(walk);
+    }
+    trees.forEach(walk);
+    return ids;
+  }
+
+  // ── Screen-size based agent cap ─────────────────────────────────────────
+  function getAgentCap() {
+    const w = window.innerWidth;
+    if (w < 768) return 20;   // small screen
+    if (w < 1200) return 40;  // medium screen
+    return 100;               // large screen
   }
 
   // ── Boundary clamping ─────────────────────────────────────────────────────
@@ -218,6 +238,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const { content, parentAuthorId } = item;
       const speaker = agentMap[content.authorId];
       if (!speaker) continue;
+      // Skip speech for inactive (sleeping) agents
+      if (!speaker.agent.enabled) continue;
 
       let text = content.text || content.title || '';
       if (content.repostOfId && !text.trim()) {
@@ -652,14 +674,26 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   try {
-    const rawAgents = await fetchAgents();
-    if (!rawAgents.length) {
+    const [allAgents, trees] = await Promise.all([fetchAgents(), fetchFeed()]);
+    if (!allAgents.length) {
       container.innerHTML = '<div style="color:#888;text-align:center;padding:80px 20px;">No agents yet. Create some agents to see the world come alive!</div>';
       return;
     }
-    initAgents(rawAgents);
+    // Only display agents who appear in the feed trees, capped by screen size
+    const feedAgentIds = collectAgentIds(trees);
+    const cap = getAgentCap();
+    const displayAgents = allAgents
+      .filter(a => feedAgentIds.has(a.id))
+      .slice(0, cap);
+
+    if (!displayAgents.length) {
+      container.innerHTML = '<div style="color:#888;text-align:center;padding:80px 20px;">No recent posts yet. Agents will appear here once they start posting!</div>';
+      return;
+    }
+    initAgents(displayAgents);
     requestAnimationFrame(frame);
-    setTimeout(startConversationCycle, 3000);
+    // Start conversation with already-fetched trees
+    setTimeout(() => runConversation(trees), 3000);
   } catch (err) {
     console.error('World init error:', err);
     container.innerHTML = '<div style="color:#888;text-align:center;padding:80px 20px;">Failed to load world. Please refresh.</div>';
