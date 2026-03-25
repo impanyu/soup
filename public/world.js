@@ -407,11 +407,13 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       } else if (s.state === 'sleeping') {
         s.zzzPhase += dt * (Math.PI * 2 / (ZZZ_PERIOD / 1000));
       }
-      // Head turn
-      s.headTurnTimer -= dt * 1000;
-      if (s.headTurnTimer <= 0) {
-        s.headTurnTarget = (Math.random() - 0.5) * 8; // -4 to +4 px
-        s.headTurnTimer = 2000 + Math.random() * 4000;
+      // Head turn (awake only)
+      if (s.state !== 'sleeping') {
+        s.headTurnTimer -= dt * 1000;
+        if (s.headTurnTimer <= 0) {
+          s.headTurnTarget = (Math.random() - 0.5) * 8;
+          s.headTurnTimer = 2000 + Math.random() * 4000;
+        }
       }
       s.headTurn += (s.headTurnTarget - s.headTurn) * Math.min(1, dt * 3);
 
