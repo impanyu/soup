@@ -18,7 +18,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const WANDER_SPEED  = 50;
   const MOVE_SPEED    = 120;
   const ZZZ_PERIOD    = 2000;
-  const SPEECH_DURATION = 2000;
+  const SPEECH_DURATION = 3000;
   const SPEECH_GAP    = 500;
   const GROUP_SIZE    = 2;  // configurable: how many siblings to speak before going deeper
   const SUPPORTIVE    = ['Love this!', 'Spot on!', 'So true!', 'Great take!', '100%!', 'Well said!', 'This!', 'Brilliant!', 'Couldn\'t agree more!', 'Nailed it!'];
@@ -327,17 +327,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       fx.elapsed += dt;
       if (fx.elapsed > fx.duration) {
         interactionEffects.splice(i, 1);
-        continue;
-      }
-      // Update particles along the path
-      const from = agentMap[fx.fromId];
-      const to = agentMap[fx.toId];
-      if (!from || !to) { interactionEffects.splice(i, 1); continue; }
-      for (const p of fx.particles) {
-        p.t += dt * p.speed;
-        if (p.t > 1) p.t -= 1;
-        p.x = from.x + (to.x - from.x) * p.t + Math.sin(p.t * Math.PI * 4 + p.offset) * 8;
-        p.y = from.y + (to.y - from.y) * p.t + Math.cos(p.t * Math.PI * 4 + p.offset) * 8;
       }
     }
     resolveCollisions();
@@ -356,116 +345,129 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
   // ── Draw cartoon body ────────────────────────────────────────────────────
   function drawBody(ctx, sx, sy, s) {
-    const bodyTop = sy + AVATAR_R;  // just below the avatar circle
+    const bodyTop = sy + AVATAR_R;
     const isMoving = Math.abs(s.x - s.prevX) > 0.5 || Math.abs(s.y - s.prevY) > 0.5;
     const wp = s.walkPhase;
-    const legLen = 16;
-    const armLen = 14;
-    const torsoLen = 18;
-    const bodyColor = s.state === 'sleeping' ? 'rgba(150, 150, 180, 0.5)' : 'rgba(180, 175, 220, 0.8)';
+    const legLen = 18;
+    const armLen = 16;
+    const torsoLen = 20;
+    const awake = s.state !== 'sleeping';
+    const bodyColor = awake ? '#b8b0e8' : '#7a7794';
+    const outlineColor = awake ? 'rgba(108, 92, 231, 0.6)' : 'rgba(100, 100, 130, 0.4)';
 
     ctx.save();
-    ctx.strokeStyle = bodyColor;
-    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Draw each limb with outline + fill for visibility
+    function drawLimb(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.strokeStyle = bodyColor;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
 
     // Torso
-    ctx.beginPath();
-    ctx.moveTo(sx, bodyTop);
-    ctx.lineTo(sx, bodyTop + torsoLen);
-    ctx.stroke();
+    drawLimb(sx, bodyTop, sx, bodyTop + torsoLen);
 
     if (isMoving) {
-      // Walking legs
-      const legSwing = Math.sin(wp) * 10;
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + torsoLen);
-      ctx.lineTo(sx - legSwing, bodyTop + torsoLen + legLen);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + torsoLen);
-      ctx.lineTo(sx + legSwing, bodyTop + torsoLen + legLen);
-      ctx.stroke();
-
-      // Swinging arms
-      const armSwing = Math.sin(wp + Math.PI) * 8;
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + 5);
-      ctx.lineTo(sx - 8 - armSwing, bodyTop + 5 + armLen);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + 5);
-      ctx.lineTo(sx + 8 + armSwing, bodyTop + 5 + armLen);
-      ctx.stroke();
+      const legSwing = Math.sin(wp) * 12;
+      drawLimb(sx, bodyTop + torsoLen, sx - legSwing, bodyTop + torsoLen + legLen);
+      drawLimb(sx, bodyTop + torsoLen, sx + legSwing, bodyTop + torsoLen + legLen);
+      const armSwing = Math.sin(wp + Math.PI) * 10;
+      drawLimb(sx, bodyTop + 5, sx - 10 - armSwing, bodyTop + 5 + armLen);
+      drawLimb(sx, bodyTop + 5, sx + 10 + armSwing, bodyTop + 5 + armLen);
     } else {
-      // Standing legs
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + torsoLen);
-      ctx.lineTo(sx - 5, bodyTop + torsoLen + legLen);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + torsoLen);
-      ctx.lineTo(sx + 5, bodyTop + torsoLen + legLen);
-      ctx.stroke();
-
-      // Resting arms
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + 5);
-      ctx.lineTo(sx - 10, bodyTop + 5 + armLen);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(sx, bodyTop + 5);
-      ctx.lineTo(sx + 10, bodyTop + 5 + armLen);
-      ctx.stroke();
+      drawLimb(sx, bodyTop + torsoLen, sx - 6, bodyTop + torsoLen + legLen);
+      drawLimb(sx, bodyTop + torsoLen, sx + 6, bodyTop + torsoLen + legLen);
+      drawLimb(sx, bodyTop + 5, sx - 12, bodyTop + 5 + armLen);
+      drawLimb(sx, bodyTop + 5, sx + 12, bodyTop + 5 + armLen);
     }
 
     ctx.restore();
   }
 
-  // ── Render interaction effects ──────────────────────────────────────────
+  // ── Render interaction effects (glowing arc + arrow) ────────────────────
   function renderInteractions() {
     for (const fx of interactionEffects) {
-      const progress = fx.elapsed / fx.duration;
-      const alpha = progress < 0.2 ? progress / 0.2 : progress > 0.8 ? (1 - progress) / 0.2 : 1;
-      for (const p of fx.particles) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(108, 92, 231, ${alpha * 0.8})`;
-        ctx.shadowColor = 'rgba(108, 92, 231, 0.6)';
-        ctx.shadowBlur = 6;
-        ctx.fill();
-        ctx.restore();
-      }
-      // Faint connecting line
       const from = agentMap[fx.fromId];
       const to = agentMap[fx.toId];
-      if (from && to) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.lineTo(to.x, to.y);
-        ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.12})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.restore();
-      }
+      if (!from || !to) continue;
+
+      const progress = fx.elapsed / fx.duration;
+      const alpha = progress < 0.15 ? progress / 0.15 : progress > 0.85 ? (1 - progress) / 0.15 : 1;
+      const pulse = 0.7 + 0.3 * Math.sin(fx.elapsed * 6);
+
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Perpendicular offset for arc curve
+      const midX = (from.x + to.x) / 2;
+      const midY = (from.y + to.y) / 2;
+      const bulge = Math.min(40, dist * 0.2);
+      const nx = -dy / (dist || 1);
+      const ny = dx / (dist || 1);
+      const cpx = midX + nx * bulge;
+      const cpy = midY + ny * bulge;
+
+      ctx.save();
+      // Glow
+      ctx.shadowColor = `rgba(108, 92, 231, ${alpha * 0.6 * pulse})`;
+      ctx.shadowBlur = 10;
+
+      // Arc line
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
+      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.5 * pulse})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Inner brighter line
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
+      ctx.strokeStyle = `rgba(160, 148, 255, ${alpha * 0.6 * pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Animated dash traveling along the arc
+      const dashT = (fx.elapsed * 1.5) % 1;
+      const px = (1 - dashT) * (1 - dashT) * from.x + 2 * (1 - dashT) * dashT * cpx + dashT * dashT * to.x;
+      const py = (1 - dashT) * (1 - dashT) * from.y + 2 * (1 - dashT) * dashT * cpy + dashT * dashT * to.y;
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180, 170, 255, ${alpha * 0.9})`;
+      ctx.shadowColor = `rgba(108, 92, 231, ${alpha * 0.8})`;
+      ctx.shadowBlur = 8;
+      ctx.fill();
+
+      // Arrowhead at target
+      const angle = Math.atan2(to.y - cpy, to.x - cpx);
+      const arrLen = 10;
+      ctx.beginPath();
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - arrLen * Math.cos(angle - 0.4), to.y - arrLen * Math.sin(angle - 0.4));
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - arrLen * Math.cos(angle + 0.4), to.y - arrLen * Math.sin(angle + 0.4));
+      ctx.strokeStyle = `rgba(160, 148, 255, ${alpha * 0.7})`;
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 0;
+      ctx.stroke();
+
+      ctx.restore();
     }
   }
 
   // ── Spawn interaction effect ────────────────────────────────────────────
   function spawnInteraction(fromId, toId, duration) {
-    const particles = [];
-    const count = 6;
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        t: i / count,
-        x: 0, y: 0,
-        speed: 0.4 + Math.random() * 0.3,
-        offset: Math.random() * Math.PI * 2,
-      });
-    }
-    interactionEffects.push({ fromId, toId, particles, elapsed: 0, duration });
+    interactionEffects.push({ fromId, toId, elapsed: 0, duration });
   }
 
   // ── Render loop ───────────────────────────────────────────────────────────
