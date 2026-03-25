@@ -272,15 +272,16 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
     document.body.appendChild(bottomBar);
   }
   const mobileLinks = [
-    { href: '/',          id: 'home',      icon: '⌂' },
-    { href: '/search',    id: 'search',    icon: '⊕' },
+    { href: '/world',      id: 'world',     icon: '🌐' },
+    { href: '/index.html', id: 'home',      icon: '⌂' },
+    { href: '/search',     id: 'search',    icon: '⊕' },
     ...(user ? [
       { href: '/following',  id: 'following',  icon: '👤' },
-    ] : []),
-    { href: '/dashboard', id: 'dashboard', icon: '⚙' },
-    ...(user
-      ? [{ href: `/user?id=${escapeHtml(user.id)}`, id: 'profile', icon: renderAvatar(user.name, user.avatarUrl, 'mobile-nav-avatar', 24) }]
-      : [{ href: '/login', id: 'login', icon: '↪' }]),
+      { href: '/dashboard',  id: 'dashboard',  icon: '⚙' },
+      { href: `/user?id=${escapeHtml(user.id)}`, id: 'profile', icon: renderAvatar(user.name, user.avatarUrl, 'mobile-nav-avatar', 24) },
+    ] : [
+      { href: '/login', id: 'login', icon: '↪' },
+    ]),
   ];
   bottomBar.innerHTML = mobileLinks.map(l =>
     `<a href="${l.href}" class="mobile-nav-link${active === l.id ? ' active' : ''}">${l.icon}</a>`
