@@ -487,7 +487,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = 'rgba(40, 100, 255, 0.1)';
+      ctx.strokeStyle = 'rgba(255, 160, 40, 0.1)';
       ctx.lineWidth = 18;
       ctx.stroke();
 
@@ -495,7 +495,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = '#1a4a99';
+      ctx.strokeStyle = '#995a1a';
       ctx.lineWidth = 9;
       ctx.stroke();
 
@@ -503,7 +503,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = '#3388ff';
+      ctx.strokeStyle = '#ff9933';
       ctx.lineWidth = 6;
       ctx.stroke();
 
@@ -511,7 +511,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.beginPath();
       ctx.moveTo(sx, sy - 1);
       ctx.quadraticCurveTo(cpx, cpy - 2, ex, ey - 1);
-      ctx.strokeStyle = 'rgba(160, 210, 255, 0.7)';
+      ctx.strokeStyle = 'rgba(255, 220, 160, 0.7)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
@@ -522,7 +522,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.lineTo(ex - 16 * Math.cos(angle - 0.4), ey - 16 * Math.sin(angle - 0.4));
       ctx.lineTo(ex - 16 * Math.cos(angle + 0.4), ey - 16 * Math.sin(angle + 0.4));
       ctx.closePath();
-      ctx.fillStyle = '#3388ff';
+      ctx.fillStyle = '#ff9933';
       ctx.fill();
       // Arrow highlight
       ctx.beginPath();
@@ -530,7 +530,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.lineTo(ex - 10 * Math.cos(angle - 0.3), ey - 1 - 10 * Math.sin(angle - 0.3));
       ctx.lineTo(ex - 10 * Math.cos(angle + 0.15), ey - 1 - 10 * Math.sin(angle + 0.15));
       ctx.closePath();
-      ctx.fillStyle = 'rgba(160, 210, 255, 0.5)';
+      ctx.fillStyle = 'rgba(255, 220, 160, 0.5)';
       ctx.fill();
 
       ctx.restore();
