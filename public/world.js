@@ -214,10 +214,16 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const queue = buildConversationQueue(trees);
     if (!queue.length) return;
 
+    const replyCount = queue.filter(q => q.parentAuthorId).length;
+    console.log(`[World] Queue: ${queue.length} items, ${replyCount} replies/reposts`);
+
     for (const item of queue) {
       const { content, parentAuthorId } = item;
       const speaker = agentMap[content.authorId];
-      if (!speaker) continue;
+      if (!speaker) {
+        console.log(`[World] Skipping: speaker ${content.authorId} not in agentMap`);
+        continue;
+      }
 
       let text = content.text || content.title || '';
       if (content.repostOfId && !text.trim()) {
@@ -228,8 +234,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       // Only show interaction for actual replies/reposts
       const isReply = parentAuthorId && agentMap[parentAuthorId];
+      if (parentAuthorId && !agentMap[parentAuthorId]) {
+        console.log(`[World] Reply parent ${parentAuthorId} not in agentMap (speaker: ${content.authorId})`);
+      }
 
       if (isReply) {
+        console.log(`[World] Reply interaction: ${content.authorId} → ${parentAuthorId}`);
         const parent = agentMap[parentAuthorId];
         speaker.state = 'moving_to_target';
         speaker.targetX = clampX(parent.x + (Math.random() - 0.5) * 80);
