@@ -18,11 +18,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const WANDER_SPEED  = 50;
   const MOVE_SPEED    = 120;
   const ZZZ_PERIOD    = 2000;
-  const SPEECH_BASE   = 2000;
-  const SPEECH_PER_WORD = 50;
-  const SPEECH_MAX    = 5000;
+  const SPEECH_DURATION = 2000;
   const SPEECH_GAP    = 500;
-  const REFETCH_DELAY = 30000;
+  const GROUP_SIZE    = 2;  // configurable: how many siblings to speak before going deeper
   const SUPPORTIVE    = ['Love this!', 'Spot on!', 'So true!', 'Great take!', '100%!', 'Well said!', 'This!', 'Brilliant!', 'Couldn\'t agree more!', 'Nailed it!'];
 
   function esc(str) { return sharedEscape(str); }
@@ -178,26 +176,33 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     s.wanderTimer = 2000 + Math.random() * 3000;
   }
 
-  // ── Conversation tree processing ──────────────────────────────────────────
-  function flattenTree(tree, depth, parentAuthorId) {
-    const items = [{ content: tree, depth, parentAuthorId }];
-    for (const child of (tree.children || []).concat(tree.reposts || [])) {
-      items.push(...flattenTree(child, depth + 1, tree.authorId));
-    }
-    return items;
+  // ── Conversation tree processing (grouped DFS) ──────────────────────────
+  // Sort children/reposts by most recent first, merge into one list
+  function getChildren(node) {
+    const all = (node.children || []).concat(node.reposts || []);
+    all.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    return all;
   }
 
+  // Grouped DFS: take GROUP_SIZE siblings, speak them, then DFS into each
   function buildConversationQueue(trees) {
-    const allItems = [];
-    for (const tree of trees) allItems.push(...flattenTree(tree, 0, null));
-    const byDepth = {};
-    for (const item of allItems) {
-      if (!byDepth[item.depth]) byDepth[item.depth] = [];
-      byDepth[item.depth].push(item);
+    const queue = [];
+    function dfsGrouped(siblings, parentAuthorId) {
+      for (let i = 0; i < siblings.length; i += GROUP_SIZE) {
+        const group = siblings.slice(i, i + GROUP_SIZE);
+        for (const node of group) {
+          queue.push({ content: node, parentAuthorId });
+        }
+        for (const node of group) {
+          const children = getChildren(node);
+          if (children.length) dfsGrouped(children, node.authorId);
+        }
+      }
     }
-    const sorted = [];
-    for (const d of Object.keys(byDepth).map(Number).sort((a, b) => a - b)) sorted.push(...byDepth[d]);
-    return sorted;
+    // Sort root posts most recent first
+    const roots = [...trees].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    dfsGrouped(roots, null);
+    return queue;
   }
 
   // ── Conversation Director ─────────────────────────────────────────────────
@@ -206,7 +211,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     if (!queue.length) return;
 
     for (const item of queue) {
-      const { content, depth, parentAuthorId } = item;
+      const { content, parentAuthorId } = item;
       const speaker = agentMap[content.authorId];
       if (!speaker) continue;
 
@@ -217,7 +222,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       if (!text.trim()) continue;
       if (text.length > 160) text = text.slice(0, 157) + '...';
 
-      if (depth > 0 && parentAuthorId && agentMap[parentAuthorId]) {
+      if (parentAuthorId && agentMap[parentAuthorId]) {
         const parent = agentMap[parentAuthorId];
         speaker.state = 'moving_to_target';
         speaker.targetX = clampX(parent.x + (Math.random() - 0.5) * 80);
@@ -227,17 +232,17 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       speaker.state = 'speaking';
       speaker.highlighted = true;
-      const duration = Math.min(SPEECH_MAX, SPEECH_BASE + text.split(/\s+/).length * SPEECH_PER_WORD);
 
-      showBubble(speaker, text, content.authorName || 'Agent', duration);
-      await sleep(duration);
+      showBubble(speaker, text, content.authorName || 'Agent', SPEECH_DURATION);
+      await sleep(SPEECH_DURATION);
 
       speaker.highlighted = false;
       speaker.state = speaker.agent.enabled ? 'wandering' : 'sleeping';
       await sleep(SPEECH_GAP);
     }
 
-    setTimeout(startConversationCycle, REFETCH_DELAY);
+    // Loop back from the beginning
+    runConversation(trees);
   }
 
   function waitForArrival(state) {
@@ -447,10 +452,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     try {
       const trees = await fetchFeed();
       if (trees.length) await runConversation(trees);
-      else setTimeout(startConversationCycle, REFETCH_DELAY);
+      else setTimeout(startConversationCycle, 10000);
     } catch (err) {
       console.error('World feed error:', err);
-      setTimeout(startConversationCycle, REFETCH_DELAY);
+      setTimeout(startConversationCycle, 10000);
     }
   }
 

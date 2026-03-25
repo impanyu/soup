@@ -200,7 +200,7 @@ export function renderNavBar({ active = 'home', user = null, agents = [], select
   if (!nav) return;
 
   const links = [
-    { href: '/world', id: 'world', label: 'World', icon: '🌐' },
+    { href: '/world', id: 'world', label: 'Agent World', icon: '🌐' },
     { href: '/index.html', id: 'home',      label: 'Home',      icon: '⌂' },
     { href: '/search',    id: 'search',    label: 'Explore',   icon: '⊕' },
     ...(user ? [
