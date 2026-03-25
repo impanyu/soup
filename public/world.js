@@ -382,11 +382,11 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.moveTo(sx, bodyTop + 5); ctx.lineTo(sx + 12, bodyTop + 5 + armLen);
     }
     // Outline pass
-    ctx.strokeStyle = awake ? 'rgba(108, 92, 231, 0.6)' : 'rgba(100, 100, 130, 0.4)';
+    ctx.strokeStyle = awake ? 'rgba(80, 160, 255, 0.6)' : 'rgba(100, 100, 130, 0.4)';
     ctx.lineWidth = 6;
     ctx.stroke();
     // Fill pass (same path)
-    ctx.strokeStyle = awake ? '#b8b0e8' : '#7a7794';
+    ctx.strokeStyle = awake ? '#b0d4f8' : '#7a7794';
     ctx.lineWidth = 4;
     ctx.stroke();
 
@@ -424,15 +424,15 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.save();
       ctx.lineCap = 'round';
 
-      // Gradient along the curve: orange at speaker → warm pink at target
+      // Gradient along the curve: light blue at speaker → deeper blue at target
       const grad = ctx.createLinearGradient(sx, sy, ex, ey);
-      grad.addColorStop(0, '#ffaa44');
-      grad.addColorStop(1, '#ff6b9d');
+      grad.addColorStop(0, '#66bbff');
+      grad.addColorStop(1, '#3388ff');
 
       // Outer glow
       const glowGrad = ctx.createLinearGradient(sx, sy, ex, ey);
-      glowGrad.addColorStop(0, 'rgba(255, 170, 60, 0.2)');
-      glowGrad.addColorStop(1, 'rgba(255, 107, 157, 0.2)');
+      glowGrad.addColorStop(0, 'rgba(100, 180, 255, 0.2)');
+      glowGrad.addColorStop(1, 'rgba(50, 130, 255, 0.2)');
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
@@ -448,14 +448,14 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Arrowhead at target (pink end)
+      // Arrowhead at target (blue end)
       const angle = Math.atan2(ey - cpy, ex - cpx);
       ctx.beginPath();
       ctx.moveTo(ex, ey);
       ctx.lineTo(ex - 13 * Math.cos(angle - 0.45), ey - 13 * Math.sin(angle - 0.45));
       ctx.lineTo(ex - 13 * Math.cos(angle + 0.45), ey - 13 * Math.sin(angle + 0.45));
       ctx.closePath();
-      ctx.fillStyle = '#ff6b9d';
+      ctx.fillStyle = '#3388ff';
       ctx.fill();
 
 
@@ -497,19 +497,19 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       if (s.highlighted) {
         ctx.save();
         const pulse = 0.8 + 0.2 * Math.sin(globalTime * 4);
-        // Outer soft glow
+        // Wide outer glow
         ctx.beginPath();
-        ctx.arc(sx, sy, AVATAR_R + 22, 0, Math.PI * 2);
-        const outerGlow = ctx.createRadialGradient(sx, sy, AVATAR_R, sx, sy, AVATAR_R + 22);
-        outerGlow.addColorStop(0, `rgba(255, 170, 60, ${0.35 * pulse})`);
-        outerGlow.addColorStop(0.5, `rgba(108, 92, 231, ${0.2 * pulse})`);
-        outerGlow.addColorStop(1, 'rgba(108, 92, 231, 0)');
+        ctx.arc(sx, sy, AVATAR_R + 30, 0, Math.PI * 2);
+        const outerGlow = ctx.createRadialGradient(sx, sy, AVATAR_R - 4, sx, sy, AVATAR_R + 30);
+        outerGlow.addColorStop(0, `rgba(80, 160, 255, ${0.5 * pulse})`);
+        outerGlow.addColorStop(0.4, `rgba(60, 120, 255, ${0.3 * pulse})`);
+        outerGlow.addColorStop(1, 'rgba(40, 80, 255, 0)');
         ctx.fillStyle = outerGlow;
         ctx.fill();
-        // Inner bright ring
+        // Bright blue ring
         ctx.beginPath();
         ctx.arc(sx, sy, AVATAR_R + 3, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255, 200, 100, ${0.7 * pulse})`;
+        ctx.strokeStyle = `rgba(100, 180, 255, ${0.85 * pulse})`;
         ctx.lineWidth = 3;
         ctx.stroke();
         ctx.restore();
@@ -543,7 +543,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.beginPath();
       ctx.arc(sx, sy, AVATAR_R, 0, Math.PI * 2);
       ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.1)'
-        : s.highlighted ? 'rgba(108, 92, 231, 0.9)' : 'rgba(108, 92, 231, 0.5)';
+        : s.highlighted ? 'rgba(80, 160, 255, 0.9)' : 'rgba(80, 160, 255, 0.5)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
