@@ -458,18 +458,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.fillStyle = '#ff6b9d';
       ctx.fill();
 
-      // Pulsing ring at speaker end (cheap: just two concentric circles)
-      const pulse = 0.6 + 0.4 * Math.sin(fx.elapsed * 5);
-      const ringR = 4 + pulse * 3;
-      ctx.beginPath();
-      ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 170, 60, ${0.4 + pulse * 0.3})`;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffaa44';
-      ctx.fill();
 
       ctx.restore();
     }
