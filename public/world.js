@@ -454,6 +454,30 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     }
   }
 
+  // ── Resize handler ────────────────────────────────────────────────────────
+  function handleResize() {
+    const newW = container.clientWidth;
+    const newH = container.clientHeight;
+    if (newW === worldW && newH === worldH) return;
+    const scaleX = newW / (worldW || newW);
+    const scaleY = newH / (worldH || newH);
+    worldW = newW;
+    worldH = newH;
+    canvas.width = worldW;
+    canvas.height = worldH;
+    bubbleLayer.style.width = worldW + 'px';
+    bubbleLayer.style.height = worldH + 'px';
+    for (const id of agentIds) {
+      const s = agentMap[id];
+      s.x = clampX(s.x * scaleX);
+      s.y = clampY(s.y * scaleY);
+      s.targetX = clampX(s.targetX * scaleX);
+      s.targetY = clampY(s.targetY * scaleY);
+    }
+    initBackground();
+  }
+  window.addEventListener('resize', handleResize);
+
   // ── Boot ──────────────────────────────────────────────────────────────────
   try {
     const rawAgents = await fetchAgents();
