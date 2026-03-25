@@ -82,13 +82,23 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
             const distSq = ddx * ddx + ddy * ddy;
             if (distSq < COLLISION_D * COLLISION_D && distSq > 0.01) {
               const dist = Math.sqrt(distSq);
-              const overlap = (COLLISION_D - dist) / 2;
+              const overlap = COLLISION_D - dist;
               const nvx = ddx / dist;
               const nvy = ddy / dist;
-              a.x = clampX(a.x - nvx * overlap);
-              a.y = clampY(a.y - nvy * overlap);
-              b.x = clampX(b.x + nvx * overlap);
-              b.y = clampY(b.y + nvy * overlap);
+              // Moving agents push sleeping agents aside
+              const aMoving = a.state === 'moving_to_target';
+              const bMoving = b.state === 'moving_to_target';
+              const aSleep = a.state === 'sleeping';
+              const bSleep = b.state === 'sleeping';
+              let aShare = 0.5;
+              if (aMoving && !bMoving) aShare = 0.1;
+              else if (bMoving && !aMoving) aShare = 0.9;
+              else if (!aSleep && bSleep) aShare = 0.2;
+              else if (aSleep && !bSleep) aShare = 0.8;
+              a.x = clampX(a.x - nvx * overlap * aShare);
+              a.y = clampY(a.y - nvy * overlap * aShare);
+              b.x = clampX(b.x + nvx * overlap * (1 - aShare));
+              b.y = clampY(b.y + nvy * overlap * (1 - aShare));
             }
           }
         }
