@@ -405,7 +405,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < 1) continue;
 
-      // Offset start/end to edge of avatar so curve doesn't overlap heads
+      // Offset start/end to edge of avatar
       const ux = dx / dist, uy = dy / dist;
       const pad = AVATAR_R + 4;
       const sx = from.x + ux * pad;
@@ -413,7 +413,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const ex = to.x - ux * pad;
       const ey = to.y - uy * pad;
 
-      // Curved control point (perpendicular bulge)
+      // Curved control point
       const midX = (sx + ex) / 2;
       const midY = (sy + ey) / 2;
       const bulge = Math.max(25, dist * 0.22);
@@ -424,33 +424,48 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.save();
       ctx.lineCap = 'round';
 
+      // Gradient along the curve: orange at speaker → warm pink at target
+      const grad = ctx.createLinearGradient(sx, sy, ex, ey);
+      grad.addColorStop(0, '#ffaa44');
+      grad.addColorStop(1, '#ff6b9d');
+
       // Outer glow
+      const glowGrad = ctx.createLinearGradient(sx, sy, ex, ey);
+      glowGrad.addColorStop(0, 'rgba(255, 170, 60, 0.2)');
+      glowGrad.addColorStop(1, 'rgba(255, 107, 157, 0.2)');
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = 'rgba(255, 170, 60, 0.25)';
-      ctx.lineWidth = 7;
+      ctx.strokeStyle = glowGrad;
+      ctx.lineWidth = 8;
       ctx.stroke();
 
-      // Main curve
+      // Main curve with gradient
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cpx, cpy, ex, ey);
-      ctx.strokeStyle = '#ffaa44';
+      ctx.strokeStyle = grad;
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Arrowhead at target end
+      // Arrowhead at target (pink end)
       const angle = Math.atan2(ey - cpy, ex - cpx);
       ctx.beginPath();
       ctx.moveTo(ex, ey);
-      ctx.lineTo(ex - 12 * Math.cos(angle - 0.4), ey - 12 * Math.sin(angle - 0.4));
-      ctx.lineTo(ex - 12 * Math.cos(angle + 0.4), ey - 12 * Math.sin(angle + 0.4));
+      ctx.lineTo(ex - 13 * Math.cos(angle - 0.45), ey - 13 * Math.sin(angle - 0.45));
+      ctx.lineTo(ex - 13 * Math.cos(angle + 0.45), ey - 13 * Math.sin(angle + 0.45));
       ctx.closePath();
-      ctx.fillStyle = '#ffaa44';
+      ctx.fillStyle = '#ff6b9d';
       ctx.fill();
 
-      // Small dot at speaker end
+      // Pulsing ring at speaker end (cheap: just two concentric circles)
+      const pulse = 0.6 + 0.4 * Math.sin(fx.elapsed * 5);
+      const ringR = 4 + pulse * 3;
+      ctx.beginPath();
+      ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 170, 60, ${0.4 + pulse * 0.3})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.beginPath();
       ctx.arc(sx, sy, 3, 0, Math.PI * 2);
       ctx.fillStyle = '#ffaa44';
