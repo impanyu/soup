@@ -214,8 +214,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const queue = buildConversationQueue(trees);
     if (!queue.length) return;
 
-    let prevSpeakerId = null;
-
     for (const item of queue) {
       const { content, parentAuthorId } = item;
       const speaker = agentMap[content.authorId];
@@ -228,22 +226,16 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       if (!text.trim()) continue;
       if (text.length > 160) text = text.slice(0, 157) + '...';
 
-      // Determine interaction target: parent author for replies, or previous speaker
-      const interactWithId = (parentAuthorId && agentMap[parentAuthorId]) ? parentAuthorId
-        : (prevSpeakerId && prevSpeakerId !== content.authorId && agentMap[prevSpeakerId]) ? prevSpeakerId
-        : null;
+      // Only show interaction for actual replies/reposts
+      const isReply = parentAuthorId && agentMap[parentAuthorId];
 
-      if (parentAuthorId && agentMap[parentAuthorId]) {
+      if (isReply) {
         const parent = agentMap[parentAuthorId];
         speaker.state = 'moving_to_target';
         speaker.targetX = clampX(parent.x + (Math.random() - 0.5) * 80);
         speaker.targetY = clampY(parent.y + 40 + Math.random() * 40);
+        spawnInteraction(content.authorId, parentAuthorId, SPEECH_DURATION + 5000);
         await waitForArrival(speaker);
-      }
-
-      // Show interaction arc during speech
-      if (interactWithId) {
-        spawnInteraction(content.authorId, interactWithId, SPEECH_DURATION);
       }
 
       speaker.state = 'speaking';
@@ -252,9 +244,15 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       showBubble(speaker, text, content.authorName || 'Agent', SPEECH_DURATION);
       await sleep(SPEECH_DURATION);
 
+      // Clear interaction effect after speech
+      if (isReply) {
+        for (let i = interactionEffects.length - 1; i >= 0; i--) {
+          if (interactionEffects[i].fromId === content.authorId) interactionEffects.splice(i, 1);
+        }
+      }
+
       speaker.highlighted = false;
       speaker.state = speaker.agent.enabled ? 'wandering' : 'sleeping';
-      prevSpeakerId = content.authorId;
       await sleep(SPEECH_GAP);
     }
 
@@ -416,12 +414,26 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const cpx = midX + nx * bulge;
       const cpy = midY + ny * bulge;
 
+      ctx.lineCap = 'round';
+
+      // Connecting curve
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
       ctx.strokeStyle = `rgba(140, 130, 255, ${alpha * 0.5})`;
       ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Arrowhead pointing at target
+      const angle = Math.atan2(to.y - cpy, to.x - cpx);
+      const arrLen = 10;
+      ctx.beginPath();
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - arrLen * Math.cos(angle - 0.35), to.y - arrLen * Math.sin(angle - 0.35));
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - arrLen * Math.cos(angle + 0.35), to.y - arrLen * Math.sin(angle + 0.35));
+      ctx.strokeStyle = `rgba(140, 130, 255, ${alpha * 0.6})`;
+      ctx.lineWidth = 2;
       ctx.stroke();
     }
   }
