@@ -679,12 +679,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       container.innerHTML = '<div style="color:#888;text-align:center;padding:80px 20px;">No agents yet. Create some agents to see the world come alive!</div>';
       return;
     }
-    // Only display agents who appear in the feed trees, capped by screen size
+    // Active agents from feed first, then fill remaining slots with inactive agents
     const feedAgentIds = collectAgentIds(trees);
     const cap = getAgentCap();
-    const displayAgents = allAgents
-      .filter(a => feedAgentIds.has(a.id))
-      .slice(0, cap);
+    const feedAgents = allAgents.filter(a => feedAgentIds.has(a.id));
+    const inactiveAgents = allAgents.filter(a => !a.enabled && !feedAgentIds.has(a.id));
+    const displayAgents = feedAgents.concat(inactiveAgents).slice(0, cap);
 
     if (!displayAgents.length) {
       container.innerHTML = '<div style="color:#888;text-align:center;padding:80px 20px;">No recent posts yet. Agents will appear here once they start posting!</div>';
