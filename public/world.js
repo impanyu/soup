@@ -395,7 +395,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.restore();
   }
 
-  // ── Render interaction effects (arc + arrow, no shadowBlur) ──────────────
+  // ── Render interaction effects (simple connecting curve) ─────────────────
   function renderInteractions() {
     for (const fx of interactionEffects) {
       const from = agentMap[fx.fromId];
@@ -404,7 +404,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       const progress = fx.elapsed / fx.duration;
       const alpha = progress < 0.15 ? progress / 0.15 : progress > 0.85 ? (1 - progress) / 0.15 : 1;
-      const pulse = 0.7 + 0.3 * Math.sin(fx.elapsed * 6);
 
       const dx = to.x - from.x;
       const dy = to.y - from.y;
@@ -417,61 +416,13 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const cpx = midX + nx * bulge;
       const cpy = midY + ny * bulge;
 
-      ctx.save();
-      ctx.lineCap = 'round';
-
-      // Outer soft glow (wide, low alpha — cheap fake glow)
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(108, 92, 231, ${alpha * 0.15 * pulse})`;
-      ctx.lineWidth = 12;
-      ctx.stroke();
-
-      // Main arc
-      ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(140, 130, 255, ${alpha * 0.6 * pulse})`;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Bright core
-      ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.quadraticCurveTo(cpx, cpy, to.x, to.y);
-      ctx.strokeStyle = `rgba(210, 205, 255, ${alpha * 0.8 * pulse})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Animated dot traveling along the arc
-      const dashT = (fx.elapsed * 1.2) % 1;
-      const px = (1 - dashT) * (1 - dashT) * from.x + 2 * (1 - dashT) * dashT * cpx + dashT * dashT * to.x;
-      const py = (1 - dashT) * (1 - dashT) * from.y + 2 * (1 - dashT) * dashT * cpy + dashT * dashT * to.y;
-      // Fake glow: larger dim circle behind
-      ctx.beginPath();
-      ctx.arc(px, py, 8, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(108, 92, 231, ${alpha * 0.3})`;
-      ctx.fill();
-      // Bright dot
-      ctx.beginPath();
-      ctx.arc(px, py, 4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(210, 200, 255, ${alpha * 0.9})`;
-      ctx.fill();
-
-      // Arrowhead
-      const angle = Math.atan2(to.y - cpy, to.x - cpx);
-      const arrLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - arrLen * Math.cos(angle - 0.4), to.y - arrLen * Math.sin(angle - 0.4));
-      ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - arrLen * Math.cos(angle + 0.4), to.y - arrLen * Math.sin(angle + 0.4));
-      ctx.strokeStyle = `rgba(160, 148, 255, ${alpha * 0.7})`;
+      ctx.strokeStyle = `rgba(140, 130, 255, ${alpha * 0.5})`;
       ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
       ctx.stroke();
-
-      ctx.restore();
     }
   }
 
@@ -481,15 +432,32 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   }
 
   // ── Render loop ───────────────────────────────────────────────────────────
+  // Two-pass rendering: 1) all bodies + names, 2) all heads + zzz
+  // This ensures heads always render on top of other agents' bodies.
   function render() {
     ctx.clearRect(0, 0, worldW, worldH);
 
-    // Interaction effects (behind agents)
+    // Interaction curves (behind everything)
     renderInteractions();
 
+    // Pass 1: Bodies + name labels
+    for (const id of agentIds) {
+      const s = agentMap[id];
+      drawBody(ctx, s.x, s.y, s);
+      // Name label
+      ctx.fillStyle = s.state === 'sleeping' ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.75)';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const name = s.agent.name || 'Agent';
+      ctx.fillText(name.length > 14 ? name.slice(0, 12) + '..' : name, s.x, s.y + AVATAR_R + 38);
+    }
+
+    // Pass 2: Heads (avatars + border + glow + zzz) — always on top
     for (const id of agentIds) {
       const s = agentMap[id];
       const sx = s.x, sy = s.y;
+      const sleeping = s.state === 'sleeping';
 
       // Glow for speaking
       if (s.highlighted) {
@@ -504,24 +472,23 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.restore();
       }
 
-      // Body (drawn behind avatar)
-      drawBody(ctx, sx, sy, s);
-
-      // Avatar
+      // Avatar circle
       ctx.save();
       ctx.beginPath();
       ctx.arc(sx, sy, AVATAR_R, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
 
+      if (sleeping) ctx.globalAlpha = 0.4;
+
       const img = s.agent.avatarUrl ? imageCache[s.agent.avatarUrl] : null;
       if (img && img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
       } else {
         const hue = hashCode(s.agent.name || 'A') % 360;
-        ctx.fillStyle = `hsl(${hue}, 60%, 40%)`;
+        ctx.fillStyle = `hsl(${hue}, ${sleeping ? 20 : 60}%, ${sleeping ? 30 : 40}%)`;
         ctx.fillRect(sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = sleeping ? '#999' : '#fff';
         ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -532,21 +499,13 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       // Border ring
       ctx.beginPath();
       ctx.arc(sx, sy, AVATAR_R, 0, Math.PI * 2);
-      ctx.strokeStyle = s.state === 'sleeping' ? 'rgba(255,255,255,0.15)'
+      ctx.strokeStyle = sleeping ? 'rgba(255,255,255,0.1)'
         : s.highlighted ? 'rgba(108, 92, 231, 0.9)' : 'rgba(108, 92, 231, 0.5)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Name label (below body now)
-      ctx.fillStyle = 'rgba(255,255,255,0.75)';
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      const name = s.agent.name || 'Agent';
-      ctx.fillText(name.length > 14 ? name.slice(0, 12) + '..' : name, sx, sy + AVATAR_R + 38);
-
       // ZZZ for sleeping
-      if (s.state === 'sleeping') {
+      if (sleeping) {
         const t = s.zzzPhase;
         for (let i = 0; i < 3; i++) {
           const phase = (t + i * 0.7) % (Math.PI * 2);
