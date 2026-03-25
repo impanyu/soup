@@ -620,12 +620,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     ctx.beginPath();
     for (const id of agentIds) {
       const s = agentMap[id];
-      const footY = s.y + AVATAR_R + 40;
-      const shadowX = s.x + 8;
+      const footY = s.y + 6;
+      const shadowX = s.x + 18;
       ctx.moveTo(shadowX + 22, footY);
       ctx.ellipse(shadowX, footY, 22, 6, 0, 0, Math.PI * 2);
     }
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.fill();
 
     // Pass 1: Bodies + name labels
