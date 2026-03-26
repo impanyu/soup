@@ -431,10 +431,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       }
       s.headTurn += (s.headTurnTarget - s.headTurn) * Math.min(1, dt * 3);
 
-      // Advance walk cycle when moving
+      // Advance walk cycle when moving (use velocity, not per-frame delta, for high refresh rate monitors)
       const dx = s.x - s.prevX, dy = s.y - s.prevY;
-      const moved = Math.sqrt(dx * dx + dy * dy);
-      if (moved > 0.5) {
+      const speed = dt > 0 ? Math.sqrt(dx * dx + dy * dy) / dt : 0;
+      if (speed > 5) {
         s.walkPhase += dt * 10;  // walk cycle speed
       }
     }
@@ -463,7 +463,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   // ── Draw cartoon body with shirt, pants, hands & feet ──────────────────
   function drawBody(ctx, sx, sy, s) {
     const bodyTop = sy + AVATAR_R;
-    const isMoving = Math.abs(s.x - s.prevX) > 0.5 || Math.abs(s.y - s.prevY) > 0.5;
+    const isMoving = s.state === 'moving_to_target' || s.state === 'walking_to_interact';
     const wp = s.walkPhase;
     const neckLen = 5;
     const legLen = 18, armLen = 16, torsoLen = 20;
