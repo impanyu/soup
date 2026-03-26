@@ -479,10 +479,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ax1 = sx - 10 - armSwing; ay1 = bodyTop + 5 + armLen;
       ax2 = sx + 10 + armSwing; ay2 = ay1;
     } else {
-      lx1 = sx - 6; ly1 = bodyTop + torsoLen + legLen;
-      lx2 = sx + 6; ly2 = ly1;
-      ax1 = sx - 12; ay1 = bodyTop + 5 + armLen;
-      ax2 = sx + 12; ay2 = ay1;
+      lx1 = sx - 3; ly1 = bodyTop + torsoLen + legLen;
+      lx2 = sx + 3; ly2 = ly1;
+      ax1 = sx - 8; ay1 = bodyTop + 5 + armLen;
+      ax2 = sx + 8; ay2 = ay1;
     }
 
     ctx.save();
