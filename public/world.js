@@ -431,11 +431,15 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       }
       s.headTurn += (s.headTurnTarget - s.headTurn) * Math.min(1, dt * 3);
 
-      // Advance walk cycle when moving (use velocity, not per-frame delta, for high refresh rate monitors)
+      // Advance walk cycle when moving, smoothly reset to 0 when stopped
       const dx = s.x - s.prevX, dy = s.y - s.prevY;
       const speed = dt > 0 ? Math.sqrt(dx * dx + dy * dy) / dt : 0;
       if (speed > 5) {
-        s.walkPhase += dt * 10;  // walk cycle speed
+        s.walkPhase += dt * 10;
+      } else {
+        // Snap walkPhase toward nearest multiple of PI (neutral pose)
+        const target = Math.round(s.walkPhase / Math.PI) * Math.PI;
+        s.walkPhase += (target - s.walkPhase) * Math.min(1, dt * 8);
       }
     }
     // Update interaction effects
