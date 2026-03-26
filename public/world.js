@@ -144,8 +144,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   // ── Screen-size based agent cap ─────────────────────────────────────────
   function getAgentCap() {
     const w = window.innerWidth;
-    if (w < 768) return 20;   // small screen
-    if (w < 1200) return 60;  // medium screen
+    if (w < 768) return 30;   // small screen
+    if (w < 1200) return 80;  // medium screen
     return 200;               // large screen
   }
 
