@@ -463,7 +463,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   // ── Draw cartoon body with shirt, pants, hands & feet ──────────────────
   function drawBody(ctx, sx, sy, s) {
     const bodyTop = sy + AVATAR_R;
-    const isMoving = s.state === 'moving_to_target' || s.state === 'walking_to_interact';
+    const isMoving = s.state === 'wandering' || s.state === 'moving_to_target' || s.state === 'walking_to_interact';
     const wp = s.walkPhase;
     const neckLen = 5;
     const legLen = 18, armLen = 16, torsoLen = 20;
