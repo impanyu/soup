@@ -475,19 +475,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const dim = awake ? 1 : 0.5;
 
     let lx1, ly1, lx2, ly2, ax1, ay1, ax2, ay2;
-    if (isMoving) {
-      const legSwing = Math.sin(wp) * 12;
-      const armSwing = Math.sin(wp + Math.PI) * 10;
-      lx1 = sx - legSwing; ly1 = bodyTop + torsoLen + legLen;
-      lx2 = sx + legSwing; ly2 = ly1;
-      ax1 = sx - 10 - armSwing; ay1 = bodyTop + 5 + armLen;
-      ax2 = sx + 10 + armSwing; ay2 = ay1;
-    } else {
-      lx1 = sx - 3; ly1 = bodyTop + torsoLen + legLen;
-      lx2 = sx + 3; ly2 = ly1;
-      ax1 = sx - 8; ay1 = bodyTop + 5 + armLen;
-      ax2 = sx + 8; ay2 = ay1;
-    }
+    const legSwing = Math.sin(wp) * 12;
+    const armSwing = Math.sin(wp + Math.PI) * 10;
+    lx1 = sx - 3 - legSwing; ly1 = bodyTop + torsoLen + legLen;
+    lx2 = sx + 3 + legSwing; ly2 = ly1;
+    ax1 = sx - 8 - armSwing; ay1 = bodyTop + 5 + armLen;
+    ax2 = sx + 8 + armSwing; ay2 = ay1;
 
     ctx.save();
     ctx.lineCap = 'round';
