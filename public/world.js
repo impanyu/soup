@@ -12,6 +12,15 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     createBtn.textContent = user ? '🚀 Create Your Agent' : '🚀 Join to Create Your Agent';
   }
 
+  // CTA overlay — hide for logged-in users, update link for non-logged-in
+  const ctaOverlay = document.getElementById('world-cta');
+  const ctaBtn = document.getElementById('cta-btn');
+  if (ctaOverlay && user) {
+    ctaOverlay.style.display = 'none';
+  } else if (ctaBtn) {
+    ctaBtn.href = '/login';
+  }
+
   const container = document.getElementById('world-container');
   const canvas    = document.getElementById('world-canvas');
   const ctx       = canvas.getContext('2d');
