@@ -798,32 +798,28 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // 3) Arrowhead — sample curve tangent at t=0.92 for smooth alignment
-      // Quadratic Bezier: B(t) = (1-t)^2*P0 + 2(1-t)t*CP + t^2*P1
-      // Tangent: B'(t) = 2(1-t)(CP-P0) + 2t(P1-CP)
-      const t0 = 0.88;
-      const bx0 = (1-t0)*(1-t0)*sx + 2*(1-t0)*t0*cpx + t0*t0*ex;
-      const by0 = (1-t0)*(1-t0)*sy + 2*(1-t0)*t0*cpy + t0*t0*ey;
-      const tdx = 2*(1-t0)*(cpx-sx) + 2*t0*(ex-cpx);
-      const tdy = 2*(1-t0)*(cpy-sy) + 2*t0*(ey-cpy);
-      const angle = Math.atan2(tdy, tdx);
-      const arrowLen = 14, arrowW = 0.45;
-      // Draw arrow as filled shape from the curve body to the tip
-      ctx.beginPath();
-      ctx.moveTo(bx0 - arrowLen*0.3*Math.cos(angle-arrowW), by0 - arrowLen*0.3*Math.sin(angle-arrowW));
-      ctx.lineTo(ex, ey);
-      ctx.lineTo(bx0 - arrowLen*0.3*Math.cos(angle+arrowW), by0 - arrowLen*0.3*Math.sin(angle+arrowW));
-      ctx.closePath();
-      ctx.fillStyle = '#ff9933';
-      ctx.fill();
-      // Arrow highlight
-      ctx.beginPath();
-      ctx.moveTo(bx0 - arrowLen*0.2*Math.cos(angle-arrowW*0.6), by0 -1 - arrowLen*0.2*Math.sin(angle-arrowW*0.6));
-      ctx.lineTo(ex, ey - 1);
-      ctx.lineTo(bx0 - arrowLen*0.2*Math.cos(angle+arrowW*0.3), by0 -1 - arrowLen*0.2*Math.sin(angle+arrowW*0.3));
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255, 220, 160, 0.5)';
-      ctx.fill();
+      // 3) Traveling glowing dot — shows direction clearly
+      const progress = (fx.elapsed / fx.duration) % 1;
+      // Two dots traveling in sequence for continuous flow
+      for (let di = 0; di < 2; di++) {
+        const t = (progress + di * 0.5) % 1;
+        const dotX = (1-t)*(1-t)*sx + 2*(1-t)*t*cpx + t*t*ex;
+        const dotY = (1-t)*(1-t)*sy + 2*(1-t)*t*cpy + t*t*ey;
+        const dotAlpha = t < 0.1 ? t / 0.1 : t > 0.9 ? (1 - t) / 0.1 : 1; // fade in/out at ends
+        // Outer glow
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 8, 0, Math.PI * 2);
+        const glow = ctx.createRadialGradient(dotX, dotY, 0, dotX, dotY, 8);
+        glow.addColorStop(0, `rgba(255, 220, 100, ${0.6 * dotAlpha})`);
+        glow.addColorStop(1, `rgba(255, 160, 40, 0)`);
+        ctx.fillStyle = glow;
+        ctx.fill();
+        // Bright core
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 240, 200, ${dotAlpha})`;
+        ctx.fill();
+      }
 
       ctx.restore();
     }
