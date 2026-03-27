@@ -242,6 +242,8 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         idleGestureTimer: 3000 + Math.random() * 8000,
         jumpY: 0,
         highlighted: false,
+        facingX: 0,   // -1 left, +1 right (smooth)
+        facingY: 1,   // -1 up (back), +1 down (front) (smooth)
         headTurn: 0,
         headTurnTarget: 0,
         headTurnTimer: 2000 + Math.random() * 4000,
@@ -456,9 +458,17 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       }
       s.headTurn += (s.headTurnTarget - s.headTurn) * Math.min(1, dt * 3);
 
-      // Advance walk cycle when moving, smoothly reset when stopped
+      // Update facing direction based on movement
       const dx = s.x - s.prevX, dy = s.y - s.prevY;
       const speed = dt > 0 ? Math.sqrt(dx * dx + dy * dy) / dt : 0;
+      if (speed > 5) {
+        const targetFX = dx / (Math.abs(dx) + Math.abs(dy) + 0.001);
+        const targetFY = dy / (Math.abs(dx) + Math.abs(dy) + 0.001);
+        s.facingX += (targetFX - s.facingX) * Math.min(1, dt * 5);
+        s.facingY += (targetFY - s.facingY) * Math.min(1, dt * 5);
+      }
+
+      // Advance walk cycle when moving, smoothly reset when stopped
       if (speed > 5) {
         s.walkPhase += dt * 10;
         s.idleGesture = 0;
@@ -843,7 +853,11 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.restore();
       }
 
-      // Avatar head (slightly narrow ellipse)
+      // Avatar head — facing direction determines what's shown
+      const faceShift = (s.facingX || 0) * AVATAR_R * 0.3; // shift face left/right
+      const showBack = (s.facingY || 0) < -0.4; // moving upward = back of head
+      const hue = hashCode(s.agent.name || 'A') % 360;
+
       ctx.save();
       ctx.beginPath();
       ctx.ellipse(sx, sy, AVATAR_R * 0.9, AVATAR_R, 0, 0, Math.PI * 2);
@@ -852,19 +866,30 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
 
       if (sleeping) ctx.globalAlpha = 0.7;
 
-      const img = s.agent.avatarUrl ? imageCache[s.agent.avatarUrl] : null;
-      if (img && img.complete && img.naturalWidth > 0) {
-        const imgR = AVATAR_R * 1.2;
-        ctx.drawImage(img, sx - imgR + s.headTurn, sy - imgR, imgR * 2, imgR * 2);
-      } else {
-        const hue = hashCode(s.agent.name || 'A') % 360;
-        ctx.fillStyle = `hsl(${hue}, ${sleeping ? 20 : 60}%, ${sleeping ? 30 : 40}%)`;
+      if (showBack) {
+        // Back of head — just hair/head color, no face
+        ctx.fillStyle = `hsl(${hue}, ${sleeping ? 15 : 30}%, ${sleeping ? 25 : 22}%)`;
         ctx.fillRect(sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
-        ctx.fillStyle = sleeping ? '#999' : '#fff';
-        ctx.font = 'bold 20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText((s.agent.name || 'A')[0].toUpperCase(), sx + s.headTurn, sy);
+        // Hair swirl detail
+        ctx.beginPath();
+        ctx.arc(sx, sy - AVATAR_R * 0.1, AVATAR_R * 0.3, 0, Math.PI * 1.5);
+        ctx.strokeStyle = `hsl(${hue}, 25%, 30%)`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        const img = s.agent.avatarUrl ? imageCache[s.agent.avatarUrl] : null;
+        if (img && img.complete && img.naturalWidth > 0) {
+          const imgR = AVATAR_R * 1.2;
+          ctx.drawImage(img, sx - imgR + faceShift, sy - imgR, imgR * 2, imgR * 2);
+        } else {
+          ctx.fillStyle = `hsl(${hue}, ${sleeping ? 20 : 60}%, ${sleeping ? 30 : 40}%)`;
+          ctx.fillRect(sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
+          ctx.fillStyle = sleeping ? '#999' : '#fff';
+          ctx.font = 'bold 20px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText((s.agent.name || 'A')[0].toUpperCase(), sx + faceShift, sy);
+        }
       }
 
       // 3D ball shading (still inside clip)
