@@ -554,35 +554,36 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const igp = s.idleGesturePhase;
     if (!isMoving && ig > 0) {
       const t = Math.sin(igp);
-      if (ig === 1) { // wave right arm above shoulder
-        uArmAngleR = -1.4;
-        lArmAngleR = -1.0 - 0.5 * t;
-      } else if (ig === 2) { // stretch both arms up
+      if (ig === 1) { // wave right arm high above head
+        uArmAngleR = -1.5;
+        lArmAngleR = -1.2 - 0.4 * t; // forearm waves
+      } else if (ig === 2) { // big stretch — both arms fully up
         const s2 = Math.abs(t);
-        uArmAngleL = -0.7 * s2; lArmAngleL = -0.5 * s2;
-        uArmAngleR = -0.7 * s2; lArmAngleR = -0.5 * s2;
-      } else if (ig === 3) { // hands on hips
-        uArmAngleL = 0.3; lArmAngleL = 0.8;
-        uArmAngleR = 0.3; lArmAngleR = 0.8;
-      } else if (ig === 4) { // jump — arms go up during jump
+        uArmAngleL = -1.4 * s2; lArmAngleL = -1.0 * s2;
+        uArmAngleR = -1.4 * s2; lArmAngleR = -1.0 * s2;
+      } else if (ig === 3) { // hands on hips — arms bent tight
+        uArmAngleL = 0.4; lArmAngleL = 1.0;
+        uArmAngleR = 0.4; lArmAngleR = 1.0;
+      } else if (ig === 4) { // jump — both arms fully up in the sky
         const jp = igp < Math.PI ? Math.sin(igp) : 0;
-        uArmAngleL = -1.2 * jp; lArmAngleL = -0.8 * jp;
-        uArmAngleR = -1.2 * jp; lArmAngleR = -0.8 * jp;
-      } else if (ig === 5) { // thinking — one hand to chin
-        uArmAngleR = -0.6;
-        lArmAngleR = -1.2;
-      } else if (ig === 6) { // clap — both arms forward and together
-        const clap = Math.abs(t);
-        uArmAngleL = -0.5; lArmAngleL = -0.3 - 0.5 * clap;
-        uArmAngleR = -0.5; lArmAngleR = -0.3 - 0.5 * clap;
-      } else if (ig === 7) { // crossed arms
-        uArmAngleL = 0.2; lArmAngleL = 1.2;
-        uArmAngleR = 0.2; lArmAngleR = 1.2;
-      } else if (ig === 8) { // dance — arms alternate up/down
-        uArmAngleL = -1.0 * Math.abs(t);
-        lArmAngleL = -0.6 * Math.abs(t);
-        uArmAngleR = -1.0 * Math.abs(Math.sin(igp + Math.PI));
-        lArmAngleR = -0.6 * Math.abs(Math.sin(igp + Math.PI));
+        uArmAngleL = -1.5; lArmAngleL = -1.3;
+        uArmAngleR = -1.5; lArmAngleR = -1.3;
+      } else if (ig === 5) { // thinking — right hand to chin, left relaxed
+        uArmAngleR = -0.8;
+        lArmAngleR = -1.4; // forearm curled up to face
+        uArmAngleL = 0.1; lArmAngleL = 0.3;
+      } else if (ig === 6) { // clap — arms swing together repeatedly
+        const clap = Math.sin(igp * 3) * 0.5; // faster clap rhythm
+        uArmAngleL = -0.6; lArmAngleL = -0.8 + clap;
+        uArmAngleR = -0.6; lArmAngleR = -0.8 - clap;
+      } else if (ig === 7) { // crossed arms — tight fold
+        uArmAngleL = 0.3; lArmAngleL = 1.3;
+        uArmAngleR = 0.3; lArmAngleR = 1.3;
+      } else if (ig === 8) { // dance — big alternating arm swings
+        uArmAngleL = -1.3 * Math.abs(t);
+        lArmAngleL = -0.8 * Math.abs(t);
+        uArmAngleR = -1.3 * Math.abs(Math.sin(igp + Math.PI));
+        lArmAngleR = -0.8 * Math.abs(Math.sin(igp + Math.PI));
       }
     }
 
