@@ -234,6 +234,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         targetX: x, targetY: y,
         state: a.enabled ? 'wandering' : 'sleeping',
         wanderTimer: Math.random() * 3000,
+        idleTimer: 0,
         zzzPhase: Math.random() * Math.PI * 2,
         walkPhase: Math.random() * Math.PI * 2,
         idleGesture: 0,       // 0=none, 1=wave, 2=stretch, 3=look-around
@@ -408,10 +409,23 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const s = agentMap[id];
       s.prevX = s.x;
       s.prevY = s.y;
-      if (s.state === 'wandering') {
-        s.wanderTimer -= dt * 1000;
-        if (s.wanderTimer <= 0) pickWanderTarget(s);
-        moveToward(s, WANDER_SPEED, dt);
+      if (s.state === 'idle') {
+        // Standing still — idle gestures happen here
+        s.idleTimer -= dt * 1000;
+        if (s.idleTimer <= 0) {
+          s.state = 'wandering';
+          pickWanderTarget(s);
+        }
+      } else if (s.state === 'wandering') {
+        // Check if reached target — pause and go idle
+        const toTargetDist = Math.sqrt((s.targetX - s.x) ** 2 + (s.targetY - s.y) ** 2);
+        if (toTargetDist < 3) {
+          s.state = 'idle';
+          s.idleTimer = 2000 + Math.random() * 4000; // stand still 2-6 seconds
+          s.idleGestureTimer = 500 + Math.random() * 1500; // gesture soon after stopping
+        } else {
+          moveToward(s, WANDER_SPEED, dt);
+        }
       } else if (s.state === 'moving_to_target') {
         moveToward(s, MOVE_SPEED, dt);
         // Stuck detection: if barely moved, pick a random detour
@@ -441,31 +455,30 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       }
       s.headTurn += (s.headTurnTarget - s.headTurn) * Math.min(1, dt * 3);
 
-      // Advance walk cycle when moving, smoothly reset to 0 when stopped
+      // Advance walk cycle when moving, smoothly reset when stopped
       const dx = s.x - s.prevX, dy = s.y - s.prevY;
       const speed = dt > 0 ? Math.sqrt(dx * dx + dy * dy) / dt : 0;
       if (speed > 5) {
         s.walkPhase += dt * 10;
-        s.idleGesture = 0; // cancel idle gesture when moving
+        s.idleGesture = 0;
       } else {
-        // Snap walkPhase toward nearest multiple of PI (neutral pose)
         const target = Math.round(s.walkPhase / Math.PI) * Math.PI;
         s.walkPhase += (target - s.walkPhase) * Math.min(1, dt * 8);
+      }
 
-        // Random idle gestures when standing still
-        if (s.state !== 'sleeping') {
-          s.idleGestureTimer -= dt * 1000;
-          if (s.idleGesture > 0) {
-            s.idleGesturePhase += dt * 4;
-            if (s.idleGesturePhase > Math.PI * 2) {
-              s.idleGesture = 0;
-              s.idleGesturePhase = 0;
-              s.idleGestureTimer = 4000 + Math.random() * 8000;
-            }
-          } else if (s.idleGestureTimer <= 0) {
-            s.idleGesture = 1 + Math.floor(Math.random() * 3); // 1=wave, 2=stretch, 3=look-around
+      // Idle gestures (run during idle state)
+      if (s.state === 'idle') {
+        s.idleGestureTimer -= dt * 1000;
+        if (s.idleGesture > 0) {
+          s.idleGesturePhase += dt * 4;
+          if (s.idleGesturePhase > Math.PI * 2) {
+            s.idleGesture = 0;
             s.idleGesturePhase = 0;
+            s.idleGestureTimer = 1000 + Math.random() * 2000;
           }
+        } else if (s.idleGestureTimer <= 0) {
+          s.idleGesture = 1 + Math.floor(Math.random() * 3);
+          s.idleGesturePhase = 0;
         }
       }
     }
