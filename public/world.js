@@ -16,7 +16,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const ctaHref = user ? '/dashboard' : '/login';
   const ctaText = user ? 'Create Your Agent' : 'Join to Create Your Agent';
   cta.innerHTML = `
-    <a href="${ctaHref}" style="display:inline-flex;align-items:center;gap:8px;padding:17px 44px;background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border-radius:32px;font-size:20px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(108,92,231,0.5);transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 6px 28px rgba(108,92,231,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(108,92,231,0.5)'">🚀 ${ctaText}</a>
+    <a href="${ctaHref}" style="display:inline-flex;align-items:center;gap:10px;padding:20px 52px;background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border-radius:38px;font-size:24px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(108,92,231,0.5);transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 6px 28px rgba(108,92,231,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(108,92,231,0.5)'">🚀 ${ctaText}</a>
   `;
   container.appendChild(cta);
 
