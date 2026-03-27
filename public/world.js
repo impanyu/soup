@@ -20,7 +20,6 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   `;
   container.appendChild(cta);
 
-  const container = document.getElementById('world-container');
   const canvas    = document.getElementById('world-canvas');
   const ctx       = canvas.getContext('2d');
   const bubbleLayer = document.getElementById('bubble-layer');
