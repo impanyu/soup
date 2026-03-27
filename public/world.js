@@ -236,6 +236,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         wanderTimer: Math.random() * 3000,
         zzzPhase: Math.random() * Math.PI * 2,
         walkPhase: Math.random() * Math.PI * 2,
+        idleGesture: 0,       // 0=none, 1=wave, 2=stretch, 3=look-around
+        idleGesturePhase: 0,
+        idleGestureTimer: 3000 + Math.random() * 8000,
         highlighted: false,
         headTurn: 0,
         headTurnTarget: 0,
@@ -443,10 +446,27 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const speed = dt > 0 ? Math.sqrt(dx * dx + dy * dy) / dt : 0;
       if (speed > 5) {
         s.walkPhase += dt * 10;
+        s.idleGesture = 0; // cancel idle gesture when moving
       } else {
         // Snap walkPhase toward nearest multiple of PI (neutral pose)
         const target = Math.round(s.walkPhase / Math.PI) * Math.PI;
         s.walkPhase += (target - s.walkPhase) * Math.min(1, dt * 8);
+
+        // Random idle gestures when standing still
+        if (s.state !== 'sleeping') {
+          s.idleGestureTimer -= dt * 1000;
+          if (s.idleGesture > 0) {
+            s.idleGesturePhase += dt * 4;
+            if (s.idleGesturePhase > Math.PI * 2) {
+              s.idleGesture = 0;
+              s.idleGesturePhase = 0;
+              s.idleGestureTimer = 4000 + Math.random() * 8000;
+            }
+          } else if (s.idleGestureTimer <= 0) {
+            s.idleGesture = 1 + Math.floor(Math.random() * 3); // 1=wave, 2=stretch, 3=look-around
+            s.idleGesturePhase = 0;
+          }
+        }
       }
     }
     // Update interaction effects
@@ -471,83 +491,132 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     s.y = clampY(s.y + (dy / dist) * step);
   }
 
-  // ── Draw cartoon body with shirt, pants, hands & feet ──────────────────
+  // ── Draw cartoon body with joints, idle gestures ────────────────────────
   function drawBody(ctx, sx, sy, s) {
     const bodyTop = sy + AVATAR_R;
     const isMoving = s.state === 'wandering' || s.state === 'moving_to_target' || s.state === 'walking_to_interact';
     const wp = s.walkPhase;
     const neckLen = 5;
-    const legLen = 18, armLen = 16, torsoLen = 20;
+    const upperLeg = 10, lowerLeg = 10, upperArm = 9, lowerArm = 9, torsoLen = 20;
     const awake = s.state !== 'sleeping';
     const dim = awake ? 1 : 0.5;
 
-    let lx1, ly1, lx2, ly2, ax1, ay1, ax2, ay2;
-    const legSwing = Math.sin(wp) * 12;
-    const armSwing = Math.sin(wp + Math.PI) * 10;
-    lx1 = sx - 3 - legSwing; ly1 = bodyTop + torsoLen + legLen;
-    lx2 = sx + 3 + legSwing; ly2 = ly1;
-    ax1 = sx - 8 - armSwing; ay1 = bodyTop + 5 + armLen;
-    ax2 = sx + 8 + armSwing; ay2 = ay1;
+    // Leg and arm swing
+    let legSwing = Math.sin(wp) * 12;
+    let armSwingL = Math.sin(wp + Math.PI) * 10;
+    let armSwingR = Math.sin(wp) * 10;
+
+    // Idle gestures override arm positions
+    const ig = s.idleGesture;
+    const igp = s.idleGesturePhase;
+    let idleArmL = 0, idleArmR = 0;
+    if (!isMoving && ig > 0) {
+      const t = Math.sin(igp);
+      if (ig === 1) { idleArmR = -t * 25; } // wave right arm up
+      else if (ig === 2) { idleArmL = -Math.abs(t) * 18; idleArmR = -Math.abs(t) * 18; } // stretch both up
+      else if (ig === 3) { /* look-around handled by head turn */ }
+    }
+
+    // Hip positions
+    const hipY = bodyTop + torsoLen;
+    // Left leg: upper → knee → lower → foot
+    const lKneeX = sx - 3 - legSwing * 0.5;
+    const lKneeY = hipY + upperLeg;
+    const lFootX = sx - 3 - legSwing;
+    const lFootY = hipY + upperLeg + lowerLeg;
+    // Right leg
+    const rKneeX = sx + 3 + legSwing * 0.5;
+    const rKneeY = hipY + upperLeg;
+    const rFootX = sx + 3 + legSwing;
+    const rFootY = hipY + upperLeg + lowerLeg;
+
+    // Shoulder positions
+    const shoulderY = bodyTop + 5;
+    // Left arm: shoulder → elbow → hand
+    const lElbowX = sx - 7 - (armSwingL + idleArmL) * 0.4;
+    const lElbowY = shoulderY + upperArm + idleArmL * 0.3;
+    const lHandX = sx - 8 - armSwingL - idleArmL * 0.6;
+    const lHandY = shoulderY + upperArm + lowerArm + idleArmL * 0.5;
+    // Right arm
+    const rElbowX = sx + 7 + (armSwingR + idleArmR) * 0.4;
+    const rElbowY = shoulderY + upperArm + idleArmR * 0.3;
+    const rHandX = sx + 8 + armSwingR + idleArmR * 0.6;
+    const rHandY = shoulderY + upperArm + lowerArm + idleArmR * 0.5;
 
     ctx.save();
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.globalAlpha = dim;
 
-    // Shadow (all limbs, offset +3,+3)
+    // Shadow
     ctx.beginPath();
-    ctx.moveTo(sx + 3, bodyTop + 3); ctx.lineTo(sx + 3, bodyTop + torsoLen + 3);
-    ctx.moveTo(sx + 3, bodyTop + torsoLen + 3); ctx.lineTo(lx1 + 3, ly1 + 3);
-    ctx.moveTo(sx + 3, bodyTop + torsoLen + 3); ctx.lineTo(lx2 + 3, ly2 + 3);
-    ctx.moveTo(sx - 6 + 3, bodyTop + 5 + 3); ctx.lineTo(ax1 + 3, ay1 + 3);
-    ctx.moveTo(sx + 6 + 3, bodyTop + 5 + 3); ctx.lineTo(ax2 + 3, ay2 + 3);
+    ctx.moveTo(sx + 3, bodyTop + 3); ctx.lineTo(sx + 3, hipY + 3);
+    ctx.moveTo(sx + 3, hipY + 3); ctx.lineTo(lKneeX + 3, lKneeY + 3); ctx.lineTo(lFootX + 3, lFootY + 3);
+    ctx.moveTo(sx + 3, hipY + 3); ctx.lineTo(rKneeX + 3, rKneeY + 3); ctx.lineTo(rFootX + 3, rFootY + 3);
+    ctx.moveTo(sx - 6 + 3, shoulderY + 3); ctx.lineTo(lElbowX + 3, lElbowY + 3); ctx.lineTo(lHandX + 3, lHandY + 3);
+    ctx.moveTo(sx + 6 + 3, shoulderY + 3); ctx.lineTo(rElbowX + 3, rElbowY + 3); ctx.lineTo(rHandX + 3, rHandY + 3);
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
     ctx.lineWidth = 5;
     ctx.stroke();
 
-    // Neck (skin tone, connects head to torso)
+    // Neck
     ctx.beginPath();
     ctx.moveTo(sx, bodyTop - neckLen); ctx.lineTo(sx, bodyTop);
     ctx.strokeStyle = '#d4a574';
     ctx.lineWidth = 5;
     ctx.stroke();
 
-    // Pants (legs): dark edge → main → highlight
+    // Pants (legs with knees)
     ctx.beginPath();
-    ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(lx1, ly1);
-    ctx.moveTo(sx, bodyTop + torsoLen); ctx.lineTo(lx2, ly2);
+    ctx.moveTo(sx, hipY); ctx.lineTo(lKneeX, lKneeY); ctx.lineTo(lFootX, lFootY);
+    ctx.moveTo(sx, hipY); ctx.lineTo(rKneeX, rKneeY); ctx.lineTo(rFootX, rFootY);
     ctx.strokeStyle = s.pantsDark; ctx.lineWidth = 7; ctx.stroke();
     ctx.strokeStyle = s.pantsColor; ctx.lineWidth = 5; ctx.stroke();
 
-    // Shirt torso (thicker)
+    // Shirt torso
     ctx.beginPath();
-    ctx.moveTo(sx, bodyTop); ctx.lineTo(sx, bodyTop + torsoLen);
+    ctx.moveTo(sx, bodyTop); ctx.lineTo(sx, hipY);
     ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 16; ctx.stroke();
     ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 12; ctx.stroke();
 
-    // Shirt arms (from torso edges)
+    // Shirt arms (with elbows)
     ctx.beginPath();
-    ctx.moveTo(sx - 6, bodyTop + 5); ctx.lineTo(ax1, ay1);
-    ctx.moveTo(sx + 6, bodyTop + 5); ctx.lineTo(ax2, ay2);
+    ctx.moveTo(sx - 6, shoulderY); ctx.lineTo(lElbowX, lElbowY); ctx.lineTo(lHandX, lHandY);
+    ctx.moveTo(sx + 6, shoulderY); ctx.lineTo(rElbowX, rElbowY); ctx.lineTo(rHandX, rHandY);
     ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 7; ctx.stroke();
     ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 5; ctx.stroke();
 
     // Highlight on torso
     ctx.beginPath();
-    ctx.moveTo(sx - 3, bodyTop - 1); ctx.lineTo(sx - 3, bodyTop + torsoLen - 1);
+    ctx.moveTo(sx - 3, bodyTop - 1); ctx.lineTo(sx - 3, hipY - 1);
     ctx.strokeStyle = s.shirtLight; ctx.lineWidth = 4; ctx.stroke();
 
-    // Hands (small circles at arm ends) — skin tone
-    ctx.fillStyle = '#f0c8a0';
+    // Knee joints (small dots)
+    ctx.fillStyle = s.pantsDark;
     ctx.beginPath();
-    ctx.arc(ax1, ay1, 3.5, 0, Math.PI * 2);
-    ctx.arc(ax2, ay2, 3.5, 0, Math.PI * 2);
+    ctx.arc(lKneeX, lKneeY, 2, 0, Math.PI * 2);
+    ctx.arc(rKneeX, rKneeY, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Feet (small ovals at leg ends) — dark shoe color
+    // Elbow joints
+    ctx.fillStyle = s.shirtDark;
+    ctx.beginPath();
+    ctx.arc(lElbowX, lElbowY, 2, 0, Math.PI * 2);
+    ctx.arc(rElbowX, rElbowY, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hands
+    ctx.fillStyle = '#f0c8a0';
+    ctx.beginPath();
+    ctx.arc(lHandX, lHandY, 3.5, 0, Math.PI * 2);
+    ctx.arc(rHandX, rHandY, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Feet
     ctx.fillStyle = '#3a3a3a';
     ctx.beginPath();
-    ctx.ellipse(lx1, ly1 + 1, 4, 2.5, 0, 0, Math.PI * 2);
-    ctx.ellipse(lx2, ly2 + 1, 4, 2.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(lFootX, lFootY + 1, 4, 2.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(rFootX, rFootY + 1, 4, 2.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
@@ -715,10 +784,12 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.restore();
       }
 
-      // Avatar circle
+      // Avatar ellipse (narrower head)
+      const headRX = AVATAR_R * 0.85;
+      const headRY = AVATAR_R;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(sx, sy, AVATAR_R, 0, Math.PI * 2);
+      ctx.ellipse(sx, sy, headRX, headRY, 0, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
 
