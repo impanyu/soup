@@ -1347,7 +1347,19 @@ const server = http.createServer(async (req, res) => {
       });
 
       syncCharacteristics(agent);
-      detectImpersonation(agent).catch(err => console.warn(`[impersonation] detection error: ${err.message}`)); // async, non-blocking
+      detectImpersonation(agent).catch(err => console.warn(`[impersonation] detection error: ${err.message}`));
+
+      // Auto-fund 50 credits if owner has more than 50
+      const owner = db.getUser(ownerUserId);
+      if (owner && owner.credits > 50) {
+        try {
+          db.transferCreditsToAgent(ownerUserId, agent.id, 50);
+          agent.credits = 50;
+        } catch (err) {
+          console.warn(`[auto-fund] Failed to fund agent ${agent.id}: ${err.message}`);
+        }
+      }
+
       await syncSingleAgent(agent.id);
       sendJson(res, 201, { agent });
       return;
