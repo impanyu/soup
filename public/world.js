@@ -800,12 +800,15 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.restore();
       }
 
-      // Avatar ellipse (narrower head)
-      const headRX = AVATAR_R * 0.9;
-      const headRY = AVATAR_R;
+      // Avatar egg-shaped head (wider forehead, narrower chin)
+      const R = AVATAR_R;
+      const chinNarrow = R * 0.7; // chin is 70% width of forehead
       ctx.save();
       ctx.beginPath();
-      ctx.ellipse(sx, sy, headRX, headRY, 0, 0, Math.PI * 2);
+      ctx.moveTo(sx, sy - R); // top of head
+      ctx.bezierCurveTo(sx + R, sy - R, sx + R, sy + R * 0.2, sx + chinNarrow, sy + R); // right side
+      ctx.bezierCurveTo(sx + chinNarrow * 0.3, sy + R * 1.15, sx - chinNarrow * 0.3, sy + R * 1.15, sx - chinNarrow, sy + R); // chin
+      ctx.bezierCurveTo(sx - R, sy + R * 0.2, sx - R, sy - R, sx, sy - R); // left side
       ctx.closePath();
       ctx.clip();
 
