@@ -95,11 +95,11 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
               const overlap = COLLISION_D - dist;
               const nvx = ddx / dist;
               const nvy = ddy / dist;
-              // Moving agents push sleeping agents aside
-              const aMoving = a.state === 'moving_to_target';
-              const bMoving = b.state === 'moving_to_target';
-              const aSleep = a.state === 'sleeping';
-              const bSleep = b.state === 'sleeping';
+              // Moving agents push idle/sleeping agents aside
+              const aMoving = a.state === 'moving_to_target' || a.state === 'wandering';
+              const bMoving = b.state === 'moving_to_target' || b.state === 'wandering';
+              const aSleep = a.state === 'sleeping' || a.state === 'idle';
+              const bSleep = b.state === 'sleeping' || b.state === 'idle';
               let aShare = 0.5;
               if (aMoving && !bMoving) aShare = 0.1;
               else if (bMoving && !aMoving) aShare = 0.9;
@@ -424,10 +424,21 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         const toTargetDist = Math.sqrt((s.targetX - s.x) ** 2 + (s.targetY - s.y) ** 2);
         if (toTargetDist < 3) {
           s.state = 'idle';
-          s.idleTimer = 2000 + Math.random() * 4000; // stand still 2-6 seconds
-          s.idleGestureTimer = 500 + Math.random() * 1500; // gesture soon after stopping
+          s.idleTimer = 2000 + Math.random() * 4000;
+          s.idleGestureTimer = 500 + Math.random() * 1500;
         } else {
           moveToward(s, WANDER_SPEED, dt);
+          // Stuck detection for wandering
+          const wmx = s.x - s.prevX, wmy = s.y - s.prevY;
+          if (Math.abs(wmx) < 0.2 && Math.abs(wmy) < 0.2) {
+            s.stuckTime = (s.stuckTime || 0) + dt;
+            if (s.stuckTime > 0.5) {
+              pickWanderTarget(s);
+              s.stuckTime = 0;
+            }
+          } else {
+            s.stuckTime = 0;
+          }
         }
       } else if (s.state === 'moving_to_target') {
         moveToward(s, MOVE_SPEED, dt);
