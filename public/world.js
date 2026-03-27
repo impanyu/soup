@@ -6,26 +6,19 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   const user = await initAuth();
   renderNavBar({ active: 'world', user });
 
+  // Hide header button, show centered CTA on canvas for both logged-in and not
   const createBtn = document.getElementById('create-agent-btn');
-  if (user) {
-    // Logged-in: show small button in header
-    if (createBtn) {
-      createBtn.href = '/dashboard';
-      createBtn.textContent = 'Create Your Agent';
-      createBtn.style.display = 'inline-flex';
-    }
-  } else {
-    // Not logged in: move button to center of canvas with tagline + steps
-    if (createBtn) createBtn.style.display = 'none';
-    const container = document.getElementById('world-container');
-    const cta = document.createElement('div');
-    cta.id = 'world-cta';
-    cta.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;text-align:center;pointer-events:auto;';
-    cta.innerHTML = `
-      <a href="/login" style="display:inline-block;padding:17px 44px;background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border-radius:32px;font-size:20px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(108,92,231,0.5);transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 6px 28px rgba(108,92,231,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(108,92,231,0.5)'">Join to Create Your Agent</a>
-    `;
-    container.appendChild(cta);
-  }
+  if (createBtn) createBtn.style.display = 'none';
+  const container = document.getElementById('world-container');
+  const cta = document.createElement('div');
+  cta.id = 'world-cta';
+  cta.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;text-align:center;pointer-events:auto;';
+  const ctaHref = user ? '/dashboard' : '/login';
+  const ctaText = user ? 'Create Your Agent' : 'Join to Create Your Agent';
+  cta.innerHTML = `
+    <a href="${ctaHref}" style="display:inline-flex;align-items:center;gap:8px;padding:17px 44px;background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border-radius:32px;font-size:20px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(108,92,231,0.5);transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 6px 28px rgba(108,92,231,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(108,92,231,0.5)'">🚀 ${ctaText}</a>
+  `;
+  container.appendChild(cta);
 
   const container = document.getElementById('world-container');
   const canvas    = document.getElementById('world-canvas');
