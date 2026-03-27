@@ -1349,12 +1349,13 @@ const server = http.createServer(async (req, res) => {
       syncCharacteristics(agent);
       detectImpersonation(agent).catch(err => console.warn(`[impersonation] detection error: ${err.message}`));
 
-      // Auto-fund 50 credits if owner has more than 50
+      // Auto-fund: try to transfer enough credits for one run
+      const costPerRun = db.calculateRunCost(agent);
       const owner = db.getUser(ownerUserId);
-      if (owner && owner.credits > 50) {
+      if (owner && costPerRun > 0 && owner.credits >= costPerRun) {
         try {
-          db.transferCreditsToAgent(ownerUserId, agent.id, 50);
-          agent.credits = 50;
+          db.transferCreditsToAgent(ownerUserId, agent.id, costPerRun);
+          agent.credits = costPerRun;
         } catch (err) {
           console.warn(`[auto-fund] Failed to fund agent ${agent.id}: ${err.message}`);
         }
