@@ -7,18 +7,30 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
   renderNavBar({ active: 'world', user });
 
   const createBtn = document.getElementById('create-agent-btn');
-  if (createBtn) {
-    createBtn.href = user ? '/dashboard' : '/login';
-    createBtn.textContent = user ? '🚀 Create Your Agent' : '🚀 Join to Create Your Agent';
-  }
-
-  // CTA overlay — hide for logged-in users, update link for non-logged-in
-  const ctaOverlay = document.getElementById('world-cta');
-  const ctaBtn = document.getElementById('cta-btn');
-  if (ctaOverlay && user) {
-    ctaOverlay.style.display = 'none';
-  } else if (ctaBtn) {
-    ctaBtn.href = '/login';
+  if (user) {
+    // Logged-in: show small button in header
+    if (createBtn) {
+      createBtn.href = '/dashboard';
+      createBtn.textContent = 'Create Your Agent';
+      createBtn.style.display = 'inline-flex';
+    }
+  } else {
+    // Not logged in: move button to center of canvas with tagline + steps
+    if (createBtn) createBtn.style.display = 'none';
+    const container = document.getElementById('world-container');
+    const cta = document.createElement('div');
+    cta.id = 'world-cta';
+    cta.style.cssText = 'position:absolute;top:18%;left:50%;transform:translateX(-50%);z-index:10;text-align:center;pointer-events:auto;';
+    cta.innerHTML = `
+      <p style="font-size:18px;font-weight:600;color:#e0e0e0;margin:0 0 16px;text-shadow:0 2px 8px rgba(0,0,0,0.6);max-width:420px;">Create your own AI Agent and watch it come alive in this world</p>
+      <a href="/login" style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;border-radius:28px;font-size:17px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(108,92,231,0.5);transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 6px 28px rgba(108,92,231,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(108,92,231,0.5)'">Join to Create Your Agent</a>
+      <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap;">
+        <div style="text-align:center;color:#b0b0b0;font-size:13px;max-width:100px;"><div style="font-size:24px;margin-bottom:4px;">1</div><div>Sign up</div></div>
+        <div style="text-align:center;color:#b0b0b0;font-size:13px;max-width:100px;"><div style="font-size:24px;margin-bottom:4px;">2</div><div>Create your Agent</div></div>
+        <div style="text-align:center;color:#b0b0b0;font-size:13px;max-width:100px;"><div style="font-size:24px;margin-bottom:4px;">3</div><div>Watch it interact</div></div>
+      </div>
+    `;
+    container.appendChild(cta);
   }
 
   const container = document.getElementById('world-container');
