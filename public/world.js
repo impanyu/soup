@@ -491,57 +491,70 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     s.y = clampY(s.y + (dy / dist) * step);
   }
 
-  // ── Draw cartoon body with joints, idle gestures ────────────────────────
+  // ── Draw cartoon body with natural joint movement ───────────────────────
   function drawBody(ctx, sx, sy, s) {
     const bodyTop = sy + AVATAR_R;
     const isMoving = s.state === 'wandering' || s.state === 'moving_to_target' || s.state === 'walking_to_interact';
     const wp = s.walkPhase;
     const neckLen = 5;
-    const upperLeg = 10, lowerLeg = 10, upperArm = 9, lowerArm = 9, torsoLen = 20;
+    const uLeg = 10, lLeg = 10, uArm = 9, lArm = 9, torsoLen = 20;
     const awake = s.state !== 'sleeping';
     const dim = awake ? 1 : 0.5;
+    const hipY = bodyTop + torsoLen;
+    const shoulderY = bodyTop + 5;
 
-    // Leg and arm swing
-    let legSwing = Math.sin(wp) * 12;
-    let armSwingL = Math.sin(wp + Math.PI) * 10;
-    let armSwingR = Math.sin(wp) * 10;
+    // Human-like walk: upper and lower limbs have phase offset
+    // Thigh swings forward, knee bends more on backswing
+    const thighAngleL = Math.sin(wp) * 0.5;          // upper leg angle
+    const kneeAngleL = Math.max(0, Math.sin(wp - 0.8)) * 0.7; // knee bends on backswing
+    const thighAngleR = Math.sin(wp + Math.PI) * 0.5;
+    const kneeAngleR = Math.max(0, Math.sin(wp + Math.PI - 0.8)) * 0.7;
 
-    // Idle gestures override arm positions
+    // Upper arm swings opposite to legs, forearm bends naturally
+    let uArmAngleL = Math.sin(wp) * 0.4;
+    let lArmAngleL = Math.max(0, -Math.sin(wp - 0.5)) * 0.5;
+    let uArmAngleR = Math.sin(wp + Math.PI) * 0.4;
+    let lArmAngleR = Math.max(0, -Math.sin(wp + Math.PI - 0.5)) * 0.5;
+
+    // Idle gestures
     const ig = s.idleGesture;
     const igp = s.idleGesturePhase;
-    let idleArmL = 0, idleArmR = 0;
     if (!isMoving && ig > 0) {
       const t = Math.sin(igp);
-      if (ig === 1) { idleArmR = -t * 25; } // wave right arm up
-      else if (ig === 2) { idleArmL = -Math.abs(t) * 18; idleArmR = -Math.abs(t) * 18; } // stretch both up
-      else if (ig === 3) { /* look-around handled by head turn */ }
+      if (ig === 1) { // wave right arm
+        uArmAngleR = -0.8 * Math.abs(t);
+        lArmAngleR = -0.6 - 0.4 * t; // forearm waves back and forth
+      } else if (ig === 2) { // stretch both arms up
+        const s2 = Math.abs(t);
+        uArmAngleL = -0.7 * s2; lArmAngleL = -0.5 * s2;
+        uArmAngleR = -0.7 * s2; lArmAngleR = -0.5 * s2;
+      } else if (ig === 3) { // hands on hips
+        uArmAngleL = 0.3; lArmAngleL = 0.8;
+        uArmAngleR = 0.3; lArmAngleR = 0.8;
+      }
     }
 
-    // Hip positions
-    const hipY = bodyTop + torsoLen;
-    // Left leg: upper → knee → lower → foot
-    const lKneeX = sx - 3 - legSwing * 0.5;
-    const lKneeY = hipY + upperLeg;
-    const lFootX = sx - 3 - legSwing;
-    const lFootY = hipY + upperLeg + lowerLeg;
+    // Compute joint positions using angles
+    // Left leg
+    const lKneeX = sx - 3 + Math.sin(thighAngleL) * uLeg;
+    const lKneeY = hipY + Math.cos(thighAngleL) * uLeg;
+    const lFootX = lKneeX + Math.sin(thighAngleL + kneeAngleL) * lLeg;
+    const lFootY = lKneeY + Math.cos(thighAngleL + kneeAngleL) * lLeg;
     // Right leg
-    const rKneeX = sx + 3 + legSwing * 0.5;
-    const rKneeY = hipY + upperLeg;
-    const rFootX = sx + 3 + legSwing;
-    const rFootY = hipY + upperLeg + lowerLeg;
-
-    // Shoulder positions
-    const shoulderY = bodyTop + 5;
-    // Left arm: shoulder → elbow → hand
-    const lElbowX = sx - 7 - (armSwingL + idleArmL) * 0.4;
-    const lElbowY = shoulderY + upperArm + idleArmL * 0.3;
-    const lHandX = sx - 8 - armSwingL - idleArmL * 0.6;
-    const lHandY = shoulderY + upperArm + lowerArm + idleArmL * 0.5;
+    const rKneeX = sx + 3 + Math.sin(thighAngleR) * uLeg;
+    const rKneeY = hipY + Math.cos(thighAngleR) * uLeg;
+    const rFootX = rKneeX + Math.sin(thighAngleR + kneeAngleR) * lLeg;
+    const rFootY = rKneeY + Math.cos(thighAngleR + kneeAngleR) * lLeg;
+    // Left arm
+    const lElbowX = sx - 7 + Math.sin(uArmAngleL) * uArm;
+    const lElbowY = shoulderY + Math.cos(uArmAngleL) * uArm;
+    const lHandX = lElbowX + Math.sin(uArmAngleL + lArmAngleL) * lArm;
+    const lHandY = lElbowY + Math.cos(uArmAngleL + lArmAngleL) * lArm;
     // Right arm
-    const rElbowX = sx + 7 + (armSwingR + idleArmR) * 0.4;
-    const rElbowY = shoulderY + upperArm + idleArmR * 0.3;
-    const rHandX = sx + 8 + armSwingR + idleArmR * 0.6;
-    const rHandY = shoulderY + upperArm + lowerArm + idleArmR * 0.5;
+    const rElbowX = sx + 7 + Math.sin(uArmAngleR) * uArm;
+    const rElbowY = shoulderY + Math.cos(uArmAngleR) * uArm;
+    const rHandX = rElbowX + Math.sin(uArmAngleR + lArmAngleR) * lArm;
+    const rHandY = rElbowY + Math.cos(uArmAngleR + lArmAngleR) * lArm;
 
     ctx.save();
     ctx.lineCap = 'round';
@@ -562,48 +575,42 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Neck
     ctx.beginPath();
     ctx.moveTo(sx, bodyTop - neckLen); ctx.lineTo(sx, bodyTop);
-    ctx.strokeStyle = '#d4a574';
-    ctx.lineWidth = 5;
-    ctx.stroke();
+    ctx.strokeStyle = '#d4a574'; ctx.lineWidth = 5; ctx.stroke();
 
-    // Pants (legs with knees)
+    // Legs — upper and lower drawn separately
     ctx.beginPath();
-    ctx.moveTo(sx, hipY); ctx.lineTo(lKneeX, lKneeY); ctx.lineTo(lFootX, lFootY);
-    ctx.moveTo(sx, hipY); ctx.lineTo(rKneeX, rKneeY); ctx.lineTo(rFootX, rFootY);
+    ctx.moveTo(sx - 3, hipY); ctx.lineTo(lKneeX, lKneeY);
+    ctx.moveTo(sx + 3, hipY); ctx.lineTo(rKneeX, rKneeY);
     ctx.strokeStyle = s.pantsDark; ctx.lineWidth = 7; ctx.stroke();
     ctx.strokeStyle = s.pantsColor; ctx.lineWidth = 5; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(lKneeX, lKneeY); ctx.lineTo(lFootX, lFootY);
+    ctx.moveTo(rKneeX, rKneeY); ctx.lineTo(rFootX, rFootY);
+    ctx.strokeStyle = s.pantsDark; ctx.lineWidth = 6; ctx.stroke();
+    ctx.strokeStyle = s.pantsColor; ctx.lineWidth = 4; ctx.stroke();
 
-    // Shirt torso
+    // Torso
     ctx.beginPath();
     ctx.moveTo(sx, bodyTop); ctx.lineTo(sx, hipY);
     ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 16; ctx.stroke();
     ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 12; ctx.stroke();
 
-    // Shirt arms (with elbows)
+    // Arms — upper and lower drawn separately
     ctx.beginPath();
-    ctx.moveTo(sx - 6, shoulderY); ctx.lineTo(lElbowX, lElbowY); ctx.lineTo(lHandX, lHandY);
-    ctx.moveTo(sx + 6, shoulderY); ctx.lineTo(rElbowX, rElbowY); ctx.lineTo(rHandX, rHandY);
+    ctx.moveTo(sx - 6, shoulderY); ctx.lineTo(lElbowX, lElbowY);
+    ctx.moveTo(sx + 6, shoulderY); ctx.lineTo(rElbowX, rElbowY);
     ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 7; ctx.stroke();
     ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 5; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(lElbowX, lElbowY); ctx.lineTo(lHandX, lHandY);
+    ctx.moveTo(rElbowX, rElbowY); ctx.lineTo(rHandX, rHandY);
+    ctx.strokeStyle = s.shirtDark; ctx.lineWidth = 6; ctx.stroke();
+    ctx.strokeStyle = s.shirtColor; ctx.lineWidth = 4; ctx.stroke();
 
-    // Highlight on torso
+    // Torso highlight
     ctx.beginPath();
     ctx.moveTo(sx - 3, bodyTop - 1); ctx.lineTo(sx - 3, hipY - 1);
     ctx.strokeStyle = s.shirtLight; ctx.lineWidth = 4; ctx.stroke();
-
-    // Knee joints (small dots)
-    ctx.fillStyle = s.pantsDark;
-    ctx.beginPath();
-    ctx.arc(lKneeX, lKneeY, 2, 0, Math.PI * 2);
-    ctx.arc(rKneeX, rKneeY, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Elbow joints
-    ctx.fillStyle = s.shirtDark;
-    ctx.beginPath();
-    ctx.arc(lElbowX, lElbowY, 2, 0, Math.PI * 2);
-    ctx.arc(rElbowX, rElbowY, 2, 0, Math.PI * 2);
-    ctx.fill();
 
     // Hands
     ctx.fillStyle = '#f0c8a0';
@@ -794,7 +801,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       }
 
       // Avatar ellipse (narrower head)
-      const headRX = AVATAR_R * 0.85;
+      const headRX = AVATAR_R * 0.9;
       const headRY = AVATAR_R;
       ctx.save();
       ctx.beginPath();
