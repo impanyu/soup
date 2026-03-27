@@ -105,10 +105,16 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
               else if (bMoving && !aMoving) aShare = 0.9;
               else if (!aSleep && bSleep) aShare = 0.2;
               else if (aSleep && !bSleep) aShare = 0.8;
-              a.x = clampX(a.x - nvx * overlap * aShare);
-              a.y = clampY(a.y - nvy * overlap * aShare);
-              b.x = clampX(b.x + nvx * overlap * (1 - aShare));
-              b.y = clampY(b.y + nvy * overlap * (1 - aShare));
+              // When both moving, push sideways (perpendicular) so they pass each other
+              let pushX = nvx, pushY = nvy;
+              if (aMoving && bMoving) {
+                pushX = -nvy; pushY = nvx; // perpendicular
+                aShare = 0.5;
+              }
+              a.x = clampX(a.x - pushX * overlap * aShare);
+              a.y = clampY(a.y - pushY * overlap * aShare);
+              b.x = clampX(b.x + pushX * overlap * (1 - aShare));
+              b.y = clampY(b.y + pushY * overlap * (1 - aShare));
             }
           }
         }
