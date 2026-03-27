@@ -3315,10 +3315,32 @@ async function executeAction(agent, decision, runState) {
       const p = decision.params || {};
       if (!p.title || !p.headers || !p.rows) return { ok: false, summary: 'title, headers, and rows are required.' };
 
+      // Filter out columns that contain file paths, URLs, or thumbnail data
+      const skipCols = new Set();
+      for (let c = 0; c < p.headers.length; c++) {
+        const hdr = String(p.headers[c] || '').toLowerCase();
+        if (/thumbnail|image.*url|img.*url|photo.*url|avatar.*url|icon.*url|file.*path|preview/i.test(hdr)) {
+          skipCols.add(c);
+          continue;
+        }
+        // Check first few rows — if they look like paths/URLs, skip the column
+        let pathCount = 0;
+        for (let r = 0; r < Math.min(3, p.rows.length); r++) {
+          const val = String((p.rows[r] || [])[c] ?? '');
+          if (/^\/agents\/|^\/users\/|^https?:\/\/.*\.(jpg|png|gif|webp|svg)/i.test(val)) pathCount++;
+        }
+        if (pathCount >= 2) skipCols.add(c);
+      }
+      const keepCols = [];
+      for (let c = 0; c < p.headers.length; c++) { if (!skipCols.has(c)) keepCols.push(c); }
+      if (keepCols.length === 0) keepCols.push(...Array.from({ length: p.headers.length }, (_, i) => i)); // fallback: keep all
+      const filteredHeaders = keepCols.map(c => p.headers[c]);
+      const filteredRows = p.rows.map(row => keepCols.map(c => (row || [])[c]));
+
       // Build an SVG table image
       const cellW = 120, cellH = 32, pad = 8;
-      const cols = p.headers.length;
-      const rowCount = p.rows.length;
+      const cols = filteredHeaders.length;
+      const rowCount = filteredRows.length;
       const tableW = cols * cellW + pad * 2;
       const titleH = 40;
       const tableH = titleH + (rowCount + 1) * cellH + pad * 2;
@@ -3332,7 +3354,7 @@ async function executeAction(agent, decision, runState) {
       for (let c = 0; c < cols; c++) {
         const x = pad + c * cellW;
         svg += `<rect x="${x}" y="${startY}" width="${cellW}" height="${cellH}" fill="#6366f1" stroke="#fff" stroke-width="1"/>`;
-        svg += `<text x="${x + cellW / 2}" y="${startY + 21}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">${String(p.headers[c] || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').slice(0, 18)}</text>`;
+        svg += `<text x="${x + cellW / 2}" y="${startY + 21}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white">${String(filteredHeaders[c] || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').slice(0, 18)}</text>`;
       }
 
       // Data rows
@@ -3341,7 +3363,7 @@ async function executeAction(agent, decision, runState) {
         const bg = r % 2 === 0 ? '#f9fafb' : '#ffffff';
         for (let c = 0; c < cols; c++) {
           const x = pad + c * cellW;
-          const val = String((p.rows[r] || [])[c] ?? '').slice(0, 20);
+          const val = String((filteredRows[r] || [])[c] ?? '').slice(0, 20);
           svg += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" fill="${bg}" stroke="#e5e7eb" stroke-width="1"/>`;
           svg += `<text x="${x + cellW / 2}" y="${y + 21}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="#374151">${val.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`;
         }
