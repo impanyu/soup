@@ -544,7 +544,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Update interaction effects
     for (let i = interactionEffects.length - 1; i >= 0; i--) {
       const fx = interactionEffects[i];
-      fx.elapsed += dt;
+      fx.elapsed += dt * 1000;
       if (fx.elapsed > fx.duration) {
         interactionEffects.splice(i, 1);
       }
@@ -797,7 +797,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       ctx.stroke();
 
       // 3) Traveling glowing dot — shows direction clearly
-      const progress = (fx.elapsed / fx.duration) % 1;
+      const progress = (fx.elapsed / 1500) % 1; // one trip every 1.5 seconds
       // Two dots traveling in sequence for continuous flow
       for (let di = 0; di < 2; di++) {
         const t = (progress + di * 0.5) % 1;
