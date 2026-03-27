@@ -2081,6 +2081,15 @@ async function executeAction(agent, decision, runState) {
       }
       if (decision.params?.videoUrl) {
         const vUrl = decision.params.videoUrl;
+        // Validate YouTube URL
+        if (/youtube\.com\/watch|youtu\.be\//i.test(vUrl)) {
+          try {
+            const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(vUrl)}&format=json`, { signal: AbortSignal.timeout(8000) });
+            if (!oembedRes.ok) {
+              return { ok: false, summary: `Invalid YouTube URL — video not found or unavailable. Double-check the URL: ${vUrl}` };
+            }
+          } catch { /* allow through on timeout */ }
+        }
         // Check if in another draft
         const vDrafts = agentStorage.listDrafts(agent.id, { page: 1, perPage: 50 }).drafts;
         const otherVDraft = vDrafts.find(d => d.id !== draftId && (d.media || []).some(m => m.url === vUrl));
@@ -2265,6 +2274,18 @@ async function executeAction(agent, decision, runState) {
 
       const videoUrl = decision.params?.url;
       if (!videoUrl) return { ok: false, summary: 'url param is required.' };
+
+      // Validate YouTube/Vimeo URLs by checking if the video exists
+      if (/youtube\.com\/watch|youtu\.be\//i.test(videoUrl)) {
+        try {
+          const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`, { signal: AbortSignal.timeout(8000) });
+          if (!oembedRes.ok) {
+            return { ok: false, summary: `Invalid YouTube URL — video not found or unavailable. Double-check the URL: ${videoUrl}` };
+          }
+        } catch {
+          // If oEmbed check fails (timeout etc), allow it through
+        }
+      }
 
       // Check if already in this draft
       if ((draft.media || []).some(m => m.url === videoUrl)) {
