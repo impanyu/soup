@@ -432,8 +432,23 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
           const wmx = s.x - s.prevX, wmy = s.y - s.prevY;
           if (Math.abs(wmx) < 0.2 && Math.abs(wmy) < 0.2) {
             s.stuckTime = (s.stuckTime || 0) + dt;
-            if (s.stuckTime > 0.5) {
-              pickWanderTarget(s);
+            if (s.stuckTime > 0.3) {
+              // Move away from the crowd — find average position of nearby agents and go opposite
+              let nearX = 0, nearY = 0, nearCount = 0;
+              for (const oid of agentIds) {
+                if (oid === id) continue;
+                const o = agentMap[oid];
+                const d = Math.sqrt((o.x - s.x) ** 2 + (o.y - s.y) ** 2);
+                if (d < COLLISION_D * 2) { nearX += o.x; nearY += o.y; nearCount++; }
+              }
+              if (nearCount > 0) {
+                const awayAng = Math.atan2(s.y - nearY / nearCount, s.x - nearX / nearCount);
+                const spread = (Math.random() - 0.5) * 1.2;
+                s.targetX = clampX(s.x + Math.cos(awayAng + spread) * 120);
+                s.targetY = clampY(s.y + Math.sin(awayAng + spread) * 120);
+              } else {
+                pickWanderTarget(s);
+              }
               s.stuckTime = 0;
             }
           } else {
@@ -447,8 +462,17 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         if (Math.abs(mx) < 0.3 && Math.abs(my) < 0.3) {
           s.stuckTime = (s.stuckTime || 0) + dt;
           if (s.stuckTime > 0.4) {
-            // Detour: offset target sideways randomly
-            const ang = Math.random() * Math.PI * 2;
+            // Detour: move away from nearby agents
+            let nearX = 0, nearY = 0, nearCount = 0;
+            for (const oid of agentIds) {
+              if (oid === id) continue;
+              const o = agentMap[oid];
+              const d = Math.sqrt((o.x - s.x) ** 2 + (o.y - s.y) ** 2);
+              if (d < COLLISION_D * 2) { nearX += o.x; nearY += o.y; nearCount++; }
+            }
+            const ang = nearCount > 0
+              ? Math.atan2(s.y - nearY / nearCount, s.x - nearX / nearCount) + (Math.random() - 0.5) * 1.0
+              : Math.random() * Math.PI * 2;
             s.targetX = clampX(s.x + Math.cos(ang) * 80);
             s.targetY = clampY(s.y + Math.sin(ang) * 80);
             s.stuckTime = 0;
@@ -499,7 +523,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
           } else {
             s.jumpY = 0;
           }
-          if (s.idleGesturePhase > Math.PI * 2) {
+          if (s.idleGesturePhase > (s.idleGesture === 8 ? Math.PI * 6 : Math.PI * 2)) {
             s.idleGesture = 0;
             s.idleGesturePhase = 0;
             s.jumpY = 0;
@@ -548,11 +572,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const shoulderY = bodyTop + 5;
 
     // Human-like walk: upper and lower limbs have phase offset
-    // Thigh swings forward, knee bends more on backswing
-    const thighAngleL = Math.sin(wp) * 0.5;          // upper leg angle
-    const kneeAngleL = Math.max(0, Math.sin(wp - 0.8)) * 0.7; // knee bends on backswing
-    const thighAngleR = Math.sin(wp + Math.PI) * 0.5;
-    const kneeAngleR = Math.max(0, Math.sin(wp + Math.PI - 0.8)) * 0.7;
+    let thighAngleL = Math.sin(wp) * 0.5;
+    let kneeAngleL = Math.max(0, Math.sin(wp - 0.8)) * 0.7;
+    let thighAngleR = Math.sin(wp + Math.PI) * 0.5;
+    let kneeAngleR = Math.max(0, Math.sin(wp + Math.PI - 0.8)) * 0.7;
 
     // Upper arm swings opposite to legs, forearm bends naturally
     let uArmAngleL = Math.sin(wp) * 0.4;
@@ -592,11 +615,16 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       } else if (ig === 7) { // crossed arms
         uArmAngleL = 0.2; lArmAngleL = -1.0;  // left: slightly in, forearm crosses
         uArmAngleR = -0.2; lArmAngleR = 1.0;  // right: slightly in, forearm crosses
-      } else if (ig === 8) { // dance — arms alternate outward
-        uArmAngleL = -1.3 * Math.abs(t);
-        lArmAngleL = -0.3;
-        uArmAngleR = 1.3 * Math.abs(Math.sin(igp + Math.PI));
-        lArmAngleR = 0.3;
+      } else if (ig === 8) { // moonwalk — smooth leg slide + MJ arm style
+        const mw = igp * 2; // faster phase for moonwalk
+        // One leg slides back while the other lifts on toe
+        thighAngleL = Math.sin(mw) * 0.4;
+        kneeAngleL = Math.max(0, -Math.sin(mw)) * 0.8; // back leg bends
+        thighAngleR = Math.sin(mw + Math.PI) * 0.4;
+        kneeAngleR = Math.max(0, -Math.sin(mw + Math.PI)) * 0.8;
+        // MJ arm style — one arm bent at side, other straight
+        uArmAngleL = -0.3; lArmAngleL = -0.6;
+        uArmAngleR = 0.5; lArmAngleR = 0.3;
       }
     }
 
