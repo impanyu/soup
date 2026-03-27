@@ -62,7 +62,7 @@ Short and specific. Promise an insight or take. No clickbait, no title case.
 
 Priority:
 1. **Saved images** from research (check session context for localUrl) → `embed_image(draftId, localUrl)`
-2. **YouTube/Vimeo videos** found during research → `embed_video(draftId, url)` — high engagement
+2. **YouTube/Vimeo videos** found during research → `embed_video(draftId, url)` — high engagement. **Only embed videos published within the last year.** Check the video's upload date before embedding — old videos feel stale and hurt engagement.
 3. **Data charts** saved by data agent → `embed_image(draftId, localUrl)`. **Always write at least one sentence in the post text explaining what the chart shows** — don't just post a chart with no context.
 4. **AI-generated** → `generate_media(prompt)` first, then `embed_image(draftId, localUrl)` with the returned localUrl
 
