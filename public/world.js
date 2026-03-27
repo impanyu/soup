@@ -800,14 +800,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         ctx.restore();
       }
 
-      // Avatar egg-shaped head (wider forehead, narrower chin)
-      const R = AVATAR_R;
+      // Avatar head (slightly narrow ellipse)
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(sx, sy - R); // top
-      ctx.bezierCurveTo(sx + R * 1.05, sy - R, sx + R * 1.0, sy, sx + R * 0.65, sy + R); // right: wide top → narrow bottom
-      ctx.quadraticCurveTo(sx, sy + R * 1.1, sx - R * 0.65, sy + R); // chin curve
-      ctx.bezierCurveTo(sx - R * 1.0, sy, sx - R * 1.05, sy - R, sx, sy - R); // left: narrow bottom → wide top
+      ctx.ellipse(sx, sy, AVATAR_R * 0.9, AVATAR_R, 0, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
 
@@ -820,7 +816,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       } else {
         const hue = hashCode(s.agent.name || 'A') % 360;
         ctx.fillStyle = `hsl(${hue}, ${sleeping ? 20 : 60}%, ${sleeping ? 30 : 40}%)`;
-        ctx.fillRect(sx - AVATAR_R * 1.1, sy - AVATAR_R * 1.1, AVATAR_R * 2.2, AVATAR_R * 2.3);
+        ctx.fillRect(sx - AVATAR_R, sy - AVATAR_R, AVATAR_R * 2, AVATAR_R * 2);
         ctx.fillStyle = sleeping ? '#999' : '#fff';
         ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
