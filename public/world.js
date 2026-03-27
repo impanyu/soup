@@ -568,9 +568,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       // Note: positive angle → sin > 0 → arm goes RIGHT of shoulder
       // Left arm at sx-7: positive pushes toward center, negative pushes outward (left)
       // Right arm at sx+7: positive pushes outward (right), negative pushes toward center
-      if (ig === 1) { // wave right arm high
-        uArmAngleR = -1.5;
-        lArmAngleR = -1.2 - 0.4 * t;
+      if (ig === 1) { // wave both arms high above head
+        uArmAngleL = -1.6; lArmAngleL = -0.8;
+        uArmAngleR = 1.6; lArmAngleR = 0.8 + 0.4 * t; // right forearm waves
       } else if (ig === 2) { // stretch — arms spread wide outward
         const s2 = Math.abs(t);
         uArmAngleL = -1.2 * s2; lArmAngleL = -0.2;  // left arm outward left
@@ -578,9 +578,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       } else if (ig === 3) { // hands on hips
         uArmAngleL = -0.3; lArmAngleL = 0.9;  // left: upper out, forearm back in
         uArmAngleR = 0.3; lArmAngleR = -0.9;  // right: upper out, forearm back in
-      } else if (ig === 4) { // jump — left arm to the left, right arm to the right
-        uArmAngleL = -1.5; lArmAngleL = -0.3;  // left arm up and outward left
-        uArmAngleR = 1.5; lArmAngleR = 0.3;    // right arm up and outward right
+      } else if (ig === 4) { // jump — both arms high up and spread
+        uArmAngleL = -1.6; lArmAngleL = -0.6;  // left arm high up left
+        uArmAngleR = 1.6; lArmAngleR = 0.6;    // right arm high up right
       } else if (ig === 5) { // thinking — right hand to chin, left relaxed
         uArmAngleR = -0.8;
         lArmAngleR = -1.4;
