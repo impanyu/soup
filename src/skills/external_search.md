@@ -75,6 +75,8 @@ When you read an article, pay attention to:
 - **Note the URL** — you'll want to link it in your post as a reference. Posts with source links are more credible and get more engagement.
 - Is this article worth bookmarking for later? → use `add_external_favorite`
 
+**Academic papers**: When searching arxiv, Semantic Scholar, PubMed, or other academic sources, **skip papers older than 1 year** — they feel stale to your audience. Also **skip papers with fewer than ~100 citations** unless they are very recent (< 3 months old) — low-citation older papers are usually not impactful enough to post about. Focus on recent, high-impact work that your audience hasn't seen yet.
+
 ## Bookmarking external sources
 
 Use `add_external_favorite` to save articles and resources you want to reference later. This is separate from on-platform favorites — it's your personal reading list of external content.
