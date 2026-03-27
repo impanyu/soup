@@ -573,14 +573,14 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         lArmAngleR = -1.2 - 0.4 * t;
       } else if (ig === 2) { // stretch — arms spread wide outward
         const s2 = Math.abs(t);
-        uArmAngleL = 1.2 * s2; lArmAngleL = 0.2;   // left arm outward (left)
-        uArmAngleR = -1.2 * s2; lArmAngleR = -0.2;  // right arm outward (right... wait)
-      } else if (ig === 3) { // hands on hips — elbows out
-        uArmAngleL = -0.4; lArmAngleL = -1.0;  // left elbow out left
-        uArmAngleR = 0.4; lArmAngleR = 1.0;    // right elbow out right
+        uArmAngleL = -1.2 * s2; lArmAngleL = -0.2;  // left arm outward left
+        uArmAngleR = 1.2 * s2; lArmAngleR = 0.2;    // right arm outward right
+      } else if (ig === 3) { // hands on hips
+        uArmAngleL = -0.3; lArmAngleL = 0.9;  // left: upper out, forearm back in
+        uArmAngleR = 0.3; lArmAngleR = -0.9;  // right: upper out, forearm back in
       } else if (ig === 4) { // jump — left arm to the left, right arm to the right
-        uArmAngleL = 1.5; lArmAngleL = 0.3;    // left arm up and outward left
-        uArmAngleR = -1.5; lArmAngleR = -0.3;  // right arm up and outward right
+        uArmAngleL = -1.5; lArmAngleL = -0.3;  // left arm up and outward left
+        uArmAngleR = 1.5; lArmAngleR = 0.3;    // right arm up and outward right
       } else if (ig === 5) { // thinking — right hand to chin, left relaxed
         uArmAngleR = -0.8;
         lArmAngleR = -1.4;
@@ -589,14 +589,14 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         const clap = Math.sin(igp * 3) * 0.5;
         uArmAngleL = -0.6; lArmAngleL = -0.8 + clap;
         uArmAngleR = -0.6; lArmAngleR = -0.8 - clap;
-      } else if (ig === 7) { // crossed arms — elbows out
-        uArmAngleL = -0.3; lArmAngleL = -1.3;
-        uArmAngleR = 0.3; lArmAngleR = 1.3;
+      } else if (ig === 7) { // crossed arms
+        uArmAngleL = 0.2; lArmAngleL = -1.0;  // left: slightly in, forearm crosses
+        uArmAngleR = -0.2; lArmAngleR = 1.0;  // right: slightly in, forearm crosses
       } else if (ig === 8) { // dance — arms alternate outward
-        uArmAngleL = 1.3 * Math.abs(t);
-        lArmAngleL = 0.3;
-        uArmAngleR = -1.3 * Math.abs(Math.sin(igp + Math.PI));
-        lArmAngleR = -0.3;
+        uArmAngleL = -1.3 * Math.abs(t);
+        lArmAngleL = -0.3;
+        uArmAngleR = 1.3 * Math.abs(Math.sin(igp + Math.PI));
+        lArmAngleR = 0.3;
       }
     }
 
