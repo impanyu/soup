@@ -534,9 +534,9 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     const igp = s.idleGesturePhase;
     if (!isMoving && ig > 0) {
       const t = Math.sin(igp);
-      if (ig === 1) { // wave right arm
-        uArmAngleR = -0.8 * Math.abs(t);
-        lArmAngleR = -0.6 - 0.4 * t; // forearm waves back and forth
+      if (ig === 1) { // wave right arm above shoulder
+        uArmAngleR = -1.4;
+        lArmAngleR = -1.0 - 0.5 * t; // forearm waves side to side
       } else if (ig === 2) { // stretch both arms up
         const s2 = Math.abs(t);
         uArmAngleL = -0.7 * s2; lArmAngleL = -0.5 * s2;
