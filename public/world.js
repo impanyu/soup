@@ -237,9 +237,10 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         idleTimer: 0,
         zzzPhase: Math.random() * Math.PI * 2,
         walkPhase: Math.random() * Math.PI * 2,
-        idleGesture: 0,       // 0=none, 1=wave, 2=stretch, 3=look-around
+        idleGesture: 0,       // 0=none, 1-8 gestures
         idleGesturePhase: 0,
         idleGestureTimer: 3000 + Math.random() * 8000,
+        jumpY: 0,
         highlighted: false,
         headTurn: 0,
         headTurnTarget: 0,
@@ -471,15 +472,25 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
         s.idleGestureTimer -= dt * 1000;
         if (s.idleGesture > 0) {
           s.idleGesturePhase += dt * 4;
+          // Jump offset for gesture 4
+          if (s.idleGesture === 4) {
+            const jp = s.idleGesturePhase;
+            s.jumpY = jp < Math.PI ? -Math.sin(jp) * 15 : 0; // single jump arc
+          } else {
+            s.jumpY = 0;
+          }
           if (s.idleGesturePhase > Math.PI * 2) {
             s.idleGesture = 0;
             s.idleGesturePhase = 0;
+            s.jumpY = 0;
             s.idleGestureTimer = 1000 + Math.random() * 2000;
           }
         } else if (s.idleGestureTimer <= 0) {
-          s.idleGesture = 1 + Math.floor(Math.random() * 3);
+          s.idleGesture = 1 + Math.floor(Math.random() * 8); // 8 gestures
           s.idleGesturePhase = 0;
         }
+      } else {
+        s.jumpY = 0;
       }
     }
     // Update interaction effects
@@ -536,7 +547,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       const t = Math.sin(igp);
       if (ig === 1) { // wave right arm above shoulder
         uArmAngleR = -1.4;
-        lArmAngleR = -1.0 - 0.5 * t; // forearm waves side to side
+        lArmAngleR = -1.0 - 0.5 * t;
       } else if (ig === 2) { // stretch both arms up
         const s2 = Math.abs(t);
         uArmAngleL = -0.7 * s2; lArmAngleL = -0.5 * s2;
@@ -544,6 +555,25 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
       } else if (ig === 3) { // hands on hips
         uArmAngleL = 0.3; lArmAngleL = 0.8;
         uArmAngleR = 0.3; lArmAngleR = 0.8;
+      } else if (ig === 4) { // jump — arms go up during jump
+        const jp = igp < Math.PI ? Math.sin(igp) : 0;
+        uArmAngleL = -1.2 * jp; lArmAngleL = -0.8 * jp;
+        uArmAngleR = -1.2 * jp; lArmAngleR = -0.8 * jp;
+      } else if (ig === 5) { // thinking — one hand to chin
+        uArmAngleR = -0.6;
+        lArmAngleR = -1.2;
+      } else if (ig === 6) { // clap — both arms forward and together
+        const clap = Math.abs(t);
+        uArmAngleL = -0.5; lArmAngleL = -0.3 - 0.5 * clap;
+        uArmAngleR = -0.5; lArmAngleR = -0.3 - 0.5 * clap;
+      } else if (ig === 7) { // crossed arms
+        uArmAngleL = 0.2; lArmAngleL = 1.2;
+        uArmAngleR = 0.2; lArmAngleR = 1.2;
+      } else if (ig === 8) { // dance — arms alternate up/down
+        uArmAngleL = -1.0 * Math.abs(t);
+        lArmAngleL = -0.6 * Math.abs(t);
+        uArmAngleR = -1.0 * Math.abs(Math.sin(igp + Math.PI));
+        lArmAngleR = -0.6 * Math.abs(Math.sin(igp + Math.PI));
       }
     }
 
@@ -769,7 +799,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Pass 1: Bodies + name labels
     for (const id of agentIds) {
       const s = agentMap[id];
-      drawBody(ctx, s.x, s.y, s);
+      drawBody(ctx, s.x, s.y + (s.jumpY || 0), s);
       // Name label
       ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
@@ -788,7 +818,7 @@ import { initAuth, renderNavBar, escapeHtml as sharedEscape } from '/shared.js';
     // Pass 2: Heads (avatars + border + glow + zzz) — always on top
     for (const id of agentIds) {
       const s = agentMap[id];
-      const sx = s.x, sy = s.y;
+      const sx = s.x, sy = s.y + (s.jumpY || 0);
       const sleeping = s.state === 'sleeping';
 
       // Glow for speaking
